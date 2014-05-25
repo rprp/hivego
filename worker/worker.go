@@ -1,9 +1,11 @@
+//worker执行模块worker负责在本地执行调度模块发送的命令，并将输出信息返回给调度模块。
+//worker执行时会启动http服务监听8123端口，提供RPC调用接口Executer.Run()方法。
 //package worker
 package main
 
 import (
 	"bytes"
-	_ "fmt"
+	"errors"
 	"github.com/Sirupsen/logrus"
 	"io"
 	"net/http"
@@ -36,18 +38,10 @@ type Job struct {
 	Param   map[string]string // Job的参数信息
 }
 
-//RPC返回的消息
+//返回的消息
 type Reply struct {
 	Stdout string //命令的标准输出
 }
-
-// 任务接口
-//type Executer interface {
-// 根据传入的任务信息执行指定任务
-// 发生错误或超时则返回error
-// 返回的数据集，在interface类型的变量中
-//Execute(job Job) (interface{}, error)
-//}
 
 //RPC结构
 //服务端处理部分，接受client端发送的指令。
@@ -56,7 +50,7 @@ type Executer struct {
 
 //Run调用相应的模块，完成对Job的执行
 //参数job，需要执行的任务信息。
-//返回任务的输出
+//参数reply，任务执行输出的信息。
 func (this *Executer) Run(job *Job, reply *Reply) error {
 	defer func() {
 		if err := recover(); err != nil {
@@ -68,84 +62,84 @@ func (this *Executer) Run(job *Job, reply *Reply) error {
 		}
 	}()
 
-	re := make(chan string, 0)
-
+	//channel类型变量chRp用来实时传递命令执行过程中的输出信息。
+	chRp := make(chan string, 0)
 	go func() {
 		for {
 			select {
-			case msg := <-re:
+			case msg := <-chRp:
 				//设置返回值
 				reply.Stdout += msg
 				log.WithFields(logrus.Fields{
 					"cmdlog": msg,
-				}).Warn("worker.Executer.Run()")
+				}).Info("worker.Executer.Run")
 			}
 		}
 	}()
 
 	//执行job任务
-	err := runCmd(job, re)
+	err := runCmd(job, chRp)
 
 	return err
 }
 
 //runCmd用来执行参数cmd中指定的命令，并返回执行时间和错误信息。
-func runCmd(job *Job, reply chan string) (err error) {
+func runCmd(job *Job, reply chan string) error {
 	defer func() {
 		if err := recover(); err != nil {
 			var buf bytes.Buffer
 			buf.Write(debug.Stack())
 			log.WithFields(logrus.Fields{
 				"panic": buf.String(),
-			}).Warn("worker.runCmd(job *Job)")
+			}).Warn("worker.runCmd")
 		}
 	}()
 
-	var (
-		c *exec.Cmd
-
-		//执行的命令行参数
-		cmdArgs []string
-	)
-
-	//记录开始执行的时间
-	startTime := time.Now().Format("2006-01-02 15:04:05")
-
-	//命令成功执行标志
-	ok := make(chan bool, 1)
-	chErr := make(chan bool, 1)
+	var c *exec.Cmd
+	var cmdArgs []string //执行的命令行参数
 
 	//从job结构中获取并组合命令参数
 	for _, v := range job.Param {
 		cmdArgs = append(cmdArgs, v)
 	}
 
+	//记录开始执行的时间
+	startTime := time.Now().Format("2006-01-02 15:04:05")
+
+	//命令成功执行标志
+	ok := make(chan bool, 1)
+	chErr := make(chan error, 1)
+
 	//启动一个goroutine执行任务，超时则直接返回，
 	//正常结束则设置成功执行标志ok
 	go func() {
 		c = exec.Command(job.Cmd, cmdArgs...)
-		stdout, err := c.StdoutPipe()
+
+		stdout, err := c.StdoutPipe() //挂载标准输出
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"StdoutPipe": err.Error(),
-			}).Warn("worker.runCmd(job *Job)")
-			chErr <- true
+			}).Warn("worker.runCmd")
+			chErr <- err
+			return
 		}
 
-		stderr, err := c.StderrPipe()
+		stderr, err := c.StderrPipe() //挂着错误输出
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"StderrPipe": err.Error(),
-			}).Warn("worker.runCmd(job *Job)")
-			chErr <- true
+			}).Warn("worker.runCmd")
+			chErr <- err
+			return
 		}
 
 		r := io.MultiReader(stdout, stderr)
 		if err := c.Start(); err != nil {
 			log.WithFields(logrus.Fields{
 				"Start": err.Error(),
-			}).Warn("worker.runCmd(job *Job)")
-			chErr <- true
+			}).Warn("worker.runCmd")
+			chErr <- err
+			return
 		}
 
 		//读取输出信息，设置到reply通道中
@@ -162,8 +156,9 @@ func runCmd(job *Job, reply chan string) (err error) {
 		if err := c.Wait(); err != nil {
 			log.WithFields(logrus.Fields{
 				"Wait": err.Error(),
-			}).Warn("worker.runCmd(job *Job)")
-			chErr <- true
+			}).Warn("worker.runCmd")
+			chErr <- err
+			return
 		}
 
 		ok <- true
@@ -179,10 +174,10 @@ func runCmd(job *Job, reply chan string) (err error) {
 			"JobName":   job.Name,
 			"JobCmd":    job.Cmd,
 			"JobArg":    cmdArgs,
-		}).Warn("worker.runCmd(job *Job) is timeout")
+		}).Warn("worker.runCmd is timeout")
 		c.Process.Kill()
-		return
-	case <-chErr:
+		return errors.New("time out")
+	case e := <-chErr:
 		//异常退出
 		log.WithFields(logrus.Fields{
 			"StartTime": startTime,
@@ -191,7 +186,8 @@ func runCmd(job *Job, reply chan string) (err error) {
 			"JobName":   job.Name,
 			"JobCmd":    job.Cmd,
 			"JobArg":    cmdArgs,
-		}).Info("worker.runCmd(job *Job) is error")
+		}).Warn("worker.runCmd is error")
+		return e
 	case <-ok:
 		//正常退出
 		log.WithFields(logrus.Fields{
@@ -201,23 +197,24 @@ func runCmd(job *Job, reply chan string) (err error) {
 			"JobName":   job.Name,
 			"JobCmd":    job.Cmd,
 			"JobArg":    cmdArgs,
-		}).Info("worker.runCmd(job *Job) is ok")
-		return
+		}).Info("worker.runCmd is ok")
+		return nil
 	}
 
-	return
+	return nil
 }
 
-func main() {
+//启动HTTP服务监控指定端口
+func DoServer(port string) {
 	executer := new(Executer)
 	rpc.Register(executer)
 	rpc.HandleHTTP()
 
 	log.WithFields(logrus.Fields{
-		"Port": gPort,
+		"Port": port,
 	}).Info("Server is running")
 
-	err := http.ListenAndServe(gPort, nil)
+	err := http.ListenAndServe(port, nil)
 
 	if err != nil {
 		log.WithFields(logrus.Fields{
@@ -225,4 +222,8 @@ func main() {
 		}).Warn("error!")
 	}
 
+}
+
+func main() {
+	DoServer(gPort)
 }
