@@ -67,8 +67,6 @@ func StartSchedule() error {
 
 	fmt.Println(schedules, jobs, tasks)
 
-	fmt.Println(schedules[0].job.nextJob.nextJob.nextJob.name)
-
 	//当构建完成一个调度后，调用它的Timer方法。
 
 	//从chan中得到需要执行的调度，启动一个线程执行
