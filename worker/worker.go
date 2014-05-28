@@ -166,7 +166,7 @@ func runCmd(job *Job, reply chan string) error {
 
 	//监听通道，超时则kill掉进程
 	select {
-	case <-time.After(time.Duration(job.TimeOut) * time.Millisecond):
+	case <-time.After(time.Duration(job.TimeOut) * 1000 * time.Millisecond):
 		log.WithFields(logrus.Fields{
 			"StartTime": startTime,
 			"EndTime":   time.Now().Format("2006-01-02 15:04:05"),
@@ -202,10 +202,10 @@ func runCmd(job *Job, reply chan string) error {
 	}
 
 	return nil
-}
+
 
 //启动HTTP服务监控指定端口
-func DoServer(port string) {
+func ListenAndServer(port string) {
 	executer := new(Executer)
 	rpc.Register(executer)
 	rpc.HandleHTTP()
@@ -225,5 +225,5 @@ func DoServer(port string) {
 }
 
 func main() {
-	DoServer(gPort)
+	ListenAndServer(gPort)
 }
