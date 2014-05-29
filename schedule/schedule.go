@@ -41,6 +41,12 @@ func StartSchedule() error {
 	defer gDbConn.Close()
 
 	//连接元数据库，初始化调度信息至内存
+	reltasks, err := getRelTasks() //获取Task的依赖链
+	checkErr(err)
+
+	jobtask, err := getJobTask() //获取Job的Task列表
+	checkErr(err)
+
 	tasks, err := getAllTasks() //获取Task列表
 	checkErr(err)
 
@@ -49,6 +55,18 @@ func StartSchedule() error {
 
 	schedules, err := getAllSchedules() //获取Schedule列表
 	checkErr(err)
+
+	//设置job中的task列表
+	//由于框架规定一个task只能在一个job中，N:1关系
+	//只需遍历一遍task与job对应关系结构，从jobs的map中找出job设置它的task即可
+	for taskid, jobid := range jobtask {
+		jobs[jobid].tasks[taskid] = tasks[taskid]
+	}
+
+	//设置task的依赖链
+	for _, maptask := range reltasks {
+		tasks[maptask.taskId].relTasks[maptask.reltaskId] = tasks[maptask.reltaskId]
+	}
 
 	//构建调度链信息
 	for _, scd := range schedules {
@@ -65,7 +83,8 @@ func StartSchedule() error {
 
 	}
 
-	fmt.Println(schedules, jobs, tasks)
+	//打印调度信息
+	printSchedule(schedules)
 
 	//当构建完成一个调度后，调用它的Timer方法。
 
@@ -82,5 +101,33 @@ func checkErr(err error) {
 	if err != nil {
 		fmt.Println(err.Error())
 		panic(err)
+	}
+}
+
+//打印调度信息
+func printSchedule(scds []*Schedule) {
+	for _, scd := range scds {
+		fmt.Println(scd.name)
+		//打印调度中的作业信息
+		for j := scd.job; j != nil; {
+			fmt.Println("\t--------------------------------------")
+			fmt.Println("\t", j.name)
+			//打印作业中的任务信息
+			for _, t := range j.tasks {
+				fmt.Println("\t\t", t.name)
+
+				fmt.Print("\t\t\t[")
+				//打印任务依赖链
+				for _, r := range t.relTasks {
+					fmt.Print(r.name, ",")
+
+				}
+				fmt.Print("]\n")
+			}
+			fmt.Print("\n")
+			j = j.nextJob
+
+		}
+
 	}
 }

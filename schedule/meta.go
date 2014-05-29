@@ -31,15 +31,15 @@ type Schedule struct {
 
 //作业信息结构
 type Job struct {
-	id        int64            //作业ID
-	name      string           //作业名称
-	timeOut   int64            //最大执行时间
-	desc      string           //作业说明
-	preJobId  int64            //上级作业ID
-	preJob    *Job             //上级作业
-	nextJobId int64            //下级作业ID
-	nextJob   *Job             //下级作业
-	task      map[string]*Task //作业中的任务
+	id        int64           //作业ID
+	name      string          //作业名称
+	timeOut   int64           //最大执行时间
+	desc      string          //作业说明
+	preJobId  int64           //上级作业ID
+	preJob    *Job            //上级作业
+	nextJobId int64           //下级作业ID
+	nextJob   *Job            //下级作业
+	tasks     map[int64]*Task //作业中的任务
 }
 
 // 任务信息结构
@@ -54,7 +54,13 @@ type Task struct {
 	timeOut     int64             // 设定超时时间，0表示不做超时限制。单位秒
 	param       map[string]string // 任务的参数信息
 	jobId       int64             //所属作业ID
-	relTask     map[string]*Task  //依赖的任务
+	relTasks    map[int64]*Task   //依赖的任务
+}
+
+// 任务依赖结构
+type RelTask struct {
+	taskId    int64 //任务ID
+	reltaskId int64 //依赖任务ID
 }
 
 //调度执行信息结构
@@ -114,6 +120,10 @@ func getAllSchedules() (scds []*Schedule, err error) {
 		scd := &Schedule{}
 		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc, &scd.startSecond,
 			&scd.timeOut, &scd.jobId, &scd.desc)
+
+		//初始化param的内存
+		scd.param = make(map[string]string)
+
 		scds = append(scds, scd)
 	}
 
@@ -141,6 +151,9 @@ func getAllJobs() (jobs map[int64]*Job, err error) {
 	for rows.Next() {
 		job := &Job{}
 		err = rows.Scan(&job.id, &job.name, &job.timeOut, &job.desc, &job.preJobId, &job.nextJobId)
+
+		//初始化Task内存
+		job.tasks = make(map[int64]*Task)
 		jobs[job.id] = job
 	}
 
@@ -169,7 +182,56 @@ func getAllTasks() (tasks map[int64]*Task, err error) {
 	for rows.Next() {
 		task := &Task{}
 		err = rows.Scan(&task.id, &task.address, &task.name, &task.jobType, &task.cyc, &task.startSecond, &task.cmd)
+		//初始化relTask、param的内存
+		task.relTasks = make(map[int64]*Task)
+		task.param = make(map[string]string)
+
 		tasks[task.id] = task
 	}
 	return tasks, err
+}
+
+//从元数据库获取Job下的Task列表。
+func getJobTask() (jobtask map[int64]int64, err error) {
+
+	jobtask = make(map[int64]int64)
+
+	//查询Job中全部Task列表
+	sql := `SELECT jt.job_id,
+				jt.task_id
+			FROM hive.scd_job_task jt`
+
+	rows, err := gDbConn.Query(sql)
+	checkErr(err)
+
+	//循环读取记录
+	for rows.Next() {
+		var jobid, taskid int64
+		err = rows.Scan(&jobid, &taskid)
+		jobtask[taskid] = jobid
+	}
+	return jobtask, err
+}
+
+//从元数据库获取Task的依赖列表。
+func getRelTasks() (relTasks []*RelTask, err error) {
+
+	relTasks = make([]*RelTask, 0)
+
+	//查询Task的依赖列表
+	sql := `SELECT tr.task_id,
+				tr.rel_task_id
+			FROM hive.scd_task_rel tr
+			ORDER BY tr.task_id`
+
+	rows, err := gDbConn.Query(sql)
+	checkErr(err)
+
+	//循环读取记录
+	for rows.Next() {
+		var taskid, reltaskid int64
+		err = rows.Scan(&taskid, &reltaskid)
+		relTasks = append(relTasks, &RelTask{taskId: taskid, reltaskId: reltaskid})
+	}
+	return relTasks, err
 }
