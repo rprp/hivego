@@ -26,6 +26,7 @@ var (
 func init() {
 	//设置log模块的默认格式
 	log.Formatter = new(logrus.TextFormatter) // default
+	runtime.GOMAXPROCS(4)
 }
 
 // 任务信息结构

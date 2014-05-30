@@ -7,6 +7,8 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"runtime"
+	"time"
 )
 
 //全局变量定义
@@ -16,13 +18,18 @@ var (
 
 	gScds []Schedule //全局调度列表
 
+	gchScd   chan *Schedule    //执行的调度结构
 	gchExScd chan ExecSchedule //执行的调度结构
 )
 
 //初始化工作
 func init() {
+	runtime.GOMAXPROCS(16)
+
 	//从配置文件中获取数据库连接、服务端口号等信息
 	gPort = ":8123"
+
+	gchScd = make(chan *Schedule)
 
 }
 
@@ -81,14 +88,32 @@ func StartSchedule() error {
 
 		}
 
+		//当构建完成一个调度后，调用它的Timer方法。
+		go scd.Timer()
+
+	}
+
+	//从chan中得到需要执行的调度，启动一个线程执行
+	for {
+		select {
+		case rscd := <-gchScd:
+			fmt.Println(time.Now(), "\t", rscd.name, "is start")
+			//启动一个线程开始构建执行结构链
+			exScd, err := constructSchedule(rscd)
+
+			//构建完成后，启动线程执行调度任务
+			//执行体exScd中包含了Schedule信息，
+			//当全部执行结束后，会设置Schedule的下次启动时间。
+			go exScd.Run()
+
+			//完成后，设置下次启动时间
+			//go rscd.Timer()
+		}
+
 	}
 
 	//打印调度信息
 	printSchedule(schedules)
-
-	//当构建完成一个调度后，调用它的Timer方法。
-
-	//从chan中得到需要执行的调度，启动一个线程执行
 
 	return nil
 }
@@ -102,6 +127,12 @@ func checkErr(err error) {
 		fmt.Println(err.Error())
 		panic(err)
 	}
+}
+
+//启动一个线程开始构建执行结构链
+func constructSchedule(rscd *Schedule) (exScd ExecSchedule, err error) {
+
+	return exScd, nil
 }
 
 //打印调度信息
