@@ -101,6 +101,7 @@ func StartSchedule() error {
 			//启动一个线程开始构建执行结构链
 			exScd, err := constructSchedule(rscd)
 
+			fmt.Println(exScd, err)
 			//构建完成后，启动线程执行调度任务
 			//执行体exScd中包含了Schedule信息，
 			//当全部执行结束后，会设置Schedule的下次启动时间。
@@ -130,9 +131,57 @@ func checkErr(err error) {
 }
 
 //启动一个线程开始构建执行结构链
-func constructSchedule(rscd *Schedule) (exScd ExecSchedule, err error) {
+func constructSchedule(rscd *Schedule) (exScd *ExecSchedule, err error) {
+	exScd = new(ExecSchedule)
 
-	return exScd, nil
+	bid := fmt.Sprintf("%d-%s", rscd.id, time.Now().Format("2006-01-02 15:04:05.000000"))
+	exScd.batchId = bid                                        //批次ID
+	exScd.schedule = rscd                                      //调度
+	exScd.startTime = time.Now()                               //开始时间
+	exScd.state = "0"                                          //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
+	exScd.result = 0                                           //结果,调度中执行成功任务的百分比
+	exScd.execType = "1"                                       //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
+	exScd.execJob, err = constructJob(exScd.batchId, rscd.job) //作业执行信息
+
+	fmt.Println(exScd.batchId)
+	return exScd, err
+}
+
+//构建作业执行结构
+func constructJob(batchId string, job *Job) (exJob *ExecJob, err error) {
+	exJob = new(ExecJob)
+
+	bjd := fmt.Sprint("%s-%d", batchId, job.id)
+	exJob.batchJobId = bjd  //作业批次ID，批次ID+作业ID
+	exJob.batchId = batchId //批次ID
+	exJob.job = job         //作业
+	exJob.state = "0"       //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
+	exJob.result = 0        //结果,作业中执行成功任务的百分比
+	exJob.execType = "1"    //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
+
+	//作业中的任务执行结构
+	tasks := make([]*ExecTask, 0)
+	for _, t := range exJob.job.tasks {
+		exTask := new(ExecTask)
+		bjtd := fmt.Sprint("%s-%d", bjd, t.id)
+		exTask.batchTaskId = bjtd
+		exTask.batchJobId = bjd
+		exTask.batchId = batchId
+		exTask.task = t
+		exTask.state = "0"    //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
+		exTask.result = 0     //结果，0.成功 1.失败
+		exTask.execType = "1" //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
+		tasks = append(tasks, exTask)
+
+	}
+	exJob.execTask = tasks
+
+	if job.nextJob != nil {
+		//递归调用，直到最后一个作业
+		exJob.nextJob, err = constructJob(batchId, job.nextJob)
+	}
+	return exJob, err
+
 }
 
 //打印调度信息

@@ -4,7 +4,6 @@ package main
 
 import (
 	_ "database/sql"
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"time"
 )
@@ -75,37 +74,47 @@ type RelTask struct {
 
 //调度执行信息结构
 type ExecSchedule struct {
-	batchId   string     //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
-	schedule  *Schedule  //调度
-	startTime time.Time  //开始时间
-	endTime   time.Time  //结束时间
-	state     string     //状态
-	result    int8       //结果
-	execType  string     //执行类型
-	execJob   []*ExecJob //作业执行信息
+	batchId   string    //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
+	schedule  *Schedule //调度
+	startTime time.Time //开始时间
+	endTime   time.Time //结束时间
+	state     string    //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
+	result    int8      //结果,调度中执行成功任务的百分比
+	execType  string    //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
+	execJob   *ExecJob  //作业执行信息
+}
+
+//执行体exScd中包含了Schedule信息，
+//当全部执行结束后，会设置Schedule的下次启动时间。
+func (s *ExecSchedule) Run() {
+
 }
 
 //作业执行信息结构
 type ExecJob struct {
-	batchId   string    //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
-	job       *Job      //作业
-	startTime time.Time //开始时间
-	endTime   time.Time //结束时间
-	state     string    //状态
-	result    int8      //结果
-	execType  string    //执行类型
-	execTask  []*Task   //任务执行信息
+	batchJobId string      //作业批次ID，批次ID + 作业ID
+	batchId    string      //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
+	job        *Job        //作业
+	startTime  time.Time   //开始时间
+	endTime    time.Time   //结束时间
+	state      string      //状态
+	result     int8        //结果
+	nextJob    *ExecJob    //下一个作业
+	execType   string      //执行类型
+	execTask   []*ExecTask //任务执行信息
 }
 
 //任务执行信息结构
 type ExecTask struct {
-	batchId   string    //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
-	task      *Task     //任务
-	startTime time.Time //开始时间
-	endTime   time.Time //结束时间
-	state     string    //状态
-	result    int8      //结果
-	execType  string    //执行类型
+	batchTaskId string    //任务批次ID，作业批次ID + 任务ID
+	batchJobId  string    //作业批次ID，批次ID + 作业ID
+	batchId     string    //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
+	task        *Task     //任务
+	startTime   time.Time //开始时间
+	endTime     time.Time //结束时间
+	state       string    //状态
+	result      int8      //结果
+	execType    string    //执行类型
 }
 
 //从元数据库获取Schedule列表。
