@@ -68,23 +68,33 @@ func StartSchedule() error {
 	//只需遍历一遍task与job对应关系结构，从jobs的map中找出job设置它的task即可
 	for taskid, jobid := range jobtask {
 		jobs[jobid].tasks[taskid] = tasks[taskid]
+		jobs[jobid].taskCnt++
 	}
 
 	//设置task的依赖链
 	for _, maptask := range reltasks {
 		tasks[maptask.taskId].relTasks[maptask.reltaskId] = tasks[maptask.reltaskId]
+		tasks[maptask.taskId].relTaskCnt++
 	}
 
 	//构建调度链信息
 	for _, scd := range schedules {
+		var ok bool
+
+		if scd.job, ok = jobs[scd.jobId]; !ok {
+			continue
+		}
 		//设置调度中的job
-		scd.job = jobs[scd.jobId]
+		scd.jobCnt++
+		scd.taskCnt = scd.job.taskCnt
 
 		//设置job链
 		for j := scd.job; j.nextJobId != 0; {
 			j.nextJob = jobs[j.nextJobId]
 			j.preJob = jobs[j.preJobId]
 			j = j.nextJob
+			scd.jobCnt++
+			scd.taskCnt += j.taskCnt
 
 		}
 
@@ -92,6 +102,9 @@ func StartSchedule() error {
 		go scd.Timer()
 
 	}
+
+	//打印调度信息
+	printSchedule(schedules)
 
 	//从chan中得到需要执行的调度，启动一个线程执行
 	for {
@@ -107,14 +120,9 @@ func StartSchedule() error {
 			//当全部执行结束后，会设置Schedule的下次启动时间。
 			go exScd.Run()
 
-			//完成后，设置下次启动时间
-			//go rscd.Timer()
 		}
 
 	}
-
-	//打印调度信息
-	printSchedule(schedules)
 
 	return nil
 }
@@ -142,6 +150,8 @@ func constructSchedule(rscd *Schedule) (exScd *ExecSchedule, err error) {
 	exScd.result = 0                                           //结果,调度中执行成功任务的百分比
 	exScd.execType = "1"                                       //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
 	exScd.execJob, err = constructJob(exScd.batchId, rscd.job) //作业执行信息
+	exScd.jobCnt = rscd.jobCnt
+	exScd.taskCnt = rscd.taskCnt
 
 	fmt.Println(exScd.batchId)
 	return exScd, err
@@ -187,7 +197,7 @@ func constructJob(batchId string, job *Job) (exJob *ExecJob, err error) {
 //打印调度信息
 func printSchedule(scds []*Schedule) {
 	for _, scd := range scds {
-		fmt.Println(scd.name)
+		fmt.Println(scd.name, "\tjobs=", scd.jobCnt, " tasks=", scd.taskCnt)
 		//打印调度中的作业信息
 		for j := scd.job; j != nil; {
 			fmt.Println("\t--------------------------------------")

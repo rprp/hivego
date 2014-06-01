@@ -21,6 +21,8 @@ type Schedule struct {
 	jobId       int64             //作业ID
 	job         *Job              //作业
 	desc        string            //调度说明
+	jobCnt      int32             //调度中作业数量
+	taskCnt     int32             //调度中任务数量
 }
 
 //根据调度的周期及启动时间，按时将调度传至执行列表执行。
@@ -49,6 +51,7 @@ type Job struct {
 	nextJobId int64           //下级作业ID
 	nextJob   *Job            //下级作业
 	tasks     map[int64]*Task //作业中的任务
+	taskCnt   int32           //调度中任务数量
 }
 
 // 任务信息结构
@@ -64,6 +67,7 @@ type Task struct {
 	param       map[string]string // 任务的参数信息
 	jobId       int64             //所属作业ID
 	relTasks    map[int64]*Task   //依赖的任务
+	relTaskCnt  int32             //依赖的任务数量
 }
 
 // 任务依赖结构
@@ -74,20 +78,65 @@ type RelTask struct {
 
 //调度执行信息结构
 type ExecSchedule struct {
-	batchId   string    //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
-	schedule  *Schedule //调度
-	startTime time.Time //开始时间
-	endTime   time.Time //结束时间
-	state     string    //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
-	result    int8      //结果,调度中执行成功任务的百分比
-	execType  string    //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
-	execJob   *ExecJob  //作业执行信息
+	batchId        string    //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
+	schedule       *Schedule //调度
+	startTime      time.Time //开始时间
+	endTime        time.Time //结束时间
+	state          int8      //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
+	result         float32   //结果,调度中执行成功任务的百分比
+	execType       int8      //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
+	execJob        *ExecJob  //作业执行信息
+	jobCnt         int32     //调度中作业数量
+	taskCnt        int32     //调度中任务数量
+	successTaskCnt int32     //执行成功任务数量
+	failTaskCnt    int32     //执行失败任务数量
 }
 
-//执行体exScd中包含了Schedule信息，
-//当全部执行结束后，会设置Schedule的下次启动时间。
+//启动线程执行调度任务
+//全部执行结束后，设置Schedule的下次启动时间。
 func (s *ExecSchedule) Run() {
+	//taskChan用来传递完成任务的状态。
+	//当一个作业完成后会成功将true放入taskChan变量中，失败放入false
+	taskChan := make(chan bool)
+	s.state = 1
 
+	//执行调度中作业的Run方法
+	//该方法会启动线程执行Job中的Task，并会递归调用。直到最后一个Job
+	go s.execJob.Run(taskChan)
+
+	//不断轮询ok中的信息，直到最后一个任务完成
+	//调用执行结构的Timer方法，并退出线程。
+	for {
+		select {
+		case tc := <-taskChan:
+			s.taskCnt--
+
+			//计算任务完成百分比
+			s.result = float32(s.schedule.taskCnt-s.taskCnt) / float32(s.schedule.taskCnt)
+
+			if tc {
+				s.successTaskCnt++
+			} else {
+				s.failTaskCnt++
+			}
+
+			if s.taskCnt == 0 {
+				//全部完成后，写入日志存储至数据库，设置下次启动时间
+				s.endTime = time.Now()
+				s.state = 3
+				err := s.Save()
+				go s.schedule.Timer()
+				return
+			}
+
+		}
+	}
+
+}
+
+//保存执行日志
+func (s *ExecSchedule) Save() error {
+	return nil
 }
 
 //作业执行信息结构
@@ -97,24 +146,71 @@ type ExecJob struct {
 	job        *Job        //作业
 	startTime  time.Time   //开始时间
 	endTime    time.Time   //结束时间
-	state      string      //状态
-	result     int8        //结果
+	state      int8        //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
+	result     float32     //结果执行成功任务的百分比
 	nextJob    *ExecJob    //下一个作业
-	execType   string      //执行类型
+	execType   int8        //执行类型1. 自动定时调度 2.手动人工调度 3.修复执行
 	execTask   []*ExecTask //任务执行信息
+	taskCnt    int32       //作业中任务数量
+}
+
+//启动线程执行作业，并将状态标志传递给执行的任务线程
+func (j *ExecJob) Run(taskChan chan bool) {
+	jobChan := make(chan bool)
+	j.startTime = time.Now()
+	j.state = 1
+
+	//对于作业中的每个任务都启动一个线程去执行
+	for _, execTask := range j.execTask {
+		go execTask.Run(taskChan, jobChan)
+
+	}
+
+	if j.nextJob != nil {
+		go j.nextJob.Run(taskChan)
+	}
+
+	for {
+		select {
+		case jc := <-jobChan:
+			j.taskCnt--
+
+			//计算任务完成百分比
+			j.result = float32(j.job.taskCnt-j.taskCnt) / float32(j.job.taskCnt)
+			if j.taskCnt == 0 {
+				j.endTime = time.Now()
+				j.state = 3
+				return
+			}
+
+		}
+
+	}
+
 }
 
 //任务执行信息结构
 type ExecTask struct {
-	batchTaskId string    //任务批次ID，作业批次ID + 任务ID
-	batchJobId  string    //作业批次ID，批次ID + 作业ID
-	batchId     string    //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
-	task        *Task     //任务
-	startTime   time.Time //开始时间
-	endTime     time.Time //结束时间
-	state       string    //状态
-	result      int8      //结果
-	execType    string    //执行类型
+	batchTaskId string      //任务批次ID，作业批次ID + 任务ID
+	batchJobId  string      //作业批次ID，批次ID + 作业ID
+	batchId     string      //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
+	task        *Task       //任务
+	startTime   time.Time   //开始时间
+	endTime     time.Time   //结束时间
+	state       int8        //状态
+	result      int8        //结果
+	execType    string      //执行类型
+	relExecTask []*ExecTask //依赖的任务
+}
+
+//任务执行
+func (t *ExecTask) Run(taskChan chan bool, jobChan chan bool) {
+	//判断是否在执行周期内
+
+	//判断是否依赖任务都执行完毕
+
+	t.startTime = time.Now()
+
 }
 
 //从元数据库获取Schedule列表。
