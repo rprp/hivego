@@ -23,8 +23,9 @@ var (
 
 	gScds []Schedule //全局调度列表
 
-	gchScd     chan *Schedule    //执行的调度结构
-	gchExScd   chan ExecSchedule //执行的调度结构
+	gScdChan     chan *Schedule    //执行的调度结构
+	gExecScdChan chan ExecSchedule //执行的调度结构
+
 	gExecTasks map[int64]*ExecTask
 )
 
@@ -38,7 +39,8 @@ func init() {
 	//从配置文件中获取数据库连接、服务端口号等信息
 	gPort = ":8123"
 
-	gchScd = make(chan *Schedule)
+	gScdChan = make(chan *Schedule)
+	gExecTasks = make(map[int64]*ExecTask)
 
 }
 
@@ -118,7 +120,7 @@ func StartSchedule() error {
 	//从chan中得到需要执行的调度，启动一个线程执行
 	for {
 		select {
-		case rscd := <-gchScd:
+		case rscd := <-gScdChan:
 			fmt.Println(time.Now(), "\t", rscd.name, "is start")
 			//启动一个线程开始构建执行结构链
 			err := NewExecSchedule(rscd)

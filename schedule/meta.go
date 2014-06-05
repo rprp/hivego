@@ -21,8 +21,8 @@ type Schedule struct {
 	jobId       int64             //作业ID
 	job         *Job              //作业
 	desc        string            //调度说明
-	jobCnt      int32             //调度中作业数量
-	taskCnt     int32             //调度中任务数量
+	jobCnt      int64             //调度中作业数量
+	taskCnt     int64             //调度中任务数量
 }
 
 //根据调度的周期及启动时间，按时将调度传至执行列表执行。
@@ -35,7 +35,7 @@ func (s *Schedule) Timer() {
 	select {
 	case <-time.After(countDown):
 		//调度信息，存入chan中
-		gchScd <- s
+		gScdChan <- s
 	}
 	return
 }
@@ -51,7 +51,7 @@ type Job struct {
 	nextJobId int64           //下级作业ID
 	nextJob   *Job            //下级作业
 	tasks     map[int64]*Task //作业中的任务
-	taskCnt   int32           //调度中任务数量
+	taskCnt   int64           //调度中任务数量
 }
 
 // 任务信息结构
@@ -67,7 +67,7 @@ type Task struct {
 	param       map[string]string // 任务的参数信息
 	jobId       int64             //所属作业ID
 	relTasks    map[int64]*Task   //依赖的任务
-	relTaskCnt  int32             //依赖的任务数量
+	relTaskCnt  int64             //依赖的任务数量
 }
 
 // 任务依赖结构

@@ -60,6 +60,7 @@ func (this *Executer) Run(job *Job, reply *Reply) error {
 			log.WithFields(logrus.Fields{
 				"panic": buf.String(),
 			}).Warn("worker.Executer.Run()")
+			return
 		}
 	}()
 
@@ -93,6 +94,7 @@ func runCmd(job *Job, reply chan string) error {
 			log.WithFields(logrus.Fields{
 				"panic": buf.String(),
 			}).Warn("worker.runCmd")
+			return
 		}
 	}()
 
