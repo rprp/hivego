@@ -30,7 +30,7 @@ var (
 )
 
 //初始化工作
-func init() {
+func init() { // {{{
 	runtime.GOMAXPROCS(16)
 
 	//设置log模块的默认格式
@@ -42,7 +42,7 @@ func init() {
 	gScdChan = make(chan *Schedule)
 	gExecTasks = make(map[int64]*ExecTask)
 
-}
+} // }}}
 
 //StartSchedule函数是调度模块的入口函数。程序初始化完成后，它负责连接元数据库，
 //获取调度信息，在内存中构建Schedule结构。完成后，会调用Schedule的Timer方法。
@@ -50,7 +50,7 @@ func init() {
 //并送入chan中。
 //模块的另一部分在不断的检测chan中的内容，将取到的执行结构体后创建新的goroutine
 //执行。
-func StartSchedule() error {
+func StartSchedule() error { // {{{
 	// 连接数据库
 	cnn, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/hive?charset=utf8")
 	checkErr(err)
@@ -79,13 +79,15 @@ func StartSchedule() error {
 	//只需遍历一遍task与job对应关系结构，从jobs的map中找出job设置它的task即可
 	for taskid, jobid := range jobtask {
 		jobs[jobid].tasks[taskid] = tasks[taskid]
+		//顺便把job的TimeOut赋值给task
+		tasks[taskid].TimeOut = jobs[jobid].timeOut
 		jobs[jobid].taskCnt++
 	}
 
 	//设置task的依赖链
 	for _, maptask := range reltasks {
-		tasks[maptask.taskId].relTasks[maptask.reltaskId] = tasks[maptask.reltaskId]
-		tasks[maptask.taskId].relTaskCnt++
+		tasks[maptask.taskId].RelTasks[maptask.reltaskId] = tasks[maptask.reltaskId]
+		tasks[maptask.taskId].RelTaskCnt++
 	}
 
 	//构建调度链信息
@@ -131,7 +133,7 @@ func StartSchedule() error {
 	}
 
 	return nil
-}
+} // }}}
 
 func main() {
 	StartSchedule()

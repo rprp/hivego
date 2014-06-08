@@ -26,7 +26,7 @@ type Schedule struct {
 }
 
 //根据调度的周期及启动时间，按时将调度传至执行列表执行。
-func (s *Schedule) Timer() {
+func (s *Schedule) Timer() { // {{{
 	//获取距启动的时间（秒）
 	countDown, err := getCountDown(s.cyc, s.startSecond)
 	checkErr(err)
@@ -38,7 +38,7 @@ func (s *Schedule) Timer() {
 		gScdChan <- s
 	}
 	return
-}
+} // }}}
 
 //作业信息结构
 type Job struct {
@@ -56,18 +56,19 @@ type Job struct {
 
 // 任务信息结构
 type Task struct {
-	id          int64             // 任务的ID
-	address     string            // 任务的执行地址
-	name        string            // 任务名称
-	jobType     string            // 任务类型
-	cyc         string            //调度周期
-	startSecond int64             //周期内启动时间
-	cmd         string            // 任务执行的命令或脚本、函数名等。
-	timeOut     int64             // 设定超时时间，0表示不做超时限制。单位秒
-	param       map[string]string // 任务的参数信息
-	jobId       int64             //所属作业ID
-	relTasks    map[int64]*Task   //依赖的任务
-	relTaskCnt  int64             //依赖的任务数量
+	Id          int64             // 任务的ID
+	Address     string            // 任务的执行地址
+	Name        string            // 任务名称
+	JobType     string            // 任务类型
+	Cyc         string            //调度周期
+	StartSecond int64             //周期内启动时间
+	Cmd         string            // 任务执行的命令或脚本、函数名等。
+	TimeOut     int64             // 设定超时时间，0表示不做超时限制。单位秒
+	Param       map[string]string // 任务的参数信息
+	Attr        map[string]string // 任务的属性信息
+	JobId       int64             //所属作业ID
+	RelTasks    map[int64]*Task   //依赖的任务
+	RelTaskCnt  int64             //依赖的任务数量
 }
 
 // 任务依赖结构
@@ -77,7 +78,7 @@ type RelTask struct {
 }
 
 //从元数据库获取Schedule列表。
-func getAllSchedules() (scds []*Schedule, err error) {
+func getAllSchedules() (scds []*Schedule, err error) { // {{{
 	var stime int64
 
 	//查询全部schedule列表
@@ -108,10 +109,10 @@ func getAllSchedules() (scds []*Schedule, err error) {
 	}
 
 	return scds, err
-}
+} // }}}
 
 //从元数据库获取Schedule下的Job列表。
-func getAllJobs() (jobs map[int64]*Job, err error) {
+func getAllJobs() (jobs map[int64]*Job, err error) { // {{{
 
 	jobs = make(map[int64]*Job)
 
@@ -138,10 +139,33 @@ func getAllJobs() (jobs map[int64]*Job, err error) {
 	}
 
 	return jobs, err
-}
+} // }}}
 
 //从元数据库获取Job下的Task列表。
-func getAllTasks() (tasks map[int64]*Task, err error) {
+func getTaskAttr(id int64) (taskAttr map[string]string, err error) { // {{{
+
+	taskAttr = make(map[string]string)
+
+	//查询指定的Task属性列表
+	sql := `SELECT ta.task_attr_name,
+			   ta.task_attr_value
+			FROM   hive.scd_task_attr ta
+			WHERE  task_id = ?`
+
+	rows, err := gDbConn.Query(sql, id)
+	checkErr(err)
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		var name, value string
+		err = rows.Scan(&name, &value)
+		taskAttr[name] = value
+	}
+	return taskAttr, err
+} // }}}
+
+//从元数据库获取Job下的Task列表。
+func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 
 	tasks = make(map[int64]*Task)
 
@@ -161,18 +185,21 @@ func getAllTasks() (tasks map[int64]*Task, err error) {
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.id, &task.address, &task.name, &task.jobType, &task.cyc, &task.startSecond, &task.cmd)
+		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.JobType, &task.Cyc, &task.StartSecond, &task.Cmd)
 		//初始化relTask、param的内存
-		task.relTasks = make(map[int64]*Task)
-		task.param = make(map[string]string)
+		task.RelTasks = make(map[int64]*Task)
+		task.Param = make(map[string]string)
+		task.Attr = make(map[string]string)
+		task.Attr, err = getTaskAttr(task.Id)
+		checkErr(err)
 
-		tasks[task.id] = task
+		tasks[task.Id] = task
 	}
 	return tasks, err
-}
+} // }}}
 
 //从元数据库获取Job下的Task列表。
-func getJobTask() (jobtask map[int64]int64, err error) {
+func getJobTask() (jobtask map[int64]int64, err error) { // {{{
 
 	jobtask = make(map[int64]int64)
 
@@ -191,10 +218,10 @@ func getJobTask() (jobtask map[int64]int64, err error) {
 		jobtask[taskid] = jobid
 	}
 	return jobtask, err
-}
+} // }}}
 
 //从元数据库获取Task的依赖列表。
-func getRelTasks() (relTasks []*RelTask, err error) {
+func getRelTasks() (relTasks []*RelTask, err error) { // {{{
 
 	relTasks = make([]*RelTask, 0)
 
@@ -214,10 +241,10 @@ func getRelTasks() (relTasks []*RelTask, err error) {
 		relTasks = append(relTasks, &RelTask{taskId: taskid, reltaskId: reltaskid})
 	}
 	return relTasks, err
-}
+} // }}}
 
 //获取距启动的时间（秒）
-func getCountDown(cyc string, ss time.Duration) (countDown time.Duration, err error) {
+func getCountDown(cyc string, ss time.Duration) (countDown time.Duration, err error) { // {{{
 	now := GetNow()
 	var startTime time.Time
 	//解析周期并取得距下一周期的时间
@@ -262,9 +289,9 @@ func getCountDown(cyc string, ss time.Duration) (countDown time.Duration, err er
 
 	return countDown, nil
 
-}
+} // }}}
 
 //获取当前时间
-func GetNow() time.Time {
+func GetNow() time.Time { // {{{
 	return time.Now().Local()
-}
+} // }}}
