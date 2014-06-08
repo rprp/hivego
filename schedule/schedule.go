@@ -21,7 +21,7 @@ var (
 	gPort   string  // 监听端口号
 	gDbConn *sql.DB //数据库链接
 
-	gScds []Schedule //全局调度列表
+	gScds map[int64]*Schedule //全局调度列表
 
 	gScdChan     chan *Schedule    //执行的调度结构
 	gExecScdChan chan ExecSchedule //执行的调度结构
@@ -39,6 +39,7 @@ func init() { // {{{
 	//从配置文件中获取数据库连接、服务端口号等信息
 	gPort = ":8123"
 
+	gScds = make(map[int64]*Schedule)
 	gScdChan = make(chan *Schedule)
 	gExecTasks = make(map[int64]*ExecTask)
 
@@ -114,6 +115,8 @@ func StartSchedule() error { // {{{
 		//当构建完成一个调度后，调用它的Timer方法。
 		go scd.Timer()
 
+		gScds[scd.id] = scd
+
 	}
 
 	//打印调度信息
@@ -125,8 +128,10 @@ func StartSchedule() error { // {{{
 		case rscd := <-gScdChan:
 			fmt.Println(time.Now(), "\t", rscd.name, "is start")
 			//启动一个线程开始构建执行结构链
-			err := NewExecSchedule(rscd)
+			s, err := NewExecSchedule(rscd)
 			checkErr(err)
+			//启动线程执行调度任务
+			go s.Run()
 
 		}
 
