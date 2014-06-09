@@ -189,6 +189,7 @@ func runCmd(task *Task, reply chan string) error { // {{{
 			"TaskName":  task.Name,
 			"TaskCmd":   task.Cmd,
 			"TaskArg":   cmdArgs,
+			"Error":     e.Error(),
 		}).Warn("worker.runCmd is error")
 		return e
 	case <-ok:

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	_ "database/sql"
 	"fmt"
-	"github.com/Sirupsen/logrus"
 	_ "github.com/go-sql-driver/mysql"
 	"net/rpc"
 	"runtime/debug"
@@ -38,7 +37,6 @@ type ExecSchedule struct {
 //并重新找出依赖列表为空的task，启动线程运行它的Run方法。
 //全部执行结束后，设置Schedule的下次启动时间。
 func (s *ExecSchedule) Run() { // {{{
-	fn := "ExecSchedule.Run"
 
 	//taskChan用来传递完成的任务。
 	//当一个作业完成后会将自己放入taskChan变量中
@@ -48,15 +46,7 @@ func (s *ExecSchedule) Run() { // {{{
 	s.state = 1
 	s.Log()
 
-	p(logrus.Fields{ // {{{
-		"batchId":      s.batchId,
-		"ScheduleName": s.schedule.name,
-		"state":        s.state,
-		"startTime":    s.startTime,
-		"endTime":      s.endTime,
-		"info":         "schedule is start",
-		"error":        nil,
-	}).Info(fn) // }}}
+	l.Infoln("schedule ", s.schedule.name, " is start ", " batchId=", s.batchId)
 
 	//启动独立的任务
 	for _, execTask := range s.execTasks {
@@ -68,17 +58,7 @@ func (s *ExecSchedule) Run() { // {{{
 				execTask.execJob.state = 1
 				execTask.execJob.Log()
 
-				p(logrus.Fields{ // {{{
-					"batchId":    execTask.execJob.batchId,
-					"batchJobId": execTask.execJob.batchJobId,
-					"jobName":    execTask.execJob.job.name,
-					"state":      execTask.execJob.state,
-					"result":     execTask.execJob.result,
-					"startTime":  execTask.execJob.startTime,
-					"endTime":    execTask.execJob.endTime,
-					"info":       "job is start",
-					"error":      nil,
-				}).Info(fn) // }}}
+				l.Infoln("job ", execTask.execJob.job.name, " is start ", " batchJobId=", execTask.execJob.batchJobId)
 
 			}
 
@@ -110,17 +90,7 @@ func (s *ExecSchedule) Run() { // {{{
 					j.state = 3
 					j.Log()
 
-					p(logrus.Fields{ // {{{
-						"batchId":    j.batchId,
-						"batchJobId": j.batchJobId,
-						"jobName":    j.job.name,
-						"state":      j.state,
-						"result":     j.result,
-						"startTime":  j.startTime,
-						"endTime":    j.endTime,
-						"info":       "job is end",
-						"error":      nil,
-					}).Info(fn) // }}}
+					l.Infoln("job ", j.job.name, " is end ", " batchJobId=", j.batchJobId, " result=", j.result)
 				}
 
 				//任务成功执行，将该任务从其它任务的依赖列表中删除。
@@ -133,17 +103,7 @@ func (s *ExecSchedule) Run() { // {{{
 							nextask.execJob.startTime = time.Now()
 							nextask.execJob.state = 1
 							nextask.execJob.Log()
-							p(logrus.Fields{ // {{{
-								"batchId":    nextask.execJob.batchId,
-								"batchJobId": nextask.execJob.batchJobId,
-								"jobName":    nextask.execJob.job.name,
-								"state":      nextask.execJob.state,
-								"result":     nextask.execJob.result,
-								"startTime":  nextask.execJob.startTime,
-								"endTime":    nextask.execJob.endTime,
-								"info":       "job is start",
-								"error":      nil,
-							}).Info(fn) // }}}
+							l.Infoln("job ", nextask.execJob.job.name, " is start ", " batchJobId=", nextask.execJob.batchJobId)
 						}
 						go nextask.Run(staskChan)
 					}
@@ -155,7 +115,7 @@ func (s *ExecSchedule) Run() { // {{{
 				n := clearFailTask(t) - 1
 				s.taskCnt -= n
 
-				fmt.Println(t.state, "    ", t.task.Name, "  ", t.task.Cmd, "\n\n")
+				l.Infoln("task ", t.task.Name, " is fail ", " batchTaskId=", t.batchTaskId, " state=", t.state)
 
 			}
 
@@ -163,20 +123,10 @@ func (s *ExecSchedule) Run() { // {{{
 				//全部完成后，写入日志存储至数据库，设置下次启动时间
 				s.endTime = time.Now()
 				s.state = 3
-				err := s.Log()
+				s.Log()
 
-				p(logrus.Fields{ // {{{
-					"batchId":      s.batchId,
-					"scheduleName": s.schedule.name,
-					"state":        s.state,
-					"result":       s.result,
-					"startTime":    s.startTime,
-					"endTime":      s.endTime,
-					"jobCnt":       s.jobCnt,
-					"taskCnt":      s.taskCnt,
-					"info":         "schedule is end",
-					"error":        err,
-				}).Info(fn) // }}}
+				l.Infoln("schedule ", s.schedule.name, " is end ", " batchId=", s.batchId,
+					" success=", s.successTaskCnt, " fail=", s.failTaskCnt, " result=", s.result)
 
 				//自动调度执行，完成后设置下次执行时间
 				if s.execType == 1 {
@@ -210,7 +160,6 @@ func clearFailTask(t *ExecTask) (n int64) { // {{{
 	if len(t.nextExecTasks) != 0 {
 		for _, nextaks := range t.nextExecTasks {
 			n += clearFailTask(nextaks)
-
 		}
 	}
 
@@ -359,26 +308,15 @@ type Reply struct {
 //执行时会从任务执行结构中取出需要执行的信息，通过RPC发送给执行模块执行。
 //完成后更新执行信息，并将任务置入taskChan变量中，供后续处理。
 func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
-	fn := "ExecTask.Run"
+	rl := new(Reply)
 	defer func() {
 		if err := recover(); err != nil {
 			var buf bytes.Buffer
 			buf.Write(debug.Stack())
 			t.endTime = time.Now()
 			t.state = 4
-			p(logrus.Fields{ // {{{
-				"batchId":      t.batchId,
-				"batchJobId":   t.batchJobId,
-				"batchTaskId":  t.batchTaskId,
-				"TaskName":     t.task.Name,
-				"state":        t.state,
-				"startTime":    t.startTime,
-				"endTime":      t.endTime,
-				"relExecTasks": t.relExecTasks,
-				"info":         "task is pause",
-				"error":        err,
-				"panic":        buf.String(),
-			}).Warn(fn) // }}}
+			l.Warningln("task run error", "batchTaskId=", t.batchTaskId, "TaskName=",
+				t.task.Name, "output=", rl.Stdout, "err=", err, " stack=", buf.String())
 			t.Log()
 
 			taskChan <- t
@@ -388,18 +326,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	//若任务为暂停状态则不执行直接退出
 	if t.state == 2 {
-		p(logrus.Fields{ // {{{
-			"batchId":      t.batchId,
-			"batchJobId":   t.batchJobId,
-			"batchTaskId":  t.batchTaskId,
-			"TaskName":     t.task.Name,
-			"state":        t.state,
-			"startTime":    t.startTime,
-			"endTime":      t.endTime,
-			"relExecTasks": t.relExecTasks,
-			"info":         "task is ignore",
-			"error":        nil,
-		}).Info(fn) // }}}
+		l.Infoln("task ", t.task.Name, " is ignore batchTaskId=", t.batchTaskId)
 		t.Log()
 		taskChan <- t
 		return
@@ -412,23 +339,11 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	t.state = 1
 
 	t.Log()
-	p(logrus.Fields{ // {{{
-		"batchId":      t.batchId,
-		"batchJobId":   t.batchJobId,
-		"batchTaskId":  t.batchTaskId,
-		"TaskName":     t.task.Name,
-		"state":        t.state,
-		"startTime":    t.startTime,
-		"endTime":      t.endTime,
-		"relExecTasks": t.relExecTasks,
-		"info":         "task is start",
-		"error":        nil,
-	}).Info(fn) // }}}
+	l.Infoln("task ", t.task.Name, " is start batchTaskId=", t.batchTaskId)
 
 	//执行任务
 	address := t.task.Address
 	task := t.task
-	rl := new(Reply)
 
 	t.state = 3
 
@@ -440,7 +355,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 				t.state = 4
 			}
 		} else {
-			panic("client.Call is error ")
+			panic(err.Error())
 		}
 	} else {
 		panic("unexpected HTTP ")
@@ -450,18 +365,8 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	t.endTime = time.Now()
 
 	t.Log()
-
-	p(logrus.Fields{ // {{{
-		"batchId":      t.batchId,
-		"batchJobId":   t.batchJobId,
-		"batchTaskId":  t.batchTaskId,
-		"TaskName":     t.task.Name,
-		"state":        t.state,
-		"startTime":    t.startTime,
-		"endTime":      t.endTime,
-		"relExecTasks": t.relExecTasks,
-		"info":         "task is end",
-	}).Info(fn) // }}}
+	l.Infoln("task", t.task.Name, "is end batchTaskId =", t.batchTaskId, "state =",
+		t.state, "output =", rl.Stdout)
 
 	taskChan <- t
 
@@ -469,7 +374,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 func NewExecSchedule(rscd *Schedule) (execScd *ExecSchedule, err error) { // {{{
 	//批次ID
-	bid := fmt.Sprintf("%s %d", rscd.id, time.Now().Format("2006-01-02 15:04:05.000000"))
+	bid := fmt.Sprintf("%s %d", time.Now().Format("2006-01-02 15:04:05.000000"), rscd.id)
 	return NewExecScheduleById(bid, rscd)
 
 } // }}}
@@ -477,7 +382,6 @@ func NewExecSchedule(rscd *Schedule) (execScd *ExecSchedule, err error) { // {{{
 //NewExecSchedule会根据传入的Schedule参数来构建一个调度的执行结构。
 //执行结构包含完整的执行链，构造完成后会调用ExecSchedule的Run方法来开始执行。
 func NewExecScheduleById(bid string, rscd *Schedule) (execScd *ExecSchedule, err error) { // {{{
-	fn := "NewExecSchedule"
 
 	execScd = &ExecSchedule{
 		batchId:   bid,  //批次ID
@@ -503,21 +407,13 @@ func NewExecScheduleById(bid string, rscd *Schedule) (execScd *ExecSchedule, err
 		j = j.nextJob
 	}
 
-	p(logrus.Fields{ // {{{
-		"batchId":      execScd.batchId,
-		"scheduleName": execScd.schedule.name,
-		"jobCnt":       execScd.jobCnt,
-		"taskCnt":      execScd.taskCnt,
-		"info":         "schedule is create",
-		"error":        err,
-	}).Info(fn) // }}}
+	l.Infoln("ExecSchedule ", execScd.schedule.name, " is create batchId=", bid)
 
 	return execScd, err
 } // }}}
 
 //NewExecJob根据输入的job和batchId构建作业执行链，并返回。
 func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
-	fn := "NewExecJob"
 	bjd := fmt.Sprintf("%s.%d", batchId, job.id)
 
 	execJob = &ExecJob{
@@ -566,23 +462,10 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 
 		execJob.execTasks = append(execJob.execTasks, execTask)
 
-		p(logrus.Fields{ // {{{
-			"batchId":     execTask.batchId,
-			"batchJobId":  execTask.batchJobId,
-			"batchTaskId": execTask.batchTaskId,
-			"taskName":    execTask.task.Name,
-			"info":        "task is create",
-			"error":       err,
-		}).Info(fn) // }}}
+		l.Infoln("ExecTask ", execTask.task.Name, " is create batchTaskId=", execTask.batchTaskId)
 	}
 
-	p(logrus.Fields{ // {{{
-		"batchId":    execJob.batchId,
-		"batchJobId": execJob.batchJobId,
-		"jobName":    execJob.job.name,
-		"info":       "job is create",
-		"error":      err,
-	}).Info(fn) // }}}
+	l.Infoln("ExecJob ", execJob.job.name, " is create batchJobId=", execJob.batchJobId)
 
 	//继续构建作业的下级作业
 	if job.nextJob != nil {
@@ -596,6 +479,10 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 //ExecSchedule.Restore(batchId string)方法修复执行指定的调度。
 //根据传入的batchId，构建调度执行结构，并调用Run方法执行其中的任务
 func Restore(batchId string, scdId int64) (err error) { // {{{
+
+	l.Infoln("Restore schedule by ", " batchid=", batchId, " scdId=", scdId)
+
+	//获取执行成功的Task
 	successTaskId := getSuccessTaskId(batchId)
 
 	//创建ExecSchedule结构
@@ -621,8 +508,12 @@ func Restore(batchId string, scdId int64) (err error) { // {{{
 		t.execJob.state = 1
 	}
 
+	l.Infoln("schedule will restore")
+
 	//执行
 	execSchedule.Run()
+
+	l.Infoln("schedule was restored")
 
 	return nil
 

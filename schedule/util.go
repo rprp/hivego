@@ -12,7 +12,7 @@ func checkErr(err error) { // {{{
 } // }}}
 
 //打印调度信息
-func printSchedule(scds []*Schedule) { // {{{
+func printSchedule(scds map[int64]*Schedule) { // {{{
 	for _, scd := range scds {
 		fmt.Println(scd.name, "\tjobs=", scd.jobCnt, " tasks=", scd.taskCnt)
 		//打印调度中的作业信息

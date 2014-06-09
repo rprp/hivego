@@ -34,10 +34,12 @@ func (sl *ScheduleList) setSchedules() (err error) {
 }
 
 //执行调度
-func (sl *ScheduleList) Run() {
+func (sl *ScheduleList) StartSchedule() {
+
 	for _, scd := range sl.schedules {
 		go scd.Timer()
 	}
+
 }
 
 //InitSchedules方法，初始化调度列表
@@ -61,12 +63,14 @@ func (sl *ScheduleList) InitSchedules() (err error) {
 		sl.tasks[taskid].TimeOut = sl.jobs[jobid].timeOut
 		sl.jobs[jobid].taskCnt++
 	}
+	l.Infoln("set task in job")
 
 	//设置task的依赖链
 	for _, maptask := range reltasks {
 		sl.tasks[maptask.taskId].RelTasks[maptask.reltaskId] = sl.tasks[maptask.reltaskId]
 		sl.tasks[maptask.taskId].RelTaskCnt++
 	}
+	l.Infoln("set task relation")
 
 	//构建调度链信息
 	for _, scd := range sl.schedules {
@@ -86,9 +90,11 @@ func (sl *ScheduleList) InitSchedules() (err error) {
 			j = j.nextJob
 			scd.jobCnt++
 			scd.taskCnt += j.taskCnt
+			l.Infoln(scd.name, "-", j.name, " was created")
 
 		}
 
+		l.Infoln(scd.name, " was created", " jobcnt=", scd.jobCnt, " taskcnt=", scd.taskCnt)
 	}
 
 	return nil
@@ -118,10 +124,15 @@ func (s *Schedule) Timer() { // {{{
 	checkErr(err)
 
 	s.nextStart = time.Now().Add(countDown)
+	l.Infoln(s.name, " will start at ", s.nextStart)
 	select {
 	case <-time.After(countDown):
-		//调度信息，存入chan中
-		gScdChan <- s
+		l.Infoln(s.name, " is start")
+		//启动一个线程开始构建执行结构链
+		es, err := NewExecSchedule(s)
+		checkErr(err)
+		//启动线程执行调度任务
+		go es.Run()
 	}
 	return
 } // }}}
@@ -229,6 +240,37 @@ func getAllJobs() (jobs map[int64]*Job, err error) { // {{{
 } // }}}
 
 //从元数据库获取Job下的Task列表。
+func getTaskParam() (taskParam map[int64]map[string]string, err error) { // {{{
+
+	taskParam = make(map[int64]map[string]string)
+
+	//查询指定的Task属性列表
+	sql := `SELECT pm.task_id,
+				   pm.scd_param_name,
+				   pm.scd_param_value
+			FROM   hive.scd_schedule_param pm`
+
+	rows, err := gDbConn.Query(sql)
+	checkErr(err)
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		p := make(map[string]string, 10)
+		var id int64
+		var name, value string
+		err = rows.Scan(&id, &name, &value)
+		if tp, ok := taskParam[id]; ok {
+			tp[name] = value
+			taskParam[id] = tp
+		} else {
+			p[name] = value
+			taskParam[id] = p
+		}
+	}
+	return taskParam, err
+} // }}}
+
+//从元数据库获取Job下的Task列表。
 func getTaskAttr(id int64) (taskAttr map[string]string, err error) { // {{{
 
 	taskAttr = make(map[string]string)
@@ -253,7 +295,7 @@ func getTaskAttr(id int64) (taskAttr map[string]string, err error) { // {{{
 
 //从元数据库获取Job下的Task列表。
 func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
-
+	taskParam, _ := getTaskParam()
 	tasks = make(map[int64]*Task)
 
 	//查询全部Task列表
@@ -278,6 +320,7 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 		task.Param = make(map[string]string)
 		task.Attr = make(map[string]string)
 		task.Attr, err = getTaskAttr(task.Id)
+		task.Param = taskParam[task.Id]
 		checkErr(err)
 
 		tasks[task.Id] = task
