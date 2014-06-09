@@ -21,7 +21,7 @@ var (
 	gPort   string  // 监听端口号
 	gDbConn *sql.DB //数据库链接
 
-	gScds map[int64]*Schedule //全局调度列表
+	gScdList *ScheduleList //全局调度列表
 
 	gScdChan     chan *Schedule    //执行的调度结构
 	gExecScdChan chan ExecSchedule //执行的调度结构
@@ -35,11 +35,11 @@ func init() { // {{{
 
 	//设置log模块的默认格式
 	gLog.Formatter = new(logrus.TextFormatter) // default
+	gLog.Level = logrus.Debug
 
 	//从配置文件中获取数据库连接、服务端口号等信息
 	gPort = ":8123"
 
-	gScds = make(map[int64]*Schedule)
 	gScdChan = make(chan *Schedule)
 	gExecTasks = make(map[int64]*ExecTask)
 
@@ -59,68 +59,12 @@ func StartSchedule() error { // {{{
 
 	defer gDbConn.Close()
 
-	//连接元数据库，初始化调度信息至内存
-	reltasks, err := getRelTasks() //获取Task的依赖链
-	checkErr(err)
+	//调度列表
+	sLst := &ScheduleList{}
 
-	jobtask, err := getJobTask() //获取Job的Task列表
-	checkErr(err)
+	sLst.InitSchedules()
 
-	tasks, err := getAllTasks() //获取Task列表
-	checkErr(err)
-
-	jobs, err := getAllJobs() //获取Job列表
-	checkErr(err)
-
-	schedules, err := getAllSchedules() //获取Schedule列表
-	checkErr(err)
-
-	//设置job中的task列表
-	//由于框架规定一个task只能在一个job中，N:1关系
-	//只需遍历一遍task与job对应关系结构，从jobs的map中找出job设置它的task即可
-	for taskid, jobid := range jobtask {
-		jobs[jobid].tasks[taskid] = tasks[taskid]
-		//顺便把job的TimeOut赋值给task
-		tasks[taskid].TimeOut = jobs[jobid].timeOut
-		jobs[jobid].taskCnt++
-	}
-
-	//设置task的依赖链
-	for _, maptask := range reltasks {
-		tasks[maptask.taskId].RelTasks[maptask.reltaskId] = tasks[maptask.reltaskId]
-		tasks[maptask.taskId].RelTaskCnt++
-	}
-
-	//构建调度链信息
-	for _, scd := range schedules {
-		var ok bool
-
-		if scd.job, ok = jobs[scd.jobId]; !ok {
-			continue
-		}
-		//设置调度中的job
-		scd.jobCnt++
-		scd.taskCnt = scd.job.taskCnt
-
-		//设置job链
-		for j := scd.job; j.nextJobId != 0; {
-			j.nextJob = jobs[j.nextJobId]
-			j.preJob = jobs[j.preJobId]
-			j = j.nextJob
-			scd.jobCnt++
-			scd.taskCnt += j.taskCnt
-
-		}
-
-		//当构建完成一个调度后，调用它的Timer方法。
-		go scd.Timer()
-
-		gScds[scd.id] = scd
-
-	}
-
-	//打印调度信息
-	printSchedule(schedules)
+	sLst.Run()
 
 	//从chan中得到需要执行的调度，启动一个线程执行
 	for {
