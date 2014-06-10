@@ -8,17 +8,14 @@ import (
 	"errors"
 	"github.com/Sirupsen/logrus"
 	"io"
-	"net/http"
-	"net/rpc"
 	"os/exec"
 	"runtime"
 	"runtime/debug"
+	"sync"
 	"time"
 )
 
 var (
-	// 监听端口号
-	gPort string = ":8123"
 	//全局log对象
 	l = logrus.New()
 	p = l.WithFields
@@ -83,7 +80,10 @@ func (this *CmdExecuter) Run(task *Task, reply *Reply) error { // {{{
 func runCmd(task *Task, reply *Reply) error { // {{{
 	var c *exec.Cmd
 	var cmdArgs []string //执行的命令行参数
+	var s sync.Mutex
 
+	s.Lock()
+	defer s.Unlock()
 	//从task结构中获取并组合命令参数
 	for _, v := range task.Param {
 		cmdArgs = append(cmdArgs, v)
@@ -132,7 +132,7 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 		}
 
 		if err := c.Wait(); err != nil {
-			l.Warnln("Wait=", err.Error())
+			l.Warnln("Wait=", err.Error(), "timout=", task.TimeOut)
 			chErr <- err
 			return
 		}
@@ -145,7 +145,7 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 	case <-time.After(time.Duration(task.TimeOut) * 1000 * time.Millisecond):
 		c.Process.Kill()
 		l.Warnln("runCmd is time out TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
-			cmdArgs, "Error=", "time out")
+			cmdArgs, "timeout=", task.TimeOut)
 		reply.Err = errors.New("time out")
 		return errors.New("time out")
 	case e := <-chErr:
@@ -164,22 +164,16 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 	return nil
 } // }}}
 
-//启动HTTP服务监控指定端口
-func ListenAndServer(port string) { // {{{
-	executer := new(CmdExecuter)
-	rpc.Register(executer)
-	rpc.HandleHTTP()
-
-	l.Infoln("Server is running Port:", port)
-
-	err := http.ListenAndServe(port, nil)
-
-	if err != nil {
-		l.Infoln("error", err.Error())
-	}
-
-} // }}}
-
 func main() {
-	ListenAndServer(gPort)
+	for i := 0; i < 5; i++ {
+		t := &Task{}
+		t.Name = "ping" + string(i)
+		t.Cmd = "ping"
+		t.TimeOut = int64(5 + i)
+		t.Param = map[string]string{"xx": "-t 20", "ip": "localhost"}
+
+		r := &Reply{}
+		e := new(CmdExecuter)
+		e.Run(t, r)
+	}
 }

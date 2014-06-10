@@ -326,7 +326,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	//若任务为暂停状态则不执行直接退出
 	if t.state == 2 {
-		l.Infoln("task ", t.task.Name, " is ignore batchTaskId=", t.batchTaskId)
+		l.Infoln("task", t.task.Name, "is ignore batchTaskId=", t.batchTaskId)
 		t.Log()
 		taskChan <- t
 		return
@@ -339,7 +339,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	t.state = 1
 
 	t.Log()
-	l.Infoln("task ", t.task.Name, " is start batchTaskId=", t.batchTaskId)
+	l.Infoln("task", t.task.Name, "is start batchTaskId=", t.batchTaskId, "cmd =", t.task.Cmd, " arg=", t.task.Param)
 
 	//执行任务
 	address := t.task.Address
