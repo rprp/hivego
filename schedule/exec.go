@@ -347,7 +347,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	t.state = 3
 
-	if client, err := rpc.DialHTTP("tcp", address+gPort); err == nil {
+	if client, err := rpc.Dial("tcp", address+gPort); err == nil {
 
 		if err := client.Call("CmdExecuter.Run", task, &rl); err == nil {
 			if rl.Err != nil {
