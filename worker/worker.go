@@ -8,11 +8,12 @@ import (
 	"errors"
 	"github.com/Sirupsen/logrus"
 	"io"
-	"net/http"
+	"net"
 	"net/rpc"
 	"os/exec"
 	"runtime"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -93,7 +94,8 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 	ok := make(chan bool, 1)
 	chErr := make(chan error, 1)
 
-	c = exec.Command(task.Cmd, cmdArgs...)
+	cmd := strings.TrimSpace(task.Cmd)
+	c = exec.Command(cmd, cmdArgs...)
 	//启动一个goroutine执行任务，超时则直接返回，
 	//正常结束则设置成功执行标志ok
 	go func() {
@@ -168,14 +170,23 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 func ListenAndServer(port string) { // {{{
 	executer := new(CmdExecuter)
 	rpc.Register(executer)
-	rpc.HandleHTTP()
 
 	l.Infoln("Server is running Port:", port)
 
-	err := http.ListenAndServe(port, nil)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", port)
+	checkErr(err)
 
-	if err != nil {
-		l.Infoln("error", err.Error())
+	listener, err := net.ListenTCP("tcp", tcpAddr)
+	checkErr(err)
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			continue
+		}
+		go func() {
+			rpc.ServeConn(conn)
+		}()
 	}
 
 } // }}}
@@ -183,3 +194,10 @@ func ListenAndServer(port string) { // {{{
 func main() {
 	ListenAndServer(gPort)
 }
+
+func checkErr(err error) { // {{{
+	if err != nil {
+		l.Infoln("error", err.Error())
+		panic(err)
+	}
+} // }}}

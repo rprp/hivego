@@ -46,7 +46,7 @@ func (s *ExecSchedule) Run() { // {{{
 	s.state = 1
 	s.Log()
 
-	l.Infoln("schedule ", s.schedule.name, " is start ", " batchId=", s.batchId)
+	l.Infoln("schedule", s.schedule.name, "is start", "batchId=", s.batchId)
 
 	//启动独立的任务
 	for _, execTask := range s.execTasks {
@@ -114,6 +114,7 @@ func (s *ExecSchedule) Run() { // {{{
 				//任务失败，处理下游依赖任务链
 				n := clearFailTask(t) - 1
 				s.taskCnt -= n
+				s.failTaskCnt += n
 
 				l.Infoln("task ", t.task.Name, " is fail ", " batchTaskId=", t.batchTaskId, " state=", t.state)
 

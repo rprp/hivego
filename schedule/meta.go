@@ -8,126 +8,37 @@ import (
 	"time"
 )
 
-//调度列表
-type ScheduleList struct {
-	schedules map[int64]*Schedule //调度列表
-	tasks     map[int64]*Task     //任务列表
-	jobs      map[int64]*Job      //作业列表
-}
-
-//从元数据库获取Job列表
-func (sl *ScheduleList) setJobs() (err error) {
-	sl.jobs, err = getAllJobs()
-	return err
-}
-
-//从元数据库获取Task列表
-func (sl *ScheduleList) setTasks() (err error) {
-	sl.tasks, err = getAllTasks()
-	return err
-}
-
-//从元数据库获取Schedule列表
-func (sl *ScheduleList) setSchedules() (err error) {
-	sl.schedules, err = getAllSchedules()
-	return err
-}
-
-//执行调度
-func (sl *ScheduleList) StartSchedule() {
-
-	for _, scd := range sl.schedules {
-		go scd.Timer()
-	}
-
-}
-
-//InitSchedules方法，初始化调度列表
-func (sl *ScheduleList) InitSchedules() (err error) {
-
-	//从元数据库读取调度信息
-	sl.setSchedules()
-	sl.setJobs()
-	sl.setTasks()
-
-	reltasks, err := getRelTasks() //获取Task的依赖链
-
-	jobtask, err := getJobTask() //获取Job的Task列表
-
-	//设置job中的task列表
-	//由于框架规定一个task只能在一个job中，N:1关系
-	//只需遍历一遍task与job对应关系结构，从jobs的map中找出job设置它的task即可
-	for taskid, jobid := range jobtask {
-		sl.jobs[jobid].tasks[taskid] = sl.tasks[taskid]
-		//顺便把job的TimeOut赋值给task
-		sl.tasks[taskid].TimeOut = sl.jobs[jobid].timeOut
-		sl.jobs[jobid].taskCnt++
-	}
-	l.Infoln("set task in job")
-
-	//设置task的依赖链
-	for _, maptask := range reltasks {
-		sl.tasks[maptask.taskId].RelTasks[maptask.reltaskId] = sl.tasks[maptask.reltaskId]
-		sl.tasks[maptask.taskId].RelTaskCnt++
-	}
-	l.Infoln("set task relation")
-
-	//构建调度链信息
-	for _, scd := range sl.schedules {
-		var ok bool
-
-		if scd.job, ok = sl.jobs[scd.jobId]; !ok {
-			continue
-		}
-		//设置调度中的job
-		scd.jobCnt++
-		scd.taskCnt = scd.job.taskCnt
-
-		//设置job链
-		for j := scd.job; j.nextJobId != 0; {
-			j.nextJob = sl.jobs[j.nextJobId]
-			j.preJob = sl.jobs[j.preJobId]
-			j = j.nextJob
-			scd.jobCnt++
-			scd.taskCnt += j.taskCnt
-			l.Infoln(scd.name, "-", j.name, " was created")
-
-		}
-
-		l.Infoln(scd.name, " was created", " jobcnt=", scd.jobCnt, " taskcnt=", scd.taskCnt)
-	}
-
-	return nil
-}
-
 //调度信息结构
 type Schedule struct {
-	id          int64             //调度ID
-	name        string            //调度名称
-	count       int8              //调度次数
-	cyc         string            //调度周期
-	param       map[string]string //调度参数
-	startSecond time.Duration     //周期内启动时间
-	nextStart   time.Time         //周期内启动时间
-	timeOut     int64             //最大执行时间
-	jobId       int64             //作业ID
-	job         *Job              //作业
-	desc        string            //调度说明
-	jobCnt      int64             //调度中作业数量
-	taskCnt     int64             //调度中任务数量
+	id          int64         //调度ID
+	name        string        //调度名称
+	count       int8          //调度次数
+	cyc         string        //调度周期
+	startSecond time.Duration //周期内启动时间
+	nextStart   time.Time     //周期内启动时间
+	timeOut     int64         //最大执行时间
+	jobId       int64         //作业ID
+	job         *Job          //作业
+	desc        string        //调度说明
+	jobCnt      int64         //调度中作业数量
+	taskCnt     int64         //调度中任务数量
 }
 
 //根据调度的周期及启动时间，按时将调度传至执行列表执行。
 func (s *Schedule) Timer() { // {{{
+
 	//获取距启动的时间（秒）
 	countDown, err := getCountDown(s.cyc, s.startSecond)
 	checkErr(err)
 
 	s.nextStart = time.Now().Add(countDown)
-	l.Infoln(s.name, " will start at ", s.nextStart)
+	l.Infoln(s.name, "will start at", s.nextStart)
 	select {
 	case <-time.After(countDown):
-		l.Infoln(s.name, " is start")
+		//刷新调度
+		s.refreshSchedule()
+
+		l.Infoln(s.name, "is start")
 		//启动一个线程开始构建执行结构链
 		es, err := NewExecSchedule(s)
 		checkErr(err)
@@ -137,11 +48,38 @@ func (s *Schedule) Timer() { // {{{
 	return
 } // }}}
 
+//refreshSchedule方法用来从元数据库刷新调度信息
+func (s *Schedule) refreshSchedule() { // {{{
+	if ts, ok := getSchedule(s.id); ok {
+		s.name = ts.name
+		s.count = ts.count
+		s.cyc = ts.cyc
+		s.startSecond = ts.startSecond
+		s.nextStart = ts.nextStart
+		s.timeOut = ts.timeOut
+		s.jobId = ts.jobId
+		s.desc = ts.desc
+
+		if tj, ok := getJob(s.jobId); ok {
+			tj.refreshJob()
+			s.job = tj
+		}
+
+		s.jobCnt = 0
+		s.taskCnt = 0
+		for j := s.job; j != nil; {
+			s.jobCnt++
+			s.taskCnt += j.taskCnt
+			j = j.nextJob
+		}
+	}
+
+} // }}}
+
 //作业信息结构
 type Job struct {
 	id        int64           //作业ID
 	name      string          //作业名称
-	timeOut   int64           //最大执行时间
 	desc      string          //作业说明
 	preJobId  int64           //上级作业ID
 	preJob    *Job            //上级作业
@@ -149,6 +87,39 @@ type Job struct {
 	nextJob   *Job            //下级作业
 	tasks     map[int64]*Task //作业中的任务
 	taskCnt   int64           //调度中任务数量
+}
+
+//refreshJob方法用来从元数据库刷新作业信息
+func (j *Job) refreshJob() {
+
+	if tj, ok := getJob(j.id); ok {
+		j.name = tj.name
+		j.desc = tj.desc
+		j.preJobId = tj.preJobId
+		j.nextJobId = tj.nextJobId
+		j.nextJob = tj.nextJob
+		j.tasks = make(map[int64]*Task)
+		j.taskCnt = 0
+
+		l.Infoln("refresh job", j.name)
+		if pj, ok := getJob(j.preJobId); ok {
+			j.preJob = pj
+		}
+
+		if t, ok := getTasks(j.id); ok {
+			j.tasks = t
+			for _, tt := range t {
+				j.taskCnt++
+				l.Infoln("refresh task", tt.Name)
+				tt.refreshTask(j.id)
+			}
+		}
+
+		if nj, ok := getJob(j.nextJobId); ok {
+			nj.refreshJob()
+			j.nextJob = nj
+		}
+	}
 }
 
 // 任务信息结构
@@ -168,11 +139,72 @@ type Task struct {
 	RelTaskCnt  int64             //依赖的任务数量
 }
 
+//refreshTask方法用来从元数据库刷新Task的信息
+func (t *Task) refreshTask(jobid int64) {
+	if tt, ok := getTask(t.Id); ok {
+		t.Address = tt.Address
+		t.Name = tt.Name
+		t.TimeOut = tt.TimeOut
+		t.JobType = tt.JobType
+		t.Cyc = tt.Cyc
+		t.StartSecond = tt.StartSecond
+		t.Cmd = tt.Cmd
+		t.Param = tt.Param
+		t.JobId = jobid
+		t.Attr = tt.Attr
+		t.RelTasks = make(map[int64]*Task)
+		t.RelTaskCnt = 0
+
+		if reltask, ok := getRelTaskId(t.Id); ok {
+			for _, rtid := range reltask {
+				t.RelTasks[rtid] = gTasks[rtid]
+				t.RelTaskCnt++
+			}
+		}
+
+	}
+
+}
+
 // 任务依赖结构
 type RelTask struct {
 	taskId    int64 //任务ID
 	reltaskId int64 //依赖任务ID
 }
+
+//从元数据库获取指定的Schedule。
+func getSchedule(id int64) (scd *Schedule, ok bool) { // {{{
+	var stime int64
+
+	//查询全部schedule列表
+	sql := `SELECT scd.scd_id,
+				scd.scd_name,
+				scd.scd_num,
+				scd.scd_cyc,
+				scd.scd_start,
+				scd.scd_timeout,
+				scd.scd_job_id,
+				scd.scd_desc
+			FROM hive.scd_schedule scd
+			WHERE scd.scd_id=?`
+
+	rows, err := gDbConn.Query(sql, id)
+	checkErr(err)
+
+	scd = &Schedule{}
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc, &stime,
+			&scd.timeOut, &scd.jobId, &scd.desc)
+		if err == nil {
+			ok = true
+		}
+		scd.startSecond = time.Duration(stime) * time.Second
+
+	}
+
+	return scd, ok
+} // }}}
 
 //从元数据库获取Schedule列表。
 func getAllSchedules() (scds map[int64]*Schedule, err error) { // {{{
@@ -200,13 +232,39 @@ func getAllSchedules() (scds map[int64]*Schedule, err error) { // {{{
 			&scd.timeOut, &scd.jobId, &scd.desc)
 		scd.startSecond = time.Duration(stime) * time.Second
 
-		//初始化param的内存
-		scd.param = make(map[string]string)
-
 		scds[scd.id] = scd
 	}
 
 	return scds, err
+} // }}}
+
+//从元数据库获取Job信息。
+func getJob(id int64) (job *Job, ok bool) { // {{{
+
+	//查询全部Job列表
+	sql := `SELECT job.job_id,
+			   job.job_name,
+			   job.job_desc,
+			   job.prev_job_id,
+			   job.next_job_id
+			FROM hive.scd_job job
+			WHERE job.job_id=?`
+
+	rows, err := gDbConn.Query(sql, id)
+	checkErr(err)
+
+	job = &Job{}
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&job.id, &job.name, &job.desc, &job.preJobId, &job.nextJobId)
+		if err == nil {
+			ok = true
+		}
+		//初始化Task内存
+		job.tasks = make(map[int64]*Task)
+	}
+
+	return job, ok
 } // }}}
 
 //从元数据库获取Schedule下的Job列表。
@@ -217,7 +275,6 @@ func getAllJobs() (jobs map[int64]*Job, err error) { // {{{
 	//查询全部Job列表
 	sql := `SELECT job.job_id,
 			   job.job_name,
-			   job.job_timeout,
 			   job.job_desc,
 			   job.prev_job_id,
 			   job.next_job_id
@@ -229,7 +286,7 @@ func getAllJobs() (jobs map[int64]*Job, err error) { // {{{
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
 		job := &Job{}
-		err = rows.Scan(&job.id, &job.name, &job.timeOut, &job.desc, &job.preJobId, &job.nextJobId)
+		err = rows.Scan(&job.id, &job.name, &job.desc, &job.preJobId, &job.nextJobId)
 
 		//初始化Task内存
 		job.tasks = make(map[int64]*Task)
@@ -239,33 +296,27 @@ func getAllJobs() (jobs map[int64]*Job, err error) { // {{{
 	return jobs, err
 } // }}}
 
-//从元数据库获取Job下的Task列表。
-func getTaskParam() (taskParam map[int64]map[string]string, err error) { // {{{
+//从元数据库获取任务参数信息
+func getTaskParam(id int64) (taskParam map[string]string, err error) { // {{{
 
-	taskParam = make(map[int64]map[string]string)
+	taskParam = make(map[string]string)
 
 	//查询指定的Task属性列表
 	sql := `SELECT pm.task_id,
 				   pm.scd_param_name,
 				   pm.scd_param_value
-			FROM   hive.scd_schedule_param pm`
+			FROM   hive.scd_task_param pm
+			WHERE pm.task_id=?`
 
-	rows, err := gDbConn.Query(sql)
+	rows, err := gDbConn.Query(sql, id)
 	checkErr(err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		p := make(map[string]string, 10)
 		var id int64
 		var name, value string
 		err = rows.Scan(&id, &name, &value)
-		if tp, ok := taskParam[id]; ok {
-			tp[name] = value
-			taskParam[id] = tp
-		} else {
-			p[name] = value
-			taskParam[id] = p
-		}
+		taskParam[name] = value
 	}
 	return taskParam, err
 } // }}}
@@ -293,15 +344,53 @@ func getTaskAttr(id int64) (taskAttr map[string]string, err error) { // {{{
 	return taskAttr, err
 } // }}}
 
+//从元数据库获取Task信息。
+func getTask(id int64) (task *Task, ok bool) { // {{{
+
+	//查询全部Task列表
+	sql := `SELECT task.task_id,
+			   task.task_address,
+			   task.task_name,
+			   task.task_time_out,
+			   task.task_type_id,
+			   task.task_cyc,
+			   task.task_start,
+			   task.task_cmd
+			FROM hive.scd_task task
+			WHERE task.task_id=?`
+
+	rows, err := gDbConn.Query(sql, id)
+	checkErr(err)
+
+	task = &Task{}
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.Cyc, &task.StartSecond, &task.Cmd)
+		if err == nil {
+			ok = true
+		}
+		//初始化relTask、param的内存
+		task.RelTasks = make(map[int64]*Task)
+		task.Param = make(map[string]string)
+		task.Attr = make(map[string]string)
+		task.Attr, err = getTaskAttr(task.Id)
+		task.Param, err = getTaskParam(task.Id)
+		checkErr(err)
+
+	}
+	return task, ok
+} // }}}
+
 //从元数据库获取Job下的Task列表。
 func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
-	taskParam, _ := getTaskParam()
+
 	tasks = make(map[int64]*Task)
 
 	//查询全部Task列表
 	sql := `SELECT task.task_id,
 			   task.task_address,
 			   task.task_name,
+			   task.task_time_out,
 			   task.task_type_id,
 			   task.task_cyc,
 			   task.task_start,
@@ -314,13 +403,13 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.JobType, &task.Cyc, &task.StartSecond, &task.Cmd)
+		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.Cyc, &task.StartSecond, &task.Cmd)
 		//初始化relTask、param的内存
 		task.RelTasks = make(map[int64]*Task)
 		task.Param = make(map[string]string)
 		task.Attr = make(map[string]string)
 		task.Attr, err = getTaskAttr(task.Id)
-		task.Param = taskParam[task.Id]
+		task.Param, err = getTaskParam(task.Id)
 		checkErr(err)
 
 		tasks[task.Id] = task
@@ -329,7 +418,35 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 } // }}}
 
 //从元数据库获取Job下的Task列表。
-func getJobTask() (jobtask map[int64]int64, err error) { // {{{
+func getTasks(jobId int64) (tasks map[int64]*Task, ok bool) { // {{{
+
+	tasks = make(map[int64]*Task)
+
+	//查询Job中全部Task列表
+	sql := `SELECT jt.task_id
+			FROM hive.scd_job_task jt
+			WHERE jt.job_id=?`
+
+	rows, err := gDbConn.Query(sql, jobId)
+	checkErr(err)
+
+	//循环读取记录
+	for rows.Next() {
+		var taskid int64
+		err = rows.Scan(&taskid)
+		if err == nil {
+			ok = true
+			if task, ok := getTask(taskid); ok {
+				tasks[taskid] = task
+				gTasks[taskid] = task
+			}
+		}
+	}
+	return tasks, ok
+} // }}}
+
+//从元数据库获取Job下的Task列表。
+func getJobTaskid() (jobtask map[int64]int64, err error) { // {{{
 
 	jobtask = make(map[int64]int64)
 
@@ -348,6 +465,31 @@ func getJobTask() (jobtask map[int64]int64, err error) { // {{{
 		jobtask[taskid] = jobid
 	}
 	return jobtask, err
+} // }}}
+
+//从元数据库获取Task的依赖列表。
+func getRelTaskId(id int64) (relTaskId []int64, ok bool) { // {{{
+
+	relTaskId = make([]int64, 0)
+
+	//查询Task的依赖列表
+	sql := `SELECT tr.rel_task_id
+			FROM hive.scd_task_rel tr
+			Where tr.task_id=?`
+
+	rows, err := gDbConn.Query(sql, id)
+	checkErr(err)
+
+	//循环读取记录
+	for rows.Next() {
+		var rtid int64
+		err = rows.Scan(&rtid)
+		if err == nil {
+			ok = true
+		}
+		relTaskId = append(relTaskId, rtid)
+	}
+	return relTaskId, ok
 } // }}}
 
 //从元数据库获取Task的依赖列表。
