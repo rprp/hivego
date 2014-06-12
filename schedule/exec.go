@@ -336,7 +336,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	//判断是否在执行周期内,若是则直接执行，否则跳过返回执行完成的状态，并继续下一步骤
 	//TO-DO 暂时搁着，以后再完善
 
-	t.startTime = time.Now()
+	t.startTime = time.Now().UTC()
 	t.state = 1
 
 	t.Log()
@@ -367,7 +367,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	t.Log()
 	l.Infoln("task", t.task.Name, "is end batchTaskId =", t.batchTaskId, "state =",
-		t.state, "output =", rl.Stdout)
+		t.state, "output =", rl.Stdout, "Start time", t.startTime, "End time", t.endTime)
 
 	taskChan <- t
 
