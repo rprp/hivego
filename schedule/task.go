@@ -2,21 +2,30 @@
 //package schedule
 package main
 
+import (
+	"time"
+)
+
 // 任务信息结构
 type Task struct {
-	Id          int64             // 任务的ID
-	Address     string            // 任务的执行地址
-	Name        string            // 任务名称
-	JobType     string            // 任务类型
-	Cyc         string            //调度周期
-	StartSecond int64             //周期内启动时间
-	Cmd         string            // 任务执行的命令或脚本、函数名等。
-	TimeOut     int64             // 设定超时时间，0表示不做超时限制。单位秒
-	Param       map[string]string // 任务的参数信息
-	Attr        map[string]string // 任务的属性信息
-	JobId       int64             //所属作业ID
-	RelTasks    map[int64]*Task   //依赖的任务
-	RelTaskCnt  int64             //依赖的任务数量
+	Id           int64             // 任务的ID
+	Address      string            // 任务的执行地址
+	Name         string            // 任务名称
+	JobType      string            // 任务类型
+	Cyc          string            //调度周期
+	StartSecond  int64             //周期内启动时间
+	Cmd          string            // 任务执行的命令或脚本、函数名等。
+	Desc         string            //任务说明
+	TimeOut      int64             // 设定超时时间，0表示不做超时限制。单位秒
+	Param        map[string]string // 任务的参数信息
+	Attr         map[string]string // 任务的属性信息
+	JobId        int64             //所属作业ID
+	RelTasks     map[int64]*Task   //依赖的任务
+	RelTaskCnt   int64             //依赖的任务数量
+	CreateUserId int64             //创建人
+	CreateTime   time.Time         //创人
+	ModifyUserId int64             //修改人
+	ModifyTime   time.Time         //修改时间
 }
 
 //refreshTask方法用来从元数据库刷新Task的信息
@@ -43,6 +52,117 @@ func (t *Task) refreshTask(jobid int64) { // {{{
 		}
 
 	}
+
+} // }}}
+
+//增加作业信息至元数据库
+func (t *Task) Add() (err error) { // {{{
+	t.SetNewId()
+	sql := `INSERT INTO hive.scd_task
+            (task_id, task_address, task_name, task_cyc,
+             task_time_out, task_start, task_type_id,
+             task_cmd, task_desc, create_user_id, create_time,
+             modify_user_id, modify_time)
+			VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err = gDbConn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.Cyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
+	if err == nil {
+		for _, rt := range t.RelTasks {
+			t.AddRelTask(rt.Id)
+		}
+	}
+
+	return err
+
+} // }}}
+
+//增加依赖任务至元数据库
+func (t *Task) AddRelTask(id int64) (err error) { // {{{
+	relid, _ := t.GetNewRelTaskId()
+	sql := `INSERT INTO hive.scd_task_rel
+            (task_rel_id, task_id, rel_task_id, create_user_id, create_time)
+			VALUES      (?, ?, ?, ?, ? )`
+	_, err = gDbConn.Exec(sql, &relid, &t.Id, &id, &t.CreateUserId, &t.CreateTime)
+
+	return err
+} // }}}
+
+//更新任务至元数据库
+func (t *Task) Update() (err error) { // {{{
+	sql := `UPDATE hive.scd_task
+			SET task_address=?,
+				task_name=?,
+				task_cyc=?,
+				task_time_out=?,
+				task_start=?,
+				task_type_id=?,
+				task_cmd=?,
+				task_desc=?,
+				modify_user_id=?,
+				modify_time=?
+			WHERE task_id=?`
+	_, err = gDbConn.Exec(sql, &t.Address, &t.Name, &t.Cyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.ModifyUserId, &t.ModifyTime, &t.Id)
+
+	return err
+} // }}}
+
+//删除依赖任务至元数据库
+func (t *Task) DeleteRelTask(id int64) (err error) { // {{{
+
+	sql := `DELETE hive.scd_task_rel WHERE task_id=? and rel_task_id=?`
+	_, err = gDbConn.Exec(sql, &t.Id, &id)
+
+	return err
+} // }}}
+
+//删除任务至元数据库
+func (t *Task) Delete() (err error) { // {{{
+
+	sql := `DELETE hive.scd_task_rel WHERE task_id=?`
+	_, err = gDbConn.Exec(sql, &t.Id)
+
+	sql = `DELETE hive.scd_task WHERE task_id=?`
+	_, err = gDbConn.Exec(sql, &t.Id)
+
+	return err
+} // }}}
+
+//获取新JobTaskId
+func (t *Task) GetNewRelTaskId() (id int64, err error) { // {{{
+
+	//查询全部schedule列表
+	sql := `SELECT max(rt.task_rel_id) as task_rel_id
+			FROM hive.scd_task_rel rt`
+
+	rows, err := gDbConn.Query(sql)
+	checkErr(err)
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id)
+	}
+
+	return id + 1, err
+
+} // }}}
+
+//获取新Id
+func (t *Task) SetNewId() (err error) { // {{{
+	var id int64
+
+	//查询全部schedule列表
+	sql := `SELECT max(t.task_id) as task_id
+			FROM hive.scd_task t`
+
+	rows, err := gDbConn.Query(sql)
+	checkErr(err)
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id)
+	}
+	t.Id = id + 1
+
+	return err
 
 } // }}}
 

@@ -78,6 +78,80 @@ func (s *Schedule) refreshSchedule() { // {{{
 
 } // }}}
 
+//增加调度信息至元数据库
+func (s *Schedule) Add() (err error) { // {{{
+	s.SetNewId()
+	sql := `INSERT INTO hive.scd_schedule
+            (scd_id, scd_name, scd_num, scd_cyc, scd_start,
+             scd_timeout, scd_job_id, scd_desc, create_user_id,
+             create_time, modify_user_id, modify_time)
+		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err = gDbConn.Exec(sql, &s.id, &s.name, &s.count, &s.cyc, &s.startSecond,
+		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime)
+
+	return err
+} // }}}
+
+//修改调度信息至元数据库
+func (s *Schedule) Update() (err error) { // {{{
+	sql := `UPDATE hive.scd_schedule 
+		SET  scd_name=?,
+             scd_num=?,
+             scd_cyc=?,
+             scd_start=?,
+             scd_timeout=?,
+             scd_job_id=?,
+             scd_desc=?,
+             create_user_id=?,
+             create_time=?,
+             modify_user_id=?,
+             modify_time=?
+		 WHERE scd_id=?`
+	_, err = gDbConn.Exec(sql, &s.name, &s.count, &s.cyc, &s.startSecond,
+		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime, &s.id)
+
+	return err
+} // }}}
+
+//删除元数据库中的调度信息
+func (s *Schedule) Delete() (err error) { // {{{
+	sql := `Delete hive.scd_schedule WHERE scd_id=?`
+	_, err = gDbConn.Exec(sql, &s.id)
+
+	return err
+} // }}}
+
+//设置调度下的Job
+func (s *Schedule) SetJob(jobid int64) (err error) { // {{{
+	s.jobId = jobid
+	if j, ok := getJob(jobid); ok {
+		s.job = j
+	}
+
+	return nil
+} // }}}
+
+//获取新Id
+func (s *Schedule) SetNewId() (err error) { // {{{
+	var id int64
+
+	//查询全部schedule列表
+	sql := `SELECT max(scd.scd_id) as scd_id
+			FROM hive.scd_schedule scd`
+
+	rows, err := gDbConn.Query(sql)
+	checkErr(err)
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id)
+	}
+	s.id = id + 1
+
+	return err
+
+} // }}}
+
 //从元数据库获取指定的Schedule。
 func getSchedule(id int64) (scd *Schedule, ok bool) { // {{{
 	var stime int64
@@ -142,68 +216,4 @@ func getAllSchedules() (scds map[int64]*Schedule, err error) { // {{{
 	}
 
 	return scds, err
-} // }}}
-
-//增加调度信息至元数据库
-func (s *Schedule) Add() (err error) { // {{{
-	s.SetNewId()
-	sql := `INSERT INTO hive.scd_schedule
-            (scd_id, scd_name, scd_num, scd_cyc, scd_start,
-             scd_timeout, scd_job_id, scd_desc, create_user_id,
-             create_time, modify_user_id, modify_time)
-		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = gDbConn.Exec(sql, &s.id, &s.name, &s.count, &s.cyc, &s.startSecond,
-		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime)
-
-	return err
-} // }}}
-
-//修改调度信息至元数据库
-func (s *Schedule) Update() (err error) { // {{{
-	sql := `UPDATE hive.scd_schedule 
-		SET  scd_name=?,
-             scd_num=?,
-             scd_cyc=?,
-             scd_start=?,
-             scd_timeout=?,
-             scd_job_id=?,
-             scd_desc=?,
-             create_user_id=?,
-             create_time=?,
-             modify_user_id=?,
-             modify_time=?
-		 WHERE scd_id=?`
-	_, err = gDbConn.Exec(sql, &s.name, &s.count, &s.cyc, &s.startSecond,
-		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime, &s.id)
-
-	return err
-} // }}}
-
-//删除元数据库中的调度信息
-func (s *Schedule) Delete() (err error) { // {{{
-	sql := `Delete hive.scd_schedule WHERE scd_id=?`
-	_, err = gDbConn.Exec(sql, &s.id)
-
-	return err
-} // }}}
-
-//获取新Id
-func (s *Schedule) SetNewId() (err error) { // {{{
-	var id int64
-
-	//查询全部schedule列表
-	sql := `SELECT max(scd.scd_id) as scd_id
-			FROM hive.scd_schedule scd`
-
-	rows, err := gDbConn.Query(sql)
-	checkErr(err)
-
-	//循环读取记录，格式化后存入变量ｂ
-	for rows.Next() {
-		err = rows.Scan(&id)
-	}
-	s.id = id + 1
-
-	return err
-
 } // }}}
