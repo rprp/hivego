@@ -2,9 +2,7 @@ package main
 
 import (
 	"bytes"
-	_ "database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"net/rpc"
 	"runtime/debug"
 	"sync"
@@ -336,7 +334,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	//判断是否在执行周期内,若是则直接执行，否则跳过返回执行完成的状态，并继续下一步骤
 	//TO-DO 暂时搁着，以后再完善
 
-	t.startTime = time.Now().UTC()
+	t.startTime = time.Now()
 	t.state = 1
 
 	t.Log()
@@ -487,7 +485,7 @@ func Restore(batchId string, scdId int64) (err error) { // {{{
 	successTaskId := getSuccessTaskId(batchId)
 
 	//创建ExecSchedule结构
-	execSchedule, err := NewExecScheduleById(batchId, gScdList.schedules[scdId])
+	execSchedule, err := NewExecScheduleById(batchId, gScdList.Schedules[scdId])
 	execSchedule.execType = 3
 	execSchedule.state = 1
 

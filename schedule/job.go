@@ -27,7 +27,7 @@ func (j *Job) refreshJob() { // {{{
 		j.tasks = make(map[int64]*Task)
 		j.taskCnt = 0
 
-		l.Infoln("refresh job", j.name)
+		l.Infoln("create job", j.name)
 		if pj, ok := getJob(j.preJobId); ok {
 			j.preJob = pj
 		}
@@ -36,7 +36,7 @@ func (j *Job) refreshJob() { // {{{
 			j.tasks = t
 			for _, tt := range t {
 				j.taskCnt++
-				l.Infoln("refresh task", tt.Name)
+				l.Infoln("create task", tt.Name)
 				tt.refreshTask(j.id)
 			}
 		}
