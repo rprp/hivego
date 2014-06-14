@@ -69,10 +69,26 @@ func (t *Task) Add() (err error) { // {{{
 		for _, rt := range t.RelTasks {
 			t.AddRelTask(rt.Id)
 		}
+		for _, p := range t.Param {
+			t.AddParam(p)
+		}
 	}
 
 	return err
 
+} // }}}
+
+//增加作业参数信息至元数据库
+func (t *Task) AddParam(pname string) (err error) { // {{{
+	pid, _ := t.GetNewParamTaskId()
+	pv := t.Param[pname]
+	sql := `INSERT INTO hive.scd_task_param
+            (scd_param_id,task_id, scd_param_name, scd_param_value,
+             create_user_id, create_time)
+			VALUES      (?, ?, ?, ?, ?, ?)`
+	_, err = gDbConn.Exec(sql, &pid, &t.Id, &pname, &pv, &t.CreateUserId, &t.CreateTime)
+
+	return err
 } // }}}
 
 //增加依赖任务至元数据库
@@ -105,10 +121,10 @@ func (t *Task) Update() (err error) { // {{{
 	return err
 } // }}}
 
-//删除依赖任务至元数据库
+//删除任务参数至元数据库
 func (t *Task) DeleteRelTask(id int64) (err error) { // {{{
 
-	sql := `DELETE hive.scd_task_rel WHERE task_id=? and rel_task_id=?`
+	sql := `DELETE hive.scd_task_param WHERE task_id=? and scd_param_id=?`
 	_, err = gDbConn.Exec(sql, &t.Id, &id)
 
 	return err
@@ -117,13 +133,35 @@ func (t *Task) DeleteRelTask(id int64) (err error) { // {{{
 //删除任务至元数据库
 func (t *Task) Delete() (err error) { // {{{
 
-	sql := `DELETE hive.scd_task_rel WHERE task_id=?`
+	sql := `DELETE hive.scd_task_param WHERE task_id=?`
+	_, err = gDbConn.Exec(sql, &t.Id)
+
+	sql = `DELETE hive.scd_task_rel WHERE task_id=?`
 	_, err = gDbConn.Exec(sql, &t.Id)
 
 	sql = `DELETE hive.scd_task WHERE task_id=?`
 	_, err = gDbConn.Exec(sql, &t.Id)
 
 	return err
+} // }}}
+
+//获取新TaskParamId
+func (t *Task) GetNewParamTaskId() (id int64, err error) { // {{{
+
+	//查询全部schedule列表
+	sql := `SELECT max(p.scd_param_id) as scd_param_id
+			FROM hive.scd_task_param p`
+
+	rows, err := gDbConn.Query(sql)
+	checkErr(err)
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id)
+	}
+
+	return id + 1, err
+
 } // }}}
 
 //获取新JobTaskId

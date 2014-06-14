@@ -8,22 +8,22 @@ import (
 
 //调度信息结构
 type Schedule struct {
-	id           int64         //调度ID
-	name         string        //调度名称
-	count        int8          //调度次数
-	cyc          string        //调度周期
-	startSecond  time.Duration //周期内启动时间
-	nextStart    time.Time     //周期内启动时间
-	timeOut      int64         //最大执行时间
-	jobId        int64         //作业ID
-	job          *Job          //作业
-	desc         string        //调度说明
-	jobCnt       int64         //调度中作业数量
-	taskCnt      int64         //调度中任务数量
-	createUserId int64         //创建人
-	createTime   time.Time     //创人
-	modifyUserId int64         //修改人
-	modifyTime   time.Time     //修改时间
+	id           int64           //调度ID
+	name         string          //调度名称
+	count        int8            //调度次数
+	cyc          string          //调度周期
+	startSecond  []time.Duration //周期内启动时间
+	nextStart    time.Time       //周期内启动时间
+	timeOut      int64           //最大执行时间
+	jobId        int64           //作业ID
+	job          *Job            //作业
+	desc         string          //调度说明
+	jobCnt       int64           //调度中作业数量
+	taskCnt      int64           //调度中任务数量
+	createUserId int64           //创建人
+	createTime   time.Time       //创人
+	modifyUserId int64           //修改人
+	modifyTime   time.Time       //修改时间
 }
 
 //根据调度的周期及启动时间，按时将调度传至执行列表执行。
@@ -82,11 +82,11 @@ func (s *Schedule) refreshSchedule() { // {{{
 func (s *Schedule) Add() (err error) { // {{{
 	s.SetNewId()
 	sql := `INSERT INTO hive.scd_schedule
-            (scd_id, scd_name, scd_num, scd_cyc, scd_start,
+            (scd_id, scd_name, scd_num, scd_cyc,
              scd_timeout, scd_job_id, scd_desc, create_user_id,
              create_time, modify_user_id, modify_time)
-		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = gDbConn.Exec(sql, &s.id, &s.name, &s.count, &s.cyc, &s.startSecond,
+		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err = gDbConn.Exec(sql, &s.id, &s.name, &s.count, &s.cyc,
 		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime)
 
 	return err
@@ -98,7 +98,6 @@ func (s *Schedule) Update() (err error) { // {{{
 		SET  scd_name=?,
              scd_num=?,
              scd_cyc=?,
-             scd_start=?,
              scd_timeout=?,
              scd_job_id=?,
              scd_desc=?,
@@ -107,7 +106,7 @@ func (s *Schedule) Update() (err error) { // {{{
              modify_user_id=?,
              modify_time=?
 		 WHERE scd_id=?`
-	_, err = gDbConn.Exec(sql, &s.name, &s.count, &s.cyc, &s.startSecond,
+	_, err = gDbConn.Exec(sql, &s.name, &s.count, &s.cyc,
 		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime, &s.id)
 
 	return err
@@ -152,16 +151,45 @@ func (s *Schedule) SetNewId() (err error) { // {{{
 
 } // }}}
 
+//从元数据库获取指定Schedule的启动时间。
+func getStart(id int64) (st []time.Duration, ok bool) { // {{{
+
+	st = make([]time.Duration, 0)
+
+	//查询全部schedule启动时间列表
+	sql := `SELECT s.scd_start
+			FROM hive.scd_start s
+			WHERE s.scd_id=?`
+
+	rows, err := gDbConn.Query(sql, id)
+	checkErr(err)
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		var td int64
+		err = rows.Scan(&td)
+		if err == nil {
+			ok = true
+		}
+		st = append(st, time.Duration(td)*time.Second)
+
+	}
+
+	if len(st) == 0 {
+		st = append(st, time.Duration(0))
+	}
+
+	return st, ok
+} // }}}
+
 //从元数据库获取指定的Schedule。
 func getSchedule(id int64) (scd *Schedule, ok bool) { // {{{
-	var stime int64
 
 	//查询全部schedule列表
 	sql := `SELECT scd.scd_id,
 				scd.scd_name,
 				scd.scd_num,
 				scd.scd_cyc,
-				scd.scd_start,
 				scd.scd_timeout,
 				scd.scd_job_id,
 				scd.scd_desc
@@ -172,14 +200,15 @@ func getSchedule(id int64) (scd *Schedule, ok bool) { // {{{
 	checkErr(err)
 
 	scd = &Schedule{}
+	scd.startSecond = make([]time.Duration, 0)
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc, &stime,
+		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc,
 			&scd.timeOut, &scd.jobId, &scd.desc)
 		if err == nil {
 			ok = true
 		}
-		scd.startSecond = time.Duration(stime) * time.Second
+		scd.startSecond, _ = getStart(scd.id)
 
 	}
 
@@ -188,7 +217,6 @@ func getSchedule(id int64) (scd *Schedule, ok bool) { // {{{
 
 //从元数据库获取Schedule列表。
 func getAllSchedules() (scds map[int64]*Schedule, err error) { // {{{
-	var stime int64
 	scds = make(map[int64]*Schedule)
 
 	//查询全部schedule列表
@@ -196,7 +224,6 @@ func getAllSchedules() (scds map[int64]*Schedule, err error) { // {{{
 				scd.scd_name,
 				scd.scd_num,
 				scd.scd_cyc,
-				scd.scd_start,
 				scd.scd_timeout,
 				scd.scd_job_id,
 				scd.scd_desc
@@ -208,9 +235,10 @@ func getAllSchedules() (scds map[int64]*Schedule, err error) { // {{{
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
 		scd := &Schedule{}
-		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc, &stime,
+		scd.startSecond = make([]time.Duration, 0)
+		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc,
 			&scd.timeOut, &scd.jobId, &scd.desc)
-		scd.startSecond = time.Duration(stime) * time.Second
+		scd.startSecond, _ = getStart(scd.id)
 
 		scds[scd.id] = scd
 	}
