@@ -10,6 +10,7 @@ import (
 type Job struct {
 	id           int64           //作业ID
 	scheduleId   int64           //调度ID
+	scheduleCyc  string          //调度周期
 	name         string          //作业名称
 	desc         string          //作业说明
 	preJobId     int64           //上级作业ID
@@ -44,6 +45,7 @@ func (j *Job) refreshJob() { // {{{
 		if t, ok := getTasks(j.id); ok {
 			j.tasks = t
 			for _, tt := range t {
+				tt.ScheduleCyc = j.scheduleCyc
 				j.taskCnt++
 				l.Infoln("create task", tt.Name)
 				tt.refreshTask(j.id)
@@ -51,6 +53,8 @@ func (j *Job) refreshJob() { // {{{
 		}
 
 		if nj, ok := getJob(j.nextJobId); ok {
+			nj.scheduleId = j.scheduleId
+			nj.scheduleCyc = j.scheduleCyc
 			nj.refreshJob()
 			j.nextJob = nj
 		}

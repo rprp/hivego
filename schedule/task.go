@@ -12,8 +12,9 @@ type Task struct {
 	Address      string            // 任务的执行地址
 	Name         string            // 任务名称
 	JobType      string            // 任务类型
-	Cyc          string            //调度周期
-	StartSecond  int64             //周期内启动时间
+	ScheduleCyc  string            //调度周期
+	TaskCyc      string            //调度周期
+	StartSecond  time.Duration     //周期内启动时间
 	Cmd          string            // 任务执行的命令或脚本、函数名等。
 	Desc         string            //任务说明
 	TimeOut      int64             // 设定超时时间，0表示不做超时限制。单位秒
@@ -35,7 +36,7 @@ func (t *Task) refreshTask(jobid int64) { // {{{
 		t.Name = tt.Name
 		t.TimeOut = tt.TimeOut
 		t.JobType = tt.JobType
-		t.Cyc = tt.Cyc
+		t.TaskCyc = tt.TaskCyc
 		t.StartSecond = tt.StartSecond
 		t.Cmd = tt.Cmd
 		t.Param = tt.Param
@@ -64,7 +65,7 @@ func (t *Task) Add() (err error) { // {{{
              task_cmd, task_desc, create_user_id, create_time,
              modify_user_id, modify_time)
 			VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = gDbConn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.Cyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
+	_, err = gDbConn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
 	if err == nil {
 		for _, rt := range t.RelTasks {
 			t.AddRelTask(rt.Id)
@@ -116,7 +117,7 @@ func (t *Task) Update() (err error) { // {{{
 				modify_user_id=?,
 				modify_time=?
 			WHERE task_id=?`
-	_, err = gDbConn.Exec(sql, &t.Address, &t.Name, &t.Cyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.ModifyUserId, &t.ModifyTime, &t.Id)
+	_, err = gDbConn.Exec(sql, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.ModifyUserId, &t.ModifyTime, &t.Id)
 
 	return err
 } // }}}
@@ -261,6 +262,7 @@ func getTaskAttr(id int64) (taskAttr map[string]string, err error) { // {{{
 //从元数据库获取Task信息。
 func getTask(id int64) (task *Task, ok bool) { // {{{
 
+	var td int64
 	//查询全部Task列表
 	sql := `SELECT task.task_id,
 			   task.task_address,
@@ -277,9 +279,10 @@ func getTask(id int64) (task *Task, ok bool) { // {{{
 	checkErr(err)
 
 	task = &Task{}
+
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.Cyc, &task.StartSecond, &task.Cmd)
+		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.TaskCyc, &td, &task.Cmd)
 		if err == nil {
 			ok = true
 		}
@@ -289,6 +292,7 @@ func getTask(id int64) (task *Task, ok bool) { // {{{
 		task.Attr = make(map[string]string)
 		task.Attr, err = getTaskAttr(task.Id)
 		task.Param, err = getTaskParam(task.Id)
+		task.StartSecond = time.Duration(td) * time.Second
 		checkErr(err)
 
 	}
@@ -317,13 +321,15 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.Cyc, &task.StartSecond, &task.Cmd)
+		var td int64
+		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.TaskCyc, &td, &task.Cmd)
 		//初始化relTask、param的内存
 		task.RelTasks = make(map[int64]*Task)
 		task.Param = make(map[string]string)
 		task.Attr = make(map[string]string)
 		task.Attr, err = getTaskAttr(task.Id)
 		task.Param, err = getTaskParam(task.Id)
+		task.StartSecond = time.Duration(td) * time.Second
 		checkErr(err)
 
 		tasks[task.Id] = task

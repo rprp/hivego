@@ -11,7 +11,6 @@ func getCountDown(cyc string, ss []time.Duration) (countDown time.Duration, err 
 	var startTime time.Time
 	var b bool
 
-	l.Infoln("--------", ss)
 	//按周期取整
 	s := TruncDate(cyc, now)
 

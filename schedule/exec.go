@@ -75,7 +75,7 @@ func (s *ExecSchedule) Run() { // {{{
 			//计算任务完成百分比
 			s.result = float32(s.schedule.taskCnt-s.taskCnt) / float32(s.schedule.taskCnt)
 
-			if t.state == 3 {
+			if t.state == 3 || t.state == 4 {
 				s.successTaskCnt++
 
 				//设置作业信息
@@ -313,7 +313,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 			var buf bytes.Buffer
 			buf.Write(debug.Stack())
 			t.endTime = time.Now()
-			t.state = 4
+			t.state = 5
 			l.Warningln("task run error", "batchTaskId=", t.batchTaskId, "TaskName=",
 				t.task.Name, "output=", rl.Stdout, "err=", err, " stack=", buf.String())
 			t.Log()
@@ -325,20 +325,30 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	//若任务为暂停状态则不执行直接退出
 	if t.state == 2 {
-		l.Infoln("task", t.task.Name, "is ignore batchTaskId=", t.batchTaskId)
+		l.Infoln("task", t.task.Name, "is pause batchTaskId=", t.batchTaskId)
 		t.Log()
 		taskChan <- t
 		return
 	}
-
-	//判断是否在执行周期内,若是则直接执行，否则跳过返回执行完成的状态，并继续下一步骤
-	//TO-DO 暂时搁着，以后再完善
 
 	t.startTime = time.Now()
 	t.state = 1
 
 	t.Log()
 	l.Infoln("task", t.task.Name, "is start batchTaskId=", t.batchTaskId, "cmd =", t.task.Cmd, " arg=", t.task.Param)
+
+	//判断是否在执行周期内,若是则直接执行，否则跳过返回执行完成的状态，并继续下一步骤
+	//TO-DO 暂时搁着，以后再完善
+	if !t.isReady() {
+		t.state = 4
+		t.output = "task is ignored"
+		t.endTime = time.Now()
+		l.Infoln("task", t.task.Name, "is ignore batchTaskId=", t.batchTaskId)
+		t.Log()
+		taskChan <- t
+		return
+
+	}
 
 	//执行任务
 	address := t.task.Address
@@ -351,7 +361,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 		if err := client.Call("CmdExecuter.Run", task, &rl); err == nil {
 			if rl.Err != nil {
 				t.output = rl.Err.Error()
-				t.state = 4
+				t.state = 5
 			}
 		} else {
 			panic(err.Error())
@@ -370,6 +380,19 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	taskChan <- t
 
 } // }}}
+
+//isReady方法会根据Task的调度周期与启动时间判断是否符合执行条件
+//符合返回true，反之false
+func (t *ExecTask) isReady() (b bool) {
+	td := TruncDate(t.task.TaskCyc, time.Now()).Add(t.task.StartSecond)
+	sd := TruncDate(t.task.ScheduleCyc, time.Now())
+	l.Infoln("StarSecond", t.task.StartSecond, "td", td, "sd", sd)
+	if TruncDate(t.task.ScheduleCyc, td) == sd {
+		b = true
+	}
+
+	return b
+}
 
 func NewExecSchedule(rscd *Schedule) (execScd *ExecSchedule, err error) { // {{{
 	//批次ID

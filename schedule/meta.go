@@ -3,6 +3,7 @@
 package main
 
 import (
+	"sort"
 	"time"
 )
 
@@ -63,6 +64,8 @@ func (s *Schedule) refreshSchedule() { // {{{
 		s.desc = ts.desc
 
 		if tj, ok := getJob(s.jobId); ok {
+			tj.scheduleId = s.id
+			tj.scheduleCyc = s.cyc
 			tj.refreshJob()
 			s.job = tj
 		}
@@ -179,8 +182,16 @@ func getStart(id int64) (st []time.Duration, ok bool) { // {{{
 		st = append(st, time.Duration(0))
 	}
 
+	sort.Sort(timeSort(st))
 	return st, ok
 } // }}}
+
+//time.Duration列表排序
+type timeSort []time.Duration
+
+func (a timeSort) Len() int           { return len(a) }
+func (a timeSort) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a timeSort) Less(i, j int) bool { return a[i] < a[j] }
 
 //从元数据库获取指定的Schedule。
 func getSchedule(id int64) (scd *Schedule, ok bool) { // {{{
