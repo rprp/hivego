@@ -28,36 +28,34 @@ type Job struct {
 //refreshJob方法用来从元数据库刷新作业信息
 func (j *Job) refreshJob() { // {{{
 
-	if tj, ok := getJob(j.id); ok {
-		j.name = tj.name
-		j.desc = tj.desc
-		j.preJobId = tj.preJobId
-		j.nextJobId = tj.nextJobId
-		j.nextJob = tj.nextJob
-		j.tasks = make(map[int64]*Task)
-		j.taskCnt = 0
+	tj := getJob(j.id)
+	j.name = tj.name
+	j.desc = tj.desc
+	j.preJobId = tj.preJobId
+	j.nextJobId = tj.nextJobId
+	j.nextJob = tj.nextJob
+	j.tasks = make(map[int64]*Task)
+	j.taskCnt = 0
 
-		l.Infoln("create job", j.name)
-		if pj, ok := getJob(j.preJobId); ok {
-			j.preJob = pj
-		}
+	l.Infoln("create job", j.name)
+	pj := getJob(j.preJobId)
+	j.preJob = pj
 
-		if t, ok := getTasks(j.id); ok {
-			j.tasks = t
-			for _, tt := range t {
-				tt.ScheduleCyc = j.scheduleCyc
-				j.taskCnt++
-				l.Infoln("create task", tt.Name)
-				tt.refreshTask(j.id)
-			}
-		}
+	t := getTasks(j.id)
+	j.tasks = t
+	for _, tt := range t {
+		tt.ScheduleCyc = j.scheduleCyc
+		j.taskCnt++
+		l.Infoln("create task", tt.Name)
+		tt.refreshTask(j.id)
+	}
 
-		if nj, ok := getJob(j.nextJobId); ok {
-			nj.scheduleId = j.scheduleId
-			nj.scheduleCyc = j.scheduleCyc
-			nj.refreshJob()
-			j.nextJob = nj
-		}
+	//获取下级任务
+	if nj := getJob(j.nextJobId); nj.id != 0 {
+		nj.scheduleId = j.scheduleId
+		nj.scheduleCyc = j.scheduleCyc
+		nj.refreshJob()
+		j.nextJob = nj
 	}
 } // }}}
 
@@ -138,9 +136,8 @@ func (j *Job) SetNewId() (err error) { // {{{
 	//查询全部schedule列表
 	sql := `SELECT max(job.job_id) as job_id
 			FROM hive.scd_job job`
-
 	rows, err := gDbConn.Query(sql)
-	checkErr(err)
+	CheckErr("job SetNewId run Sql "+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
@@ -158,9 +155,8 @@ func (j *Job) GetNewJobTaskId() (id int64, err error) { // {{{
 	//查询全部schedule列表
 	sql := `SELECT max(jt.job_task_id) as job_task_id
 			FROM hive.scd_job_task jt`
-
 	rows, err := gDbConn.Query(sql)
-	checkErr(err)
+	CheckErr("GetNewJobTaskId run Sql "+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
@@ -172,7 +168,7 @@ func (j *Job) GetNewJobTaskId() (id int64, err error) { // {{{
 } // }}}
 
 //从元数据库获取Job信息。
-func getJob(id int64) (job *Job, ok bool) { // {{{
+func getJob(id int64) (job *Job) { // {{{
 
 	//查询全部Job列表
 	sql := `SELECT job.job_id,
@@ -182,22 +178,19 @@ func getJob(id int64) (job *Job, ok bool) { // {{{
 			   job.next_job_id
 			FROM hive.scd_job job
 			WHERE job.job_id=?`
-
 	rows, err := gDbConn.Query(sql, id)
-	checkErr(err)
+	CheckErr("getJob run Sql "+sql, err)
 
 	job = &Job{}
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
 		err = rows.Scan(&job.id, &job.name, &job.desc, &job.preJobId, &job.nextJobId)
-		if err == nil {
-			ok = true
-		}
+		CheckErr("getJob ", err)
 		//初始化Task内存
 		job.tasks = make(map[int64]*Task)
 	}
 
-	return job, ok
+	return job
 } // }}}
 
 //从元数据库获取Schedule下的Job列表。
@@ -212,9 +205,8 @@ func getAllJobs() (jobs map[int64]*Job, err error) { // {{{
 			   job.prev_job_id,
 			   job.next_job_id
 			FROM hive.scd_job job`
-
 	rows, err := gDbConn.Query(sql)
-	checkErr(err)
+	CheckErr("getAllJobs run Sql "+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {

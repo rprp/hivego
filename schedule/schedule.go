@@ -8,6 +8,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	_ "github.com/go-sql-driver/mysql"
 	"runtime"
+	"sort"
+	"time"
 )
 
 //全局变量定义
@@ -43,21 +45,20 @@ func init() { // {{{
 	gExecTasks = make(map[int64]*ExecTask)
 	gTasks = make(map[int64]*Task)
 
-	dbString = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8"
+	dbString = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true"
 } // }}}
 
-//调度列表
+//ScheduleList 调度列表结构，它包含了全部的调度信息，并有两个方法来初始化和启动其中的调度。
 type ScheduleList struct {
 	Schedules map[int64]*Schedule //调度列表
 }
 
 //从元数据库获取Schedule列表
-//执行调度会调用Schedule的Timer方法。
-//Timer方法会根据调度周期及启动时间，按时启动，随后会依据Schedule信息构建执行结构
-//并送入chan中。
+//StartSchedule方法，会遍历列表中的Schedule并启动goroutine调用它的Timer方法。
 func (sl *ScheduleList) StartSchedule() { // {{{
 
 	for _, scd := range sl.Schedules {
+		//Timer方法会根据调度周期及启动时间，按时启动，随后会依据Schedule信息构建执行结构
 		go scd.Timer()
 	}
 
@@ -65,27 +66,20 @@ func (sl *ScheduleList) StartSchedule() { // {{{
 
 //InitSchedules方法，初始化调度列表
 //获取调度信息，在内存中构建Schedule结构。
-func (sl *ScheduleList) InitSchedules() (err error) { // {{{
+func (sl *ScheduleList) InitSchedules() { // {{{
 
-	//从元数据库读取调度信息
-	sl.Schedules, err = getAllSchedules()
+	//从元数据库读取调度信息,初始化调度列表
+	sl.Schedules = getAllSchedules()
 
-	//构建调度链信息
-	for _, scd := range sl.Schedules {
-		scd.refreshSchedule()
-		l.Infoln(scd.name, " was created", " jobcnt=", scd.jobCnt, " taskcnt=", scd.taskCnt)
-	}
-
-	return nil
+	return
 } // }}}
 
 //StartSchedule函数是调度模块的入口函数。
 func StartSchedule() error { // {{{
 	// 连接数据库
 	cnn, err := sql.Open("mysql", dbString)
-	checkErr(err)
+	CheckErr("StartSchedule ", err)
 	gDbConn = cnn
-
 	defer gDbConn.Close()
 
 	//创建并初始化调度列表
@@ -104,3 +98,250 @@ func StartSchedule() error { // {{{
 func main() {
 	StartSchedule()
 }
+
+//调度信息结构
+type Schedule struct {
+	id           int64           //调度ID
+	name         string          //调度名称
+	count        int8            //调度次数
+	cyc          string          //调度周期
+	startSecond  []time.Duration //周期内启动时间
+	nextStart    time.Time       //周期内启动时间
+	timeOut      int64           //最大执行时间
+	jobId        int64           //作业ID
+	job          *Job            //作业
+	desc         string          //调度说明
+	jobCnt       int64           //调度中作业数量
+	taskCnt      int64           //调度中任务数量
+	createUserId int64           //创建人
+	createTime   time.Time       //创人
+	modifyUserId int64           //修改人
+	modifyTime   time.Time       //修改时间
+}
+
+//根据调度的周期及启动时间，按时将调度传至执行列表执行。
+func (s *Schedule) Timer() { // {{{
+
+	//获取距启动的时间（秒）
+	countDown, err := getCountDown(s.cyc, s.startSecond)
+	CheckErr("getCountDown", err)
+
+	s.nextStart = time.Now().Add(countDown)
+	l.Infoln(s.name, "will start at", s.nextStart)
+	select {
+	case <-time.After(countDown):
+		//刷新调度
+		s.refreshSchedule()
+
+		l.Infoln(s.name, "is start")
+		//启动一个线程开始构建执行结构链
+		es, err := NewExecSchedule(s)
+		CheckErr("New ExecSchedule", err)
+		//启动线程执行调度任务
+		go es.Run()
+	}
+	return
+} // }}}
+
+//refreshSchedule方法用来从元数据库刷新调度信息
+func (s *Schedule) refreshSchedule() { // {{{
+	ts := getSchedule(s.id)
+	s.name = ts.name
+	s.count = ts.count
+	s.cyc = ts.cyc
+	s.startSecond = ts.startSecond
+	s.nextStart = ts.nextStart
+	s.timeOut = ts.timeOut
+	s.jobId = ts.jobId
+	s.desc = ts.desc
+
+	tj := getJob(s.jobId)
+	tj.scheduleId = s.id
+	tj.scheduleCyc = s.cyc
+	tj.refreshJob()
+	s.job = tj
+
+	s.jobCnt = 0
+	s.taskCnt = 0
+	for j := s.job; j != nil; {
+		s.jobCnt++
+		s.taskCnt += j.taskCnt
+		j = j.nextJob
+	}
+	l.Infoln("schedule", s.id, s.name, "was refreshed.")
+} // }}}
+
+//增加调度信息至元数据库
+func (s *Schedule) Add() (err error) { // {{{
+	s.SetNewId()
+	sql := `INSERT INTO hive.scd_schedule
+            (scd_id, scd_name, scd_num, scd_cyc,
+             scd_timeout, scd_job_id, scd_desc, create_user_id,
+             create_time, modify_user_id, modify_time)
+		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err = gDbConn.Exec(sql, &s.id, &s.name, &s.count, &s.cyc,
+		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime)
+
+	return err
+} // }}}
+
+//修改调度信息至元数据库
+func (s *Schedule) Update() (err error) { // {{{
+	sql := `UPDATE hive.scd_schedule 
+		SET  scd_name=?,
+             scd_num=?,
+             scd_cyc=?,
+             scd_timeout=?,
+             scd_job_id=?,
+             scd_desc=?,
+             create_user_id=?,
+             create_time=?,
+             modify_user_id=?,
+             modify_time=?
+		 WHERE scd_id=?`
+	_, err = gDbConn.Exec(sql, &s.name, &s.count, &s.cyc,
+		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime, &s.id)
+	CheckErr("Delete run Sql "+sql, err)
+
+	return err
+} // }}}
+
+//Delete方法，删除元数据库中的调度信息
+func (s *Schedule) Delete() error { // {{{
+	sql := `Delete hive.scd_schedule WHERE scd_id=?`
+	_, err := gDbConn.Exec(sql, &s.id)
+	CheckErr("Delete run Sql "+sql, err)
+	l.Debugln("schedule", s.name, " was deleted.")
+
+	return err
+} // }}}
+
+//SetJob方法，设置调度下的Job
+func (s *Schedule) SetJob(jobid int64) { // {{{
+	s.jobId = jobid
+	s.job = getJob(jobid)
+	return
+} // }}}
+
+//SetNewId方法，检索元数据库返回新的Schedule Id
+func (s *Schedule) SetNewId() { // {{{
+	var id int64
+
+	//查询全部schedule列表
+	sql := `SELECT max(scd.scd_id) as scd_id
+			FROM hive.scd_schedule scd`
+	rows, err := gDbConn.Query(sql)
+	CheckErr("SetNewId run Sql "+sql, err)
+
+	for rows.Next() {
+		err = rows.Scan(&id)
+		CheckErr("get schedule new id", err)
+	}
+	s.id = id + 1
+
+	return
+
+} // }}}
+
+//getStart，从元数据库获取指定Schedule的启动时间。
+func getStart(id int64) (st []time.Duration) { // {{{
+
+	st = make([]time.Duration, 0)
+
+	//查询全部schedule启动时间列表
+	sql := `SELECT s.scd_start
+			FROM hive.scd_start s
+			WHERE s.scd_id=?`
+	rows, err := gDbConn.Query(sql, id)
+	CheckErr("getStart run Sql "+sql, err)
+
+	for rows.Next() {
+		var td int64
+		err = rows.Scan(&td)
+		PrintErr("get schedule start", err)
+		st = append(st, time.Duration(td)*time.Second)
+		l.Debugln("start is", st)
+	}
+
+	//若没有查到Schedule的启动时间，则赋默认值。
+	if len(st) == 0 {
+		st = append(st, time.Duration(0))
+	}
+
+	sort.Sort(timeSort(st))
+	return st
+} // }}}
+
+//time.Duration列表排序
+type timeSort []time.Duration // {{{
+
+func (a timeSort) Len() int           { return len(a) }
+func (a timeSort) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a timeSort) Less(i, j int) bool { return a[i] < a[j] } // }}}
+
+//getSchedule，从元数据库获取指定的Schedule信息。
+func getSchedule(id int64) (scd *Schedule) { // {{{
+
+	//查询全部schedule列表
+	sql := `SELECT scd.scd_id,
+				scd.scd_name,
+				scd.scd_num,
+				scd.scd_cyc,
+				scd.scd_timeout,
+				scd.scd_job_id,
+				scd.scd_desc
+			FROM hive.scd_schedule scd
+			WHERE scd.scd_id=?`
+	rows, err := gDbConn.Query(sql, id)
+	CheckErr("getSchedule run Sql "+sql, err)
+
+	scd = &Schedule{}
+	scd.startSecond = make([]time.Duration, 0)
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc,
+			&scd.timeOut, &scd.jobId, &scd.desc)
+		PrintErr("get schedule info", err)
+		scd.startSecond = getStart(scd.id)
+		l.Infoln("get Schedule", scd.id, scd.name)
+
+	}
+
+	return scd
+} // }}}
+
+//从元数据库获取Schedule列表。
+func getAllSchedules() (scds map[int64]*Schedule) { // {{{
+	scds = make(map[int64]*Schedule)
+
+	//查询全部schedule列表
+	sql := `SELECT scd.scd_id,
+				scd.scd_name,
+				scd.scd_num,
+				scd.scd_cyc,
+				scd.scd_timeout,
+				scd.scd_job_id,
+				scd.scd_desc,
+				scd.create_user_id,
+				scd.create_time,
+				scd.modify_user_id,
+				scd.modify_time
+			FROM hive.scd_schedule scd`
+	rows, err := gDbConn.Query(sql)
+	CheckErr("getAllSchedules run Sql "+sql, err)
+
+	for rows.Next() {
+		scd := &Schedule{}
+		scd.startSecond = make([]time.Duration, 0)
+		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc, &scd.timeOut,
+			&scd.jobId, &scd.desc, &scd.createUserId, &scd.createTime, &scd.modifyUserId,
+			&scd.modifyTime)
+		PrintErr("get schedule info", err)
+		scd.startSecond = getStart(scd.id)
+
+		scds[scd.id] = scd
+		l.Infoln("create Schedule", scd.name)
+	}
+
+	return scds
+} // }}}

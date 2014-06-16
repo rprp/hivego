@@ -57,7 +57,7 @@ func getCountDown(cyc string, ss []time.Duration) (countDown time.Duration, err 
 } // }}}
 
 //时间取整
-func TruncDate(cyc string, now time.Time) time.Time {
+func TruncDate(cyc string, now time.Time) time.Time { // {{{
 
 	//解析周期并取得距下一周期的时间
 	switch {
@@ -88,19 +88,27 @@ func TruncDate(cyc string, now time.Time) time.Time {
 	}
 	return time.Now()
 
-}
+} // }}}
 
 //获取当前时间
 func GetNow() time.Time { // {{{
 	return time.Now().Local()
 } // }}}
 
-func checkErr(err error) { // {{{
+//CheckErr检查错误信息，若有错误则打印并抛出异常。
+func CheckErr(info string, err error) { // {{{
 	if err != nil {
-		fmt.Println(err.Error())
+		l.Errorln(info, err.Error())
 		panic(err)
 	}
 } // }}}
+
+//PrintErr打印错误信息
+func PrintErr(info string, err error) {
+	if err != nil {
+		l.Errorln(info, err.Error())
+	}
+}
 
 //打印调度信息
 func printSchedule(scds map[int64]*Schedule) { // {{{

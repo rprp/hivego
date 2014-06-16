@@ -154,7 +154,7 @@ func (t *Task) GetNewParamTaskId() (id int64, err error) { // {{{
 			FROM hive.scd_task_param p`
 
 	rows, err := gDbConn.Query(sql)
-	checkErr(err)
+	CheckErr("GetNewParamTaskId run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
@@ -173,7 +173,7 @@ func (t *Task) GetNewRelTaskId() (id int64, err error) { // {{{
 			FROM hive.scd_task_rel rt`
 
 	rows, err := gDbConn.Query(sql)
-	checkErr(err)
+	CheckErr("GetNewRelTaskId run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
@@ -191,9 +191,8 @@ func (t *Task) SetNewId() (err error) { // {{{
 	//查询全部schedule列表
 	sql := `SELECT max(t.task_id) as task_id
 			FROM hive.scd_task t`
-
 	rows, err := gDbConn.Query(sql)
-	checkErr(err)
+	CheckErr("SetNewId run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
@@ -224,7 +223,7 @@ func getTaskParam(id int64) (taskParam map[string]string, err error) { // {{{
 			WHERE pm.task_id=?`
 
 	rows, err := gDbConn.Query(sql, id)
-	checkErr(err)
+	CheckErr("getTaskParam run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
@@ -246,9 +245,8 @@ func getTaskAttr(id int64) (taskAttr map[string]string, err error) { // {{{
 			   ta.task_attr_value
 			FROM   hive.scd_task_attr ta
 			WHERE  task_id = ?`
-
 	rows, err := gDbConn.Query(sql, id)
-	checkErr(err)
+	CheckErr("getTaskAttr run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
@@ -274,9 +272,8 @@ func getTask(id int64) (task *Task, ok bool) { // {{{
 			   task.task_cmd
 			FROM hive.scd_task task
 			WHERE task.task_id=?`
-
 	rows, err := gDbConn.Query(sql, id)
-	checkErr(err)
+	CheckErr("getTask run sql"+sql, err)
 
 	task = &Task{}
 
@@ -293,7 +290,7 @@ func getTask(id int64) (task *Task, ok bool) { // {{{
 		task.Attr, err = getTaskAttr(task.Id)
 		task.Param, err = getTaskParam(task.Id)
 		task.StartSecond = time.Duration(td) * time.Second
-		checkErr(err)
+		CheckErr("getTask", err)
 
 	}
 	return task, ok
@@ -314,9 +311,8 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 			   task.task_start,
 			   task.task_cmd
 			FROM hive.scd_task task`
-
 	rows, err := gDbConn.Query(sql)
-	checkErr(err)
+	CheckErr("getAllTasks run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
@@ -330,7 +326,7 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 		task.Attr, err = getTaskAttr(task.Id)
 		task.Param, err = getTaskParam(task.Id)
 		task.StartSecond = time.Duration(td) * time.Second
-		checkErr(err)
+		CheckErr("getAllTask", err)
 
 		tasks[task.Id] = task
 	}
@@ -338,7 +334,7 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 } // }}}
 
 //从元数据库获取Job下的Task列表。
-func getTasks(jobId int64) (tasks map[int64]*Task, ok bool) { // {{{
+func getTasks(jobId int64) (tasks map[int64]*Task) { // {{{
 
 	tasks = make(map[int64]*Task)
 
@@ -346,23 +342,20 @@ func getTasks(jobId int64) (tasks map[int64]*Task, ok bool) { // {{{
 	sql := `SELECT jt.task_id
 			FROM hive.scd_job_task jt
 			WHERE jt.job_id=?`
-
 	rows, err := gDbConn.Query(sql, jobId)
-	checkErr(err)
+	CheckErr("getTasks run sql"+sql, err)
 
 	//循环读取记录
 	for rows.Next() {
 		var taskid int64
 		err = rows.Scan(&taskid)
-		if err == nil {
-			ok = true
-			if task, ok := getTask(taskid); ok {
-				tasks[taskid] = task
-				gTasks[taskid] = task
-			}
+		CheckErr("getTasks", err)
+		if task, ok := getTask(taskid); ok {
+			tasks[taskid] = task
+			gTasks[taskid] = task
 		}
 	}
-	return tasks, ok
+	return tasks
 } // }}}
 
 //从元数据库获取Job下的Task列表。
@@ -374,9 +367,8 @@ func getJobTaskid() (jobtask map[int64]int64, err error) { // {{{
 	sql := `SELECT jt.job_id,
 				jt.task_id
 			FROM hive.scd_job_task jt`
-
 	rows, err := gDbConn.Query(sql)
-	checkErr(err)
+	CheckErr("getJobTaskid run sql"+sql, err)
 
 	//循环读取记录
 	for rows.Next() {
@@ -396,9 +388,8 @@ func getRelTaskId(id int64) (relTaskId []int64, ok bool) { // {{{
 	sql := `SELECT tr.rel_task_id
 			FROM hive.scd_task_rel tr
 			Where tr.task_id=?`
-
 	rows, err := gDbConn.Query(sql, id)
-	checkErr(err)
+	CheckErr("getRelTaskId run sql"+sql, err)
 
 	//循环读取记录
 	for rows.Next() {
@@ -422,9 +413,8 @@ func getRelTasks() (relTasks []*RelTask, err error) { // {{{
 				tr.rel_task_id
 			FROM hive.scd_task_rel tr
 			ORDER BY tr.task_id`
-
 	rows, err := gDbConn.Query(sql)
-	checkErr(err)
+	CheckErr("getRelTasks run sql"+sql, err)
 
 	//循环读取记录
 	for rows.Next() {

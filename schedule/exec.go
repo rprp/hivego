@@ -339,7 +339,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	//判断是否在执行周期内,若是则直接执行，否则跳过返回执行完成的状态，并继续下一步骤
 	//TO-DO 暂时搁着，以后再完善
-	if !t.isReady() {
+	if t.task.TaskCyc != "" && !t.isReady() {
 		t.state = 4
 		t.output = "task is ignored"
 		t.endTime = time.Now()
@@ -386,7 +386,6 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 func (t *ExecTask) isReady() (b bool) {
 	td := TruncDate(t.task.TaskCyc, time.Now()).Add(t.task.StartSecond)
 	sd := TruncDate(t.task.ScheduleCyc, time.Now())
-	l.Infoln("StarSecond", t.task.StartSecond, "td", td, "sd", sd)
 	if TruncDate(t.task.ScheduleCyc, td) == sd {
 		b = true
 	}
@@ -548,9 +547,8 @@ func getSuccessTaskId(batchId string) []int64 { // {{{
 			FROM   hive.scd_task_log
 			WHERE  state = 3
 			   AND batch_id =?`
-
 	rows, err := gDbConn.Query(sql, batchId)
-	checkErr(err)
+	CheckErr("getSuccessTaskId run Sql "+sql, err)
 
 	taskIds := make([]int64, 0)
 	//循环读取记录，格式化后存入变量ｂ
