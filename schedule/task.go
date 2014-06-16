@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -31,28 +32,65 @@ type Task struct {
 
 //refreshTask方法用来从元数据库刷新Task的信息
 func (t *Task) refreshTask(jobid int64) { // {{{
-	if tt, ok := getTask(t.Id); ok {
-		t.Address = tt.Address
-		t.Name = tt.Name
-		t.TimeOut = tt.TimeOut
-		t.JobType = tt.JobType
-		t.TaskCyc = tt.TaskCyc
-		t.StartSecond = tt.StartSecond
-		t.Cmd = tt.Cmd
-		t.Param = tt.Param
-		t.JobId = jobid
-		t.Attr = tt.Attr
-		t.RelTasks = make(map[int64]*Task)
-		t.RelTaskCnt = 0
+	l.Println("refresh task", t.Name)
+	tt := getTask(t.Id)
+	t.Address = tt.Address
+	t.Name = tt.Name
+	t.TimeOut = tt.TimeOut
+	t.JobType = tt.JobType
+	t.TaskCyc = tt.TaskCyc
+	t.StartSecond = tt.StartSecond
+	t.Cmd = tt.Cmd
+	t.Param = tt.Param
+	t.JobId = jobid
+	t.Attr = tt.Attr
+	t.RelTasks = make(map[int64]*Task)
+	t.RelTaskCnt = 0
 
-		if reltask, ok := getRelTaskId(t.Id); ok {
-			for _, rtid := range reltask {
-				t.RelTasks[rtid] = gTasks[rtid]
-				t.RelTaskCnt++
-			}
-		}
-
+	reltask := getRelTaskId(t.Id)
+	for _, rtid := range reltask {
+		t.RelTasks[rtid] = gTasks[rtid]
+		t.RelTaskCnt++
 	}
+
+	l.Println("task refreshed", t)
+
+} // }}}
+
+//打印task结构信息
+func (t *Task) String() string { // {{{
+
+	tn := make([]string, 1)
+	for _, rt := range t.RelTasks {
+		tn = append(tn, rt.Name)
+	}
+
+	return fmt.Sprintf("{Id=%d"+
+		" Address=%s"+
+		" Name=%s"+
+		" TaskCyc=%s"+
+		" StartSecond=%v"+
+		" Cmd=%s"+
+		" Desc=%s"+
+		" TimeOut=%d"+
+		" Param=%v"+
+		" RelTasks=%v"+
+		" RelTaskCnt =%d"+
+		" CreateTime=%v"+
+		" ModifyTime=%v}\n",
+		t.Id,
+		t.Address,
+		t.Name,
+		t.TaskCyc,
+		t.StartSecond,
+		t.Cmd,
+		t.Desc,
+		t.TimeOut,
+		t.Param,
+		t.RelTasks,
+		t.RelTaskCnt,
+		t.CreateTime,
+		t.ModifyTime)
 
 } // }}}
 
@@ -258,7 +296,7 @@ func getTaskAttr(id int64) (taskAttr map[string]string, err error) { // {{{
 } // }}}
 
 //从元数据库获取Task信息。
-func getTask(id int64) (task *Task, ok bool) { // {{{
+func getTask(id int64) (task *Task) { // {{{
 
 	var td int64
 	//查询全部Task列表
@@ -280,9 +318,6 @@ func getTask(id int64) (task *Task, ok bool) { // {{{
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
 		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.TaskCyc, &td, &task.Cmd)
-		if err == nil {
-			ok = true
-		}
 		//初始化relTask、param的内存
 		task.RelTasks = make(map[int64]*Task)
 		task.Param = make(map[string]string)
@@ -291,9 +326,9 @@ func getTask(id int64) (task *Task, ok bool) { // {{{
 		task.Param, err = getTaskParam(task.Id)
 		task.StartSecond = time.Duration(td) * time.Second
 		CheckErr("getTask", err)
-
+		l.Debugln("get task", task)
 	}
-	return task, ok
+	return task
 } // }}}
 
 //从元数据库获取Job下的Task列表。
@@ -350,11 +385,12 @@ func getTasks(jobId int64) (tasks map[int64]*Task) { // {{{
 		var taskid int64
 		err = rows.Scan(&taskid)
 		CheckErr("getTasks", err)
-		if task, ok := getTask(taskid); ok {
+		if task := getTask(taskid); task.Id != 0 {
 			tasks[taskid] = task
 			gTasks[taskid] = task
 		}
 	}
+	l.Debugln("get task", tasks)
 	return tasks
 } // }}}
 
@@ -380,7 +416,7 @@ func getJobTaskid() (jobtask map[int64]int64, err error) { // {{{
 } // }}}
 
 //从元数据库获取Task的依赖列表。
-func getRelTaskId(id int64) (relTaskId []int64, ok bool) { // {{{
+func getRelTaskId(id int64) (relTaskId []int64) { // {{{
 
 	relTaskId = make([]int64, 0)
 
@@ -395,12 +431,10 @@ func getRelTaskId(id int64) (relTaskId []int64, ok bool) { // {{{
 	for rows.Next() {
 		var rtid int64
 		err = rows.Scan(&rtid)
-		if err == nil {
-			ok = true
-		}
+		CheckErr("getRelTaskId", err)
 		relTaskId = append(relTaskId, rtid)
 	}
-	return relTaskId, ok
+	return relTaskId
 } // }}}
 
 //从元数据库获取Task的依赖列表。

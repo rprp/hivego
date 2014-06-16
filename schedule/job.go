@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -27,7 +28,7 @@ type Job struct {
 
 //refreshJob方法用来从元数据库刷新作业信息
 func (j *Job) refreshJob() { // {{{
-
+	l.Println("refresh job", j.name)
 	tj := getJob(j.id)
 	j.name = tj.name
 	j.desc = tj.desc
@@ -37,7 +38,6 @@ func (j *Job) refreshJob() { // {{{
 	j.tasks = make(map[int64]*Task)
 	j.taskCnt = 0
 
-	l.Infoln("create job", j.name)
 	pj := getJob(j.preJobId)
 	j.preJob = pj
 
@@ -57,6 +57,44 @@ func (j *Job) refreshJob() { // {{{
 		nj.refreshJob()
 		j.nextJob = nj
 	}
+	l.Println("job refreshed", j)
+} // }}}
+
+//打印job结构信息
+func (j *Job) String() string { // {{{
+	var preName, nextName string
+	if j.preJob != nil {
+		preName = j.preJob.name
+	}
+
+	if j.nextJob != nil {
+		nextName = j.nextJob.name
+	}
+
+	t1 := make([]string, 1)
+	for _, t := range j.tasks {
+		t1 = append(t1, t.Name)
+	}
+
+	return fmt.Sprintf("{id=%d"+
+		" name=%s"+
+		" desc=%s"+
+		" preJobname=%s"+
+		" nextJobname=%s"+
+		" taskList=%v"+
+		" taskCnt=%d"+
+		" createTime=%v"+
+		" modifyTime=%v}\n",
+		j.id,
+		j.name,
+		j.desc,
+		preName,
+		nextName,
+		t1,
+		j.taskCnt,
+		j.createTime,
+		j.modifyTime)
+
 } // }}}
 
 //增加作业信息至元数据库
@@ -188,6 +226,7 @@ func getJob(id int64) (job *Job) { // {{{
 		CheckErr("getJob ", err)
 		//初始化Task内存
 		job.tasks = make(map[int64]*Task)
+		l.Debugln("get job", job)
 	}
 
 	return job

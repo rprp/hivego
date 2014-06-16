@@ -5,6 +5,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	_ "github.com/go-sql-driver/mysql"
 	"runtime"
@@ -37,7 +38,7 @@ func init() { // {{{
 
 	//设置log模块的默认格式
 	l.Formatter = new(logrus.TextFormatter) // default
-	l.Level = logrus.Info
+	l.Level = logrus.Debug
 
 	//从配置文件中获取数据库连接、服务端口号等信息
 	gPort = ":8123"
@@ -45,7 +46,7 @@ func init() { // {{{
 	gExecTasks = make(map[int64]*ExecTask)
 	gTasks = make(map[int64]*Task)
 
-	dbString = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true"
+	dbString = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true&loc=Local"
 } // }}}
 
 //ScheduleList 调度列表结构，它包含了全部的调度信息，并有两个方法来初始化和启动其中的调度。
@@ -57,21 +58,14 @@ type ScheduleList struct {
 //StartSchedule方法，会遍历列表中的Schedule并启动goroutine调用它的Timer方法。
 func (sl *ScheduleList) StartSchedule() { // {{{
 
+	//从元数据库读取调度信息,初始化调度列表
+	sl.Schedules = getAllSchedules()
+
 	for _, scd := range sl.Schedules {
 		//Timer方法会根据调度周期及启动时间，按时启动，随后会依据Schedule信息构建执行结构
 		go scd.Timer()
 	}
 
-} // }}}
-
-//InitSchedules方法，初始化调度列表
-//获取调度信息，在内存中构建Schedule结构。
-func (sl *ScheduleList) InitSchedules() { // {{{
-
-	//从元数据库读取调度信息,初始化调度列表
-	sl.Schedules = getAllSchedules()
-
-	return
 } // }}}
 
 //StartSchedule函数是调度模块的入口函数。
@@ -84,7 +78,6 @@ func StartSchedule() error { // {{{
 
 	//创建并初始化调度列表
 	sLst := &ScheduleList{}
-	sLst.InitSchedules()
 
 	//执行调度
 	sLst.StartSchedule()
@@ -96,6 +89,7 @@ func StartSchedule() error { // {{{
 } // }}}
 
 func main() {
+	l.Infoln(time.Now().Location())
 	StartSchedule()
 }
 
@@ -127,13 +121,13 @@ func (s *Schedule) Timer() { // {{{
 	CheckErr("getCountDown", err)
 
 	s.nextStart = time.Now().Add(countDown)
-	l.Infoln(s.name, "will start at", s.nextStart)
+	l.Println(s.id, s.name, "will start at", s.nextStart)
 	select {
 	case <-time.After(countDown):
 		//刷新调度
 		s.refreshSchedule()
 
-		l.Infoln(s.name, "is start")
+		l.Println("schedule", s.id, s.name, "is start")
 		//启动一个线程开始构建执行结构链
 		es, err := NewExecSchedule(s)
 		CheckErr("New ExecSchedule", err)
@@ -145,12 +139,12 @@ func (s *Schedule) Timer() { // {{{
 
 //refreshSchedule方法用来从元数据库刷新调度信息
 func (s *Schedule) refreshSchedule() { // {{{
+	l.Println("refresh schedule", s.name)
 	ts := getSchedule(s.id)
 	s.name = ts.name
 	s.count = ts.count
 	s.cyc = ts.cyc
 	s.startSecond = ts.startSecond
-	s.nextStart = ts.nextStart
 	s.timeOut = ts.timeOut
 	s.jobId = ts.jobId
 	s.desc = ts.desc
@@ -168,10 +162,26 @@ func (s *Schedule) refreshSchedule() { // {{{
 		s.taskCnt += j.taskCnt
 		j = j.nextJob
 	}
-	l.Infoln("schedule", s.id, s.name, "was refreshed.")
+	l.Println("schedule refreshed", s)
 } // }}}
 
-//增加调度信息至元数据库
+//打印Schedule结构信息
+func (s *Schedule) String() string {
+	return fmt.Sprintf("{id=%d"+
+		" name=%s"+
+		" cyc=%s"+
+		" startSecond=%v"+
+		" timeout=%d"+
+		" jobCnt=%d"+
+		" taskCnt=%d"+
+		" nextStart=%v"+
+		" createTime=%v"+
+		" desc=%s}\n",
+		s.id, s.name, s.cyc, s.startSecond,
+		s.timeOut, s.jobCnt, s.taskCnt, s.nextStart, s.createTime, s.desc)
+}
+
+//Add方法会将Schedule对象增加到元数据库中。
 func (s *Schedule) Add() (err error) { // {{{
 	s.SetNewId()
 	sql := `INSERT INTO hive.scd_schedule
@@ -181,11 +191,12 @@ func (s *Schedule) Add() (err error) { // {{{
 		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err = gDbConn.Exec(sql, &s.id, &s.name, &s.count, &s.cyc,
 		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime)
+	l.Debugln("schedule", s.name, " was added.")
 
 	return err
 } // }}}
 
-//修改调度信息至元数据库
+//Update方法将Schedule对象更新到元数据库。
 func (s *Schedule) Update() (err error) { // {{{
 	sql := `UPDATE hive.scd_schedule 
 		SET  scd_name=?,
@@ -201,7 +212,7 @@ func (s *Schedule) Update() (err error) { // {{{
 		 WHERE scd_id=?`
 	_, err = gDbConn.Exec(sql, &s.name, &s.count, &s.cyc,
 		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime, &s.id)
-	CheckErr("Delete run Sql "+sql, err)
+	l.Debugln("schedule", s.name, " was updated.")
 
 	return err
 } // }}}
@@ -210,7 +221,6 @@ func (s *Schedule) Update() (err error) { // {{{
 func (s *Schedule) Delete() error { // {{{
 	sql := `Delete hive.scd_schedule WHERE scd_id=?`
 	_, err := gDbConn.Exec(sql, &s.id)
-	CheckErr("Delete run Sql "+sql, err)
 	l.Debugln("schedule", s.name, " was deleted.")
 
 	return err
@@ -260,7 +270,6 @@ func getStart(id int64) (st []time.Duration) { // {{{
 		err = rows.Scan(&td)
 		PrintErr("get schedule start", err)
 		st = append(st, time.Duration(td)*time.Second)
-		l.Debugln("start is", st)
 	}
 
 	//若没有查到Schedule的启动时间，则赋默认值。
@@ -303,7 +312,7 @@ func getSchedule(id int64) (scd *Schedule) { // {{{
 			&scd.timeOut, &scd.jobId, &scd.desc)
 		PrintErr("get schedule info", err)
 		scd.startSecond = getStart(scd.id)
-		l.Infoln("get Schedule", scd.id, scd.name)
+		l.Debugln("get Schedule", scd)
 
 	}
 
@@ -340,7 +349,7 @@ func getAllSchedules() (scds map[int64]*Schedule) { // {{{
 		scd.startSecond = getStart(scd.id)
 
 		scds[scd.id] = scd
-		l.Infoln("create Schedule", scd.name)
+		l.Debugln("get Schedule", scd)
 	}
 
 	return scds
