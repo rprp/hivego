@@ -38,7 +38,7 @@ func init() { // {{{
 
 	//设置log模块的默认格式
 	l.Formatter = new(logrus.TextFormatter) // default
-	l.Level = logrus.Debug
+	l.Level = logrus.Info
 
 	//从配置文件中获取数据库连接、服务端口号等信息
 	gPort = ":8123"
@@ -89,12 +89,11 @@ func StartSchedule() error { // {{{
 } // }}}
 
 func main() {
-	l.Infoln(time.Now().Location())
 	StartSchedule()
 }
 
 //调度信息结构
-type Schedule struct {
+type Schedule struct { // {{{
 	id           int64           //调度ID
 	name         string          //调度名称
 	count        int8            //调度次数
@@ -166,7 +165,7 @@ func (s *Schedule) refreshSchedule() { // {{{
 } // }}}
 
 //打印Schedule结构信息
-func (s *Schedule) String() string {
+func (s *Schedule) String() string { // {{{
 	return fmt.Sprintf("{id=%d"+
 		" name=%s"+
 		" cyc=%s"+
@@ -179,7 +178,7 @@ func (s *Schedule) String() string {
 		" desc=%s}\n",
 		s.id, s.name, s.cyc, s.startSecond,
 		s.timeOut, s.jobCnt, s.taskCnt, s.nextStart, s.createTime, s.desc)
-}
+} // }}}
 
 //Add方法会将Schedule对象增加到元数据库中。
 func (s *Schedule) Add() (err error) { // {{{
@@ -251,7 +250,7 @@ func (s *Schedule) SetNewId() { // {{{
 
 	return
 
-} // }}}
+} // }}}// }}}
 
 //getStart，从元数据库获取指定Schedule的启动时间。
 func getStart(id int64) (st []time.Duration) { // {{{

@@ -87,7 +87,7 @@ func (t *Task) String() string { // {{{
 		t.Desc,
 		t.TimeOut,
 		t.Param,
-		t.RelTasks,
+		tn,
 		t.RelTaskCnt,
 		t.CreateTime,
 		t.ModifyTime)

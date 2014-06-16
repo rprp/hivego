@@ -47,7 +47,7 @@ func (s *ExecSchedule) Run() { // {{{
 	l.Infoln("schedule", s.schedule.name, "is start", "batchId=", s.batchId)
 
 	//启动独立的任务
-	for _, execTask := range s.execTasks {
+	for _, execTask := range s.execTasks { // {{{
 		//依赖任务列表为空，任务可以执行
 		if len(execTask.relExecTasks) == 0 {
 			//任务所属作业开始时间为空，设置作业启动信息
@@ -63,7 +63,7 @@ func (s *ExecSchedule) Run() { // {{{
 			//执行任务，完成后任务会放入taskChan中
 			go execTask.Run(staskChan)
 		}
-	}
+	} // }}}
 
 	//不断轮询taskChan中的信息，直到最后一个任务完成
 	//调用执行结构的Timer方法，并退出线程。
@@ -75,7 +75,7 @@ func (s *ExecSchedule) Run() { // {{{
 			//计算任务完成百分比
 			s.result = float32(s.schedule.taskCnt-s.taskCnt) / float32(s.schedule.taskCnt)
 
-			if t.state == 3 || t.state == 4 {
+			if t.state == 3 || t.state == 4 { //任务执行成功或可以忽略
 				s.successTaskCnt++
 
 				//设置作业信息
@@ -83,7 +83,7 @@ func (s *ExecSchedule) Run() { // {{{
 				j.taskCnt--
 				//计算任务完成百分比
 				j.result = float32(j.job.taskCnt-j.taskCnt) / float32(j.job.taskCnt)
-				if j.taskCnt == 0 {
+				if j.taskCnt == 0 { //作业结束
 					j.endTime = time.Now()
 					j.state = 3
 					j.Log()
@@ -93,7 +93,7 @@ func (s *ExecSchedule) Run() { // {{{
 
 				//任务成功执行，将该任务从其它任务的依赖列表中删除。
 				//若删除后依赖列表为空，则启动那个任务。
-				for _, nextask := range t.nextExecTasks {
+				for _, nextask := range t.nextExecTasks { // {{{
 					delete(nextask.relExecTasks, t.task.Id)
 					if len(nextask.relExecTasks) == 0 {
 						//任务所属作业开始时间为空，设置作业启动信息
@@ -106,7 +106,7 @@ func (s *ExecSchedule) Run() { // {{{
 						go nextask.Run(staskChan)
 					}
 
-				}
+				} // }}}
 			} else {
 				s.failTaskCnt++
 				//任务失败，处理下游依赖任务链
@@ -118,7 +118,7 @@ func (s *ExecSchedule) Run() { // {{{
 
 			}
 
-			if s.taskCnt == 0 {
+			if s.taskCnt == 0 { //调度结束
 				//全部完成后，写入日志存储至数据库，设置下次启动时间
 				s.endTime = time.Now()
 				s.state = 3
@@ -383,7 +383,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 //isReady方法会根据Task的调度周期与启动时间判断是否符合执行条件
 //符合返回true，反之false
-func (t *ExecTask) isReady() (b bool) {
+func (t *ExecTask) isReady() (b bool) { // {{{
 	td := TruncDate(t.task.TaskCyc, time.Now()).Add(t.task.StartSecond)
 	sd := TruncDate(t.task.ScheduleCyc, time.Now())
 	if TruncDate(t.task.ScheduleCyc, td) == sd {
@@ -391,46 +391,48 @@ func (t *ExecTask) isReady() (b bool) {
 	}
 
 	return b
-}
+} // }}}
 
-func NewExecSchedule(rscd *Schedule) (execScd *ExecSchedule, err error) { // {{{
+//NewExecSchedule会根据传入的Schedule参数来构建一个调度的执行结构。
+//执行结构包含完整的执行链
+func NewExecSchedule(s *Schedule) (es *ExecSchedule, err error) { // {{{// {{{
 	//批次ID
-	bid := fmt.Sprintf("%s %d", time.Now().Format("2006-01-02 15:04:05.000000"), rscd.id)
-	return NewExecScheduleById(bid, rscd)
+	bid := fmt.Sprintf("%s %d", time.Now().Format("2006-01-02 15:04:05.000000"), s.id)
+	return NewExecScheduleById(bid, s)
 
 } // }}}
 
 //NewExecSchedule会根据传入的Schedule参数来构建一个调度的执行结构。
-//执行结构包含完整的执行链，构造完成后会调用ExecSchedule的Run方法来开始执行。
-func NewExecScheduleById(bid string, rscd *Schedule) (execScd *ExecSchedule, err error) { // {{{
+//执行结构包含完整的执行链
+func NewExecScheduleById(bid string, s *Schedule) (es *ExecSchedule, err error) { // {{{
 
-	execScd = &ExecSchedule{
-		batchId:   bid,  //批次ID
-		schedule:  rscd, //调度
-		state:     0,    //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
-		result:    0,    //结果,调度中执行成功任务的百分比
-		execType:  1,    //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
-		jobCnt:    rscd.jobCnt,
-		taskCnt:   rscd.taskCnt,
+	es = &ExecSchedule{
+		batchId:   bid,
+		schedule:  s,
+		state:     0,
+		result:    0,
+		execType:  1,
+		jobCnt:    s.jobCnt,
+		taskCnt:   s.taskCnt,
 		execTasks: make(map[int64]*ExecTask), //设置任务列表
 	}
 
-	err = execScd.Log()
+	err = es.Log()
 
 	//构建调度中的作业执行结构
-	execScd.execJob, err = NewExecJob(bid, rscd.job)
+	es.execJob, err = NewExecJob(bid, s.job)
 
 	//生成调度中的任务列表
-	for j := execScd.execJob; j != nil; {
+	for j := es.execJob; j != nil; {
 		for _, t := range j.execTasks {
-			execScd.execTasks[t.task.Id] = t
+			es.execTasks[t.task.Id] = t
 		}
 		j = j.nextJob
 	}
 
-	l.Infoln("ExecSchedule ", execScd.schedule.name, " is create batchId=", bid)
+	l.Infoln("ExecSchedule ", es.schedule.name, " is create batchId=", bid)
 
-	return execScd, err
+	return es, err
 } // }}}
 
 //NewExecJob根据输入的job和batchId构建作业执行链，并返回。
@@ -438,28 +440,28 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 	bjd := fmt.Sprintf("%s.%d", batchId, job.id)
 
 	execJob = &ExecJob{
-		batchJobId: bjd,     //作业批次ID，批次ID+作业ID
-		batchId:    batchId, //批次ID
-		job:        job,     //作业
-		state:      0,       //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
-		result:     0,       //结果,作业中执行成功任务的百分比
-		execType:   1,       //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
+		batchJobId: bjd,
+		batchId:    batchId,
+		job:        job,
+		state:      0,
+		result:     0,
+		execType:   1,
 		execTasks:  make([]*ExecTask, 0),
 	}
 
 	err = execJob.Log()
 
 	//构建当前作业中的任务执行结构
-	for _, t := range execJob.job.tasks {
+	for _, t := range execJob.job.tasks { // {{{
 		execTask := new(ExecTask)
 		bjtd := fmt.Sprintf("%s.%d", bjd, t.Id)
 		execTask.batchTaskId = bjtd
 		execTask.batchJobId = bjd
 		execTask.batchId = batchId
 		execTask.task = t
-		execTask.state = 0         //状态 0.不满足条件未执行 1. 执行中 2. 暂停 3. 完成 4.意外中止
-		execTask.execType = 1      //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
-		execTask.execJob = execJob //任务所属的job
+		execTask.state = 0
+		execTask.execType = 1
+		execTask.execJob = execJob
 
 		//将任务执行结构存入全局的gExecTasks变量，以便后面获取依赖任务执行信息时使用
 		gExecTasks[t.Id] = execTask
@@ -484,7 +486,7 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 		execJob.execTasks = append(execJob.execTasks, execTask)
 
 		l.Infoln("ExecTask ", execTask.task.Name, " is create batchTaskId=", execTask.batchTaskId)
-	}
+	} // }}}
 
 	l.Infoln("ExecJob ", execJob.job.name, " is create batchJobId=", execJob.batchJobId)
 
@@ -559,4 +561,4 @@ func getSuccessTaskId(batchId string) []int64 { // {{{
 	}
 
 	return taskIds
-} // }}}
+} // }}}// }}}
