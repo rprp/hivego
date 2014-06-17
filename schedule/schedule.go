@@ -34,19 +34,21 @@ var (
 
 //初始化工作
 func init() { // {{{
-	runtime.GOMAXPROCS(16)
+	hcfg := LoadHiveConfig("hive.toml")
+
+	runtime.GOMAXPROCS(hcfg.Maxprocs)
 
 	//设置log模块的默认格式
 	l.Formatter = new(logrus.TextFormatter) // default
-	l.Level = logrus.Info
+	l.Level = logrus.Level(hcfg.Loglevel)
 
 	//从配置文件中获取数据库连接、服务端口号等信息
-	gPort = ":8123"
+	gPort = hcfg.Port
 
 	gExecTasks = make(map[int64]*ExecTask)
 	gTasks = make(map[int64]*Task)
 
-	dbString = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true&loc=Local"
+	dbString = hcfg.Conn
 } // }}}
 
 //ScheduleList 调度列表结构，它包含了全部的调度信息，并有两个方法来初始化和启动其中的调度。
