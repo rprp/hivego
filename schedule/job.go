@@ -1,6 +1,4 @@
-//调度模块的数据结构
-//package schedule
-package main
+package schedule
 
 import (
 	"fmt"
@@ -28,7 +26,7 @@ type Job struct {
 
 //refreshJob方法用来从元数据库刷新作业信息
 func (j *Job) refreshJob() { // {{{
-	l.Println("refresh job", j.name)
+	g.L.Println("refresh job", j.name)
 	tj := getJob(j.id)
 	j.name = tj.name
 	j.desc = tj.desc
@@ -46,7 +44,7 @@ func (j *Job) refreshJob() { // {{{
 	for _, tt := range t {
 		tt.ScheduleCyc = j.scheduleCyc
 		j.taskCnt++
-		l.Infoln("create task", tt.Name)
+		g.L.Infoln("create task", tt.Name)
 		tt.refreshTask(j.id)
 	}
 
@@ -57,7 +55,7 @@ func (j *Job) refreshJob() { // {{{
 		nj.refreshJob()
 		j.nextJob = nj
 	}
-	l.Println("job refreshed", j)
+	g.L.Println("job refreshed", j)
 } // }}}
 
 //打印job结构信息
@@ -105,7 +103,7 @@ func (j *Job) Add() (err error) { // {{{
              next_job_id, create_user_id, create_time,
              modify_user_id, modify_time)
 		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = gDbConn.Exec(sql, &j.id, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.createUserId, &j.createTime, &j.modifyUserId, &j.modifyTime)
+	_, err = g.Conn.Exec(sql, &j.id, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.createUserId, &j.createTime, &j.modifyUserId, &j.modifyTime)
 	if err == nil {
 		for i, t := range j.tasks {
 			j.AddTask(t.Id, i)
@@ -125,7 +123,7 @@ func (j *Job) AddTask(taskid int64, taskno int64) (err error) { // {{{
              create_user_id, create_time)
 		VALUES      (?, ?, ?, ?, ?, ?)`
 
-	_, err = gDbConn.Exec(sql, &jobtaskid, &j.id, &taskid, &taskno, &j.createUserId, &j.createTime)
+	_, err = g.Conn.Exec(sql, &jobtaskid, &j.id, &taskid, &taskno, &j.createUserId, &j.createTime)
 
 	return err
 } // }}}
@@ -135,7 +133,7 @@ func (j *Job) DeleteTask(taskid int64) (err error) { // {{{
 
 	sql := `DELETE hive.scd_job_task WHERE job_id=? and task_id=?`
 
-	_, err = gDbConn.Exec(sql, &j.id, &taskid)
+	_, err = g.Conn.Exec(sql, &j.id, &taskid)
 
 	return err
 } // }}}
@@ -151,7 +149,7 @@ func (j *Job) Update() (err error) { // {{{
             modify_user_id=?, 
 			modify_time=?
 	    WHERE job_id=?`
-	_, err = gDbConn.Exec(sql, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.modifyUserId, &j.modifyTime)
+	_, err = g.Conn.Exec(sql, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.modifyUserId, &j.modifyTime)
 	return err
 } // }}}
 
@@ -159,10 +157,10 @@ func (j *Job) Update() (err error) { // {{{
 func (j *Job) Delete() (err error) { // {{{
 
 	sql := `DELETE hive.scd_job_task WHERE job_id=?`
-	_, err = gDbConn.Exec(sql, &j.id)
+	_, err = g.Conn.Exec(sql, &j.id)
 
 	sql = `DELETE hive.scd_job WHERE job_id=?`
-	_, err = gDbConn.Exec(sql, &j.id)
+	_, err = g.Conn.Exec(sql, &j.id)
 
 	return err
 } // }}}
@@ -174,7 +172,7 @@ func (j *Job) SetNewId() (err error) { // {{{
 	//查询全部schedule列表
 	sql := `SELECT max(job.job_id) as job_id
 			FROM hive.scd_job job`
-	rows, err := gDbConn.Query(sql)
+	rows, err := g.Conn.Query(sql)
 	CheckErr("job SetNewId run Sql "+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -193,7 +191,7 @@ func (j *Job) GetNewJobTaskId() (id int64, err error) { // {{{
 	//查询全部schedule列表
 	sql := `SELECT max(jt.job_task_id) as job_task_id
 			FROM hive.scd_job_task jt`
-	rows, err := gDbConn.Query(sql)
+	rows, err := g.Conn.Query(sql)
 	CheckErr("GetNewJobTaskId run Sql "+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -216,7 +214,7 @@ func getJob(id int64) (job *Job) { // {{{
 			   job.next_job_id
 			FROM hive.scd_job job
 			WHERE job.job_id=?`
-	rows, err := gDbConn.Query(sql, id)
+	rows, err := g.Conn.Query(sql, id)
 	CheckErr("getJob run Sql "+sql, err)
 
 	job = &Job{}
@@ -226,7 +224,7 @@ func getJob(id int64) (job *Job) { // {{{
 		CheckErr("getJob ", err)
 		//初始化Task内存
 		job.tasks = make(map[int64]*Task)
-		l.Debugln("get job", job)
+		g.L.Debugln("get job", job)
 	}
 
 	return job
@@ -244,7 +242,7 @@ func getAllJobs() (jobs map[int64]*Job, err error) { // {{{
 			   job.prev_job_id,
 			   job.next_job_id
 			FROM hive.scd_job job`
-	rows, err := gDbConn.Query(sql)
+	rows, err := g.Conn.Query(sql)
 	CheckErr("getAllJobs run Sql "+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ

@@ -1,7 +1,9 @@
 .DS_Store
-schedule/schedule
-worker/worker
+hive
 *.log
+cpuprofile
+memprofile
+worker_pid_file
 
 !*.go
 !*.js

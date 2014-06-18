@@ -1,7 +1,6 @@
 //worker执行模块worker负责在本地执行调度模块发送的命令，并将输出信息返回给调度模块。
 //worker执行时会启动http服务监听8123端口，提供RPC调用接口CmdExecuter.Run()方法。
-//package worker
-package main
+package worker
 
 import (
 	"bytes"
@@ -18,8 +17,7 @@ import (
 )
 
 var (
-	// 监听端口号
-	gPort string = ":8123"
+
 	//全局log对象
 	l = logrus.New()
 	p = l.WithFields
@@ -190,10 +188,6 @@ func ListenAndServer(port string) { // {{{
 	}
 
 } // }}}
-
-func main() {
-	ListenAndServer(gPort)
-}
 
 func checkErr(err error) { // {{{
 	if err != nil {

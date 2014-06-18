@@ -1,4 +1,4 @@
-package main
+package schedule
 
 import (
 	"fmt"
@@ -98,7 +98,7 @@ func GetNow() time.Time { // {{{
 //CheckErr检查错误信息，若有错误则打印并抛出异常。
 func CheckErr(info string, err error) { // {{{
 	if err != nil {
-		l.Errorln(info, err.Error())
+		g.L.Errorln(info, err.Error())
 		panic(err)
 	}
 } // }}}
@@ -106,7 +106,7 @@ func CheckErr(info string, err error) { // {{{
 //PrintErr打印错误信息
 func PrintErr(info string, err error) {
 	if err != nil {
-		l.Errorln(info, err.Error())
+		g.L.Errorln(info, err.Error())
 	}
 }
 

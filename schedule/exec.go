@@ -1,4 +1,4 @@
-package main
+package schedule
 
 import (
 	"bytes"
@@ -44,7 +44,7 @@ func (s *ExecSchedule) Run() { // {{{
 	s.state = 1
 	s.Log()
 
-	l.Infoln("schedule", s.schedule.name, "is start", "batchId=", s.batchId)
+	g.L.Infoln("schedule", s.schedule.name, "is start", "batchId=", s.batchId)
 
 	//启动独立的任务
 	for _, execTask := range s.execTasks { // {{{
@@ -56,7 +56,7 @@ func (s *ExecSchedule) Run() { // {{{
 				execTask.execJob.state = 1
 				execTask.execJob.Log()
 
-				l.Infoln("job ", execTask.execJob.job.name, " is start ", " batchJobId=", execTask.execJob.batchJobId)
+				g.L.Infoln("job ", execTask.execJob.job.name, " is start ", " batchJobId=", execTask.execJob.batchJobId)
 
 			}
 
@@ -88,7 +88,7 @@ func (s *ExecSchedule) Run() { // {{{
 					j.state = 3
 					j.Log()
 
-					l.Infoln("job ", j.job.name, " is end ", " batchJobId=", j.batchJobId, " result=", j.result)
+					g.L.Infoln("job ", j.job.name, " is end ", " batchJobId=", j.batchJobId, " result=", j.result)
 				}
 
 				//任务成功执行，将该任务从其它任务的依赖列表中删除。
@@ -101,7 +101,7 @@ func (s *ExecSchedule) Run() { // {{{
 							nextask.execJob.startTime = time.Now()
 							nextask.execJob.state = 1
 							nextask.execJob.Log()
-							l.Infoln("job ", nextask.execJob.job.name, " is start ", " batchJobId=", nextask.execJob.batchJobId)
+							g.L.Infoln("job ", nextask.execJob.job.name, " is start ", " batchJobId=", nextask.execJob.batchJobId)
 						}
 						go nextask.Run(staskChan)
 					}
@@ -114,7 +114,7 @@ func (s *ExecSchedule) Run() { // {{{
 				s.taskCnt -= n
 				s.failTaskCnt += n
 
-				l.Infoln("task ", t.task.Name, " is fail ", " batchTaskId=", t.batchTaskId, " state=", t.state)
+				g.L.Infoln("task ", t.task.Name, " is fail ", " batchTaskId=", t.batchTaskId, " state=", t.state)
 
 			}
 
@@ -124,7 +124,7 @@ func (s *ExecSchedule) Run() { // {{{
 				s.state = 3
 				s.Log()
 
-				l.Infoln("schedule ", s.schedule.name, " is end ", " batchId=", s.batchId,
+				g.L.Infoln("schedule ", s.schedule.name, " is end ", " batchId=", s.batchId,
 					" success=", s.successTaskCnt, " fail=", s.failTaskCnt, " result=", s.result)
 
 				//自动调度执行，完成后设置下次执行时间
@@ -188,7 +188,7 @@ func (s *ExecSchedule) Log() (err error) { // {{{
 						 ?,
 						 ?,
 						 ?)`
-		_, err = gDbConn.Exec(sql, &s.batchId, &s.schedule.id, &s.startTime, &s.endTime, &s.state, &s.result, &s.execType)
+		_, err = g.Conn.Exec(sql, &s.batchId, &s.schedule.id, &s.startTime, &s.endTime, &s.state, &s.result, &s.execType)
 	} else {
 		sql := `UPDATE hive.scd_schedule_log
 						 set start_time=?,
@@ -196,7 +196,7 @@ func (s *ExecSchedule) Log() (err error) { // {{{
 						 state=?,
 						 result=?
 				WHERE batch_id=?`
-		_, err = gDbConn.Exec(sql, &s.startTime, &s.endTime, &s.state, &s.result, &s.batchId)
+		_, err = g.Conn.Exec(sql, &s.startTime, &s.endTime, &s.state, &s.result, &s.batchId)
 	}
 
 	return err
@@ -236,7 +236,7 @@ func (j *ExecJob) Log() (err error) { // {{{
 						 ?,
 						 ?,
 						 ?)`
-		_, err = gDbConn.Exec(sql, &j.batchJobId, &j.batchId, &j.job.id, &j.startTime, &j.endTime, &j.state, &j.result, &j.execType)
+		_, err = g.Conn.Exec(sql, &j.batchJobId, &j.batchId, &j.job.id, &j.startTime, &j.endTime, &j.state, &j.result, &j.execType)
 	} else {
 		sql := `UPDATE hive.scd_job_log
 						 set start_time=?,
@@ -244,7 +244,7 @@ func (j *ExecJob) Log() (err error) { // {{{
 						 state=?,
 						 result=?
 				WHERE batch_job_id=?`
-		_, err = gDbConn.Exec(sql, &j.startTime, &j.endTime, &j.state, &j.result, &j.batchJobId)
+		_, err = g.Conn.Exec(sql, &j.startTime, &j.endTime, &j.state, &j.result, &j.batchJobId)
 	}
 
 	return err
@@ -284,14 +284,14 @@ func (t *ExecTask) Log() (err error) { // {{{
 						 ?,
 						 ?,
 						 ?)`
-		_, err = gDbConn.Exec(sql, &t.batchTaskId, &t.batchJobId, &t.batchId, &t.task.Id, &t.startTime, &t.endTime, &t.state, &t.execType)
+		_, err = g.Conn.Exec(sql, &t.batchTaskId, &t.batchJobId, &t.batchId, &t.task.Id, &t.startTime, &t.endTime, &t.state, &t.execType)
 	} else {
 		sql := `UPDATE hive.scd_task_log
 						 set start_time=?,
 						 end_time=?,
 						 state=?
 				WHERE batch_task_id=?`
-		_, err = gDbConn.Exec(sql, &t.startTime, &t.endTime, &t.state, &t.batchTaskId)
+		_, err = g.Conn.Exec(sql, &t.startTime, &t.endTime, &t.state, &t.batchTaskId)
 	}
 
 	return err
@@ -314,7 +314,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 			buf.Write(debug.Stack())
 			t.endTime = time.Now()
 			t.state = 5
-			l.Warningln("task run error", "batchTaskId=", t.batchTaskId, "TaskName=",
+			g.L.Warningln("task run error", "batchTaskId=", t.batchTaskId, "TaskName=",
 				t.task.Name, "output=", rl.Stdout, "err=", err, " stack=", buf.String())
 			t.Log()
 
@@ -325,7 +325,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	//若任务为暂停状态则不执行直接退出
 	if t.state == 2 {
-		l.Infoln("task", t.task.Name, "is pause batchTaskId=", t.batchTaskId)
+		g.L.Infoln("task", t.task.Name, "is pause batchTaskId=", t.batchTaskId)
 		t.Log()
 		taskChan <- t
 		return
@@ -335,7 +335,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	t.state = 1
 
 	t.Log()
-	l.Infoln("task", t.task.Name, "is start batchTaskId=", t.batchTaskId, "cmd =", t.task.Cmd, " arg=", t.task.Param)
+	g.L.Infoln("task", t.task.Name, "is start batchTaskId=", t.batchTaskId, "cmd =", t.task.Cmd, " arg=", t.task.Param)
 
 	//判断是否在执行周期内,若是则直接执行，否则跳过返回执行完成的状态，并继续下一步骤
 	//TO-DO 暂时搁着，以后再完善
@@ -343,7 +343,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 		t.state = 4
 		t.output = "task is ignored"
 		t.endTime = time.Now()
-		l.Infoln("task", t.task.Name, "is ignore batchTaskId=", t.batchTaskId)
+		g.L.Infoln("task", t.task.Name, "is ignore batchTaskId=", t.batchTaskId)
 		t.Log()
 		taskChan <- t
 		return
@@ -356,7 +356,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	t.state = 3
 
-	if client, err := rpc.Dial("tcp", address+gPort); err == nil {
+	if client, err := rpc.Dial("tcp", address+g.Port); err == nil {
 
 		if err := client.Call("CmdExecuter.Run", task, &rl); err == nil {
 			if rl.Err != nil {
@@ -374,8 +374,8 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	t.endTime = time.Now()
 
 	t.Log()
-	l.Infoln("task", t.task.Name, "is end batchTaskId =", t.batchTaskId, "state =",
-		t.state, "output =", rl.Stdout, "Start time", t.startTime, "End time", t.endTime)
+	g.L.Infoln("task", t.task.Name, "is end batchTaskId =", t.batchTaskId, "state =",
+		t.state, "output =", rl.Stdout, "StartTime", t.startTime, "EndTime", t.endTime)
 
 	taskChan <- t
 
@@ -430,7 +430,7 @@ func NewExecScheduleById(bid string, s *Schedule) (es *ExecSchedule, err error) 
 		j = j.nextJob
 	}
 
-	l.Infoln("ExecSchedule ", es.schedule.name, " is create batchId=", bid)
+	g.L.Infoln("ExecSchedule ", es.schedule.name, " is create batchId=", bid)
 
 	return es, err
 } // }}}
@@ -464,7 +464,7 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 		execTask.execJob = execJob
 
 		//将任务执行结构存入全局的gExecTasks变量，以便后面获取依赖任务执行信息时使用
-		gExecTasks[t.Id] = execTask
+		g.ExecTasks[t.Id] = execTask
 
 		//依赖任务分配内存
 		execTask.relExecTasks = make(map[int64]*ExecTask)
@@ -473,7 +473,7 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 		//设置依赖任务执行信息
 		//先获取依赖任务列表，通过每一个依赖任务的id从全局gExecTasks中获取到依赖任务
 		for _, relTask := range t.RelTasks {
-			retask := gExecTasks[relTask.Id]
+			retask := g.ExecTasks[relTask.Id]
 			execTask.relExecTasks[relTask.Id] = retask
 
 			//将execTask设置为依赖任务的下级任务
@@ -485,10 +485,10 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 
 		execJob.execTasks = append(execJob.execTasks, execTask)
 
-		l.Infoln("ExecTask ", execTask.task.Name, " is create batchTaskId=", execTask.batchTaskId)
+		g.L.Infoln("ExecTask ", execTask.task.Name, " is create batchTaskId=", execTask.batchTaskId)
 	} // }}}
 
-	l.Infoln("ExecJob ", execJob.job.name, " is create batchJobId=", execJob.batchJobId)
+	g.L.Infoln("ExecJob ", execJob.job.name, " is create batchJobId=", execJob.batchJobId)
 
 	//继续构建作业的下级作业
 	if job.nextJob != nil {
@@ -503,13 +503,13 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 //根据传入的batchId，构建调度执行结构，并调用Run方法执行其中的任务
 func Restore(batchId string, scdId int64) (err error) { // {{{
 
-	l.Infoln("Restore schedule by ", " batchid=", batchId, " scdId=", scdId)
+	g.L.Infoln("Restore schedule by ", " batchid=", batchId, " scdId=", scdId)
 
 	//获取执行成功的Task
 	successTaskId := getSuccessTaskId(batchId)
 
 	//创建ExecSchedule结构
-	execSchedule, err := NewExecScheduleById(batchId, gScdList.Schedules[scdId])
+	execSchedule, err := NewExecScheduleById(batchId, g.Schedules.ScheduleList[scdId])
 	execSchedule.execType = 3
 	execSchedule.state = 1
 
@@ -531,12 +531,12 @@ func Restore(batchId string, scdId int64) (err error) { // {{{
 		t.execJob.state = 1
 	}
 
-	l.Infoln("schedule will restore")
+	g.L.Infoln("schedule will restore")
 
 	//执行
 	execSchedule.Run()
 
-	l.Infoln("schedule was restored")
+	g.L.Infoln("schedule was restored")
 
 	return nil
 
@@ -549,7 +549,7 @@ func getSuccessTaskId(batchId string) []int64 { // {{{
 			FROM   hive.scd_task_log
 			WHERE  state = 3
 			   AND batch_id =?`
-	rows, err := gDbConn.Query(sql, batchId)
+	rows, err := g.Conn.Query(sql, batchId)
 	CheckErr("getSuccessTaskId run Sql "+sql, err)
 
 	taskIds := make([]int64, 0)
