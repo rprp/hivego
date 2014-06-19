@@ -169,7 +169,7 @@ func ListenAndServer(port string) { // {{{
 	executer := new(CmdExecuter)
 	rpc.Register(executer)
 
-	l.Infoln("Server is running Port:", port)
+	l.Infoln("Worker is running Port:", port)
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", port)
 	checkErr(err)
