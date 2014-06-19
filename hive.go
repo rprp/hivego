@@ -103,6 +103,7 @@ func main() {
 
 		schedule.StartSchedule(global)
 
+		waitExit("Schedule")
 	} else {
 
 		if config.SchedulePidFile != "" {
@@ -118,9 +119,10 @@ func main() {
 		}
 
 		worker.ListenAndServer(global.Port)
+
+		waitExit("Worker")
 	}
 
-	waitExit()
 }
 
 func checkAndSetPid(pidFile string) error {
@@ -153,7 +155,7 @@ func checkAndSetPid(pidFile string) error {
 	return nil
 }
 
-func waitExit() {
+func waitExit(name string) {
 	sig := make(chan os.Signal)
 	// wait for sigint
 	signal.Notify(sig, syscall.SIGKILL, syscall.SIGINT, syscall.SIGHUP, syscall.SIGALRM, syscall.SIGTERM)
@@ -161,7 +163,7 @@ func waitExit() {
 	for {
 		switch <-sig {
 		case syscall.SIGKILL, syscall.SIGINT, syscall.SIGHUP, syscall.SIGALRM, syscall.SIGTERM:
-			log.Println("Hive is exit.")
+			log.Printf("%s is exit.", name)
 			return
 		}
 	}

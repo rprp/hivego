@@ -2,7 +2,7 @@
 
 maxprocs = 8
 conn = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true&loc=Local"
-port = "8123"
+port = "9527"
 #0.Panic 1.Fatal 2.Error 3.Warn 4.Info 5.Debug
 loglevel = 4
 schedule_pid_file="schedule_pid_file"

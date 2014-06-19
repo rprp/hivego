@@ -177,15 +177,17 @@ func ListenAndServer(port string) { // {{{
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	checkErr(err)
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			continue
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				continue
+			}
+			go func() {
+				rpc.ServeConn(conn)
+			}()
 		}
-		go func() {
-			rpc.ServeConn(conn)
-		}()
-	}
+	}()
 
 } // }}}
 
