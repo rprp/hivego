@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/rprp/hive/schedule"
 	"github.com/rprp/hive/worker"
 	"io/ioutil"
@@ -94,7 +95,7 @@ func main() {
 			}()
 		}
 
-		cnn, err := sql.Open("mysql", config.Conn)
+		cnn, err := sql.Open(config.Dbtype, config.Conn)
 		if err != nil {
 			log.Fatalf("Unable to connect metadata database. %s", err)
 		}

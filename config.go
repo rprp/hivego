@@ -7,6 +7,7 @@ import (
 
 type HiveConfig struct {
 	Maxprocs        int    `toml:"maxprocs"`
+	Dbtype          string `toml:"dbtype"`
 	Conn            string `toml:"conn"`
 	Port            string `toml:"port"`
 	Loglevel        uint8  `toml:"loglevel"`

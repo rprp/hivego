@@ -1,7 +1,10 @@
 # This is a TOML document. 
 
 maxprocs = 8
-conn = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true&loc=Local"
+#dbtype = "mysql"
+dbtype = "sqlite3"
+conn = "hive.db"
+#conn = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true&loc=Local"
 port = "9527"
 #0.Panic 1.Fatal 2.Error 3.Warn 4.Info 5.Debug
 loglevel = 4

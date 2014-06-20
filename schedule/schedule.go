@@ -158,7 +158,7 @@ func (s *Schedule) String() string { // {{{
 //Add方法会将Schedule对象增加到元数据库中。
 func (s *Schedule) Add() (err error) { // {{{
 	s.SetNewId()
-	sql := `INSERT INTO hive.scd_schedule
+	sql := `INSERT INTO scd_schedule
             (scd_id, scd_name, scd_num, scd_cyc,
              scd_timeout, scd_job_id, scd_desc, create_user_id,
              create_time, modify_user_id, modify_time)
@@ -172,7 +172,7 @@ func (s *Schedule) Add() (err error) { // {{{
 
 //Update方法将Schedule对象更新到元数据库。
 func (s *Schedule) Update() (err error) { // {{{
-	sql := `UPDATE hive.scd_schedule 
+	sql := `UPDATE scd_schedule 
 		SET  scd_name=?,
              scd_num=?,
              scd_cyc=?,
@@ -193,7 +193,7 @@ func (s *Schedule) Update() (err error) { // {{{
 
 //Delete方法，删除元数据库中的调度信息
 func (s *Schedule) Delete() error { // {{{
-	sql := `Delete hive.scd_schedule WHERE scd_id=?`
+	sql := `Delete scd_schedule WHERE scd_id=?`
 	_, err := g.Conn.Exec(sql, &s.id)
 	g.L.Debugln("schedule", s.name, " was deleted.")
 
@@ -213,7 +213,7 @@ func (s *Schedule) SetNewId() { // {{{
 
 	//查询全部schedule列表
 	sql := `SELECT max(scd.scd_id) as scd_id
-			FROM hive.scd_schedule scd`
+			FROM scd_schedule scd`
 	rows, err := g.Conn.Query(sql)
 	CheckErr("SetNewId run Sql "+sql, err)
 
@@ -234,7 +234,7 @@ func getStart(id int64) (st []time.Duration) { // {{{
 
 	//查询全部schedule启动时间列表
 	sql := `SELECT s.scd_start
-			FROM hive.scd_start s
+			FROM scd_start s
 			WHERE s.scd_id=?`
 	rows, err := g.Conn.Query(sql, id)
 	CheckErr("getStart run Sql "+sql, err)
@@ -273,7 +273,7 @@ func getSchedule(id int64) (scd *Schedule) { // {{{
 				scd.scd_timeout,
 				scd.scd_job_id,
 				scd.scd_desc
-			FROM hive.scd_schedule scd
+			FROM scd_schedule scd
 			WHERE scd.scd_id=?`
 	rows, err := g.Conn.Query(sql, id)
 	CheckErr("getSchedule run Sql "+sql, err)
@@ -309,7 +309,7 @@ func getAllSchedules() (scds map[int64]*Schedule) { // {{{
 				scd.create_time,
 				scd.modify_user_id,
 				scd.modify_time
-			FROM hive.scd_schedule scd`
+			FROM scd_schedule scd`
 	rows, err := g.Conn.Query(sql)
 	CheckErr("getAllSchedules run Sql "+sql, err)
 

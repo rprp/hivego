@@ -95,7 +95,7 @@ func (t *Task) String() string { // {{{
 //增加作业信息至元数据库
 func (t *Task) Add() (err error) { // {{{
 	t.SetNewId()
-	sql := `INSERT INTO hive.scd_task
+	sql := `INSERT INTO scd_task
             (task_id, task_address, task_name, task_cyc,
              task_time_out, task_start, task_type_id,
              task_cmd, task_desc, create_user_id, create_time,
@@ -119,7 +119,7 @@ func (t *Task) Add() (err error) { // {{{
 func (t *Task) AddParam(pname string) (err error) { // {{{
 	pid, _ := t.GetNewParamTaskId()
 	pv := t.Param[pname]
-	sql := `INSERT INTO hive.scd_task_param
+	sql := `INSERT INTO scd_task_param
             (scd_param_id,task_id, scd_param_name, scd_param_value,
              create_user_id, create_time)
 			VALUES      (?, ?, ?, ?, ?, ?)`
@@ -131,7 +131,7 @@ func (t *Task) AddParam(pname string) (err error) { // {{{
 //增加依赖任务至元数据库
 func (t *Task) AddRelTask(id int64) (err error) { // {{{
 	relid, _ := t.GetNewRelTaskId()
-	sql := `INSERT INTO hive.scd_task_rel
+	sql := `INSERT INTO scd_task_rel
             (task_rel_id, task_id, rel_task_id, create_user_id, create_time)
 			VALUES      (?, ?, ?, ?, ? )`
 	_, err = g.Conn.Exec(sql, &relid, &t.Id, &id, &t.CreateUserId, &t.CreateTime)
@@ -141,7 +141,7 @@ func (t *Task) AddRelTask(id int64) (err error) { // {{{
 
 //更新任务至元数据库
 func (t *Task) Update() (err error) { // {{{
-	sql := `UPDATE hive.scd_task
+	sql := `UPDATE scd_task
 			SET task_address=?,
 				task_name=?,
 				task_cyc=?,
@@ -161,7 +161,7 @@ func (t *Task) Update() (err error) { // {{{
 //删除任务参数至元数据库
 func (t *Task) DeleteRelTask(id int64) (err error) { // {{{
 
-	sql := `DELETE hive.scd_task_param WHERE task_id=? and scd_param_id=?`
+	sql := `DELETE scd_task_param WHERE task_id=? and scd_param_id=?`
 	_, err = g.Conn.Exec(sql, &t.Id, &id)
 
 	return err
@@ -170,13 +170,13 @@ func (t *Task) DeleteRelTask(id int64) (err error) { // {{{
 //删除任务至元数据库
 func (t *Task) Delete() (err error) { // {{{
 
-	sql := `DELETE hive.scd_task_param WHERE task_id=?`
+	sql := `DELETE scd_task_param WHERE task_id=?`
 	_, err = g.Conn.Exec(sql, &t.Id)
 
-	sql = `DELETE hive.scd_task_rel WHERE task_id=?`
+	sql = `DELETE scd_task_rel WHERE task_id=?`
 	_, err = g.Conn.Exec(sql, &t.Id)
 
-	sql = `DELETE hive.scd_task WHERE task_id=?`
+	sql = `DELETE scd_task WHERE task_id=?`
 	_, err = g.Conn.Exec(sql, &t.Id)
 
 	return err
@@ -187,7 +187,7 @@ func (t *Task) GetNewParamTaskId() (id int64, err error) { // {{{
 
 	//查询全部schedule列表
 	sql := `SELECT max(p.scd_param_id) as scd_param_id
-			FROM hive.scd_task_param p`
+			FROM scd_task_param p`
 
 	rows, err := g.Conn.Query(sql)
 	CheckErr("GetNewParamTaskId run sql"+sql, err)
@@ -206,7 +206,7 @@ func (t *Task) GetNewRelTaskId() (id int64, err error) { // {{{
 
 	//查询全部schedule列表
 	sql := `SELECT max(rt.task_rel_id) as task_rel_id
-			FROM hive.scd_task_rel rt`
+			FROM scd_task_rel rt`
 
 	rows, err := g.Conn.Query(sql)
 	CheckErr("GetNewRelTaskId run sql"+sql, err)
@@ -226,7 +226,7 @@ func (t *Task) SetNewId() (err error) { // {{{
 
 	//查询全部schedule列表
 	sql := `SELECT max(t.task_id) as task_id
-			FROM hive.scd_task t`
+			FROM scd_task t`
 	rows, err := g.Conn.Query(sql)
 	CheckErr("SetNewId run sql"+sql, err)
 
@@ -255,7 +255,7 @@ func getTaskParam(id int64) (taskParam map[string]string, err error) { // {{{
 	sql := `SELECT pm.task_id,
 				   pm.scd_param_name,
 				   pm.scd_param_value
-			FROM   hive.scd_task_param pm
+			FROM   scd_task_param pm
 			WHERE pm.task_id=?`
 
 	rows, err := g.Conn.Query(sql, id)
@@ -279,7 +279,7 @@ func getTaskAttr(id int64) (taskAttr map[string]string, err error) { // {{{
 	//查询指定的Task属性列表
 	sql := `SELECT ta.task_attr_name,
 			   ta.task_attr_value
-			FROM   hive.scd_task_attr ta
+			FROM   scd_task_attr ta
 			WHERE  task_id = ?`
 	rows, err := g.Conn.Query(sql, id)
 	CheckErr("getTaskAttr run sql"+sql, err)
@@ -306,7 +306,7 @@ func getTask(id int64) (task *Task) { // {{{
 			   task.task_cyc,
 			   task.task_start,
 			   task.task_cmd
-			FROM hive.scd_task task
+			FROM scd_task task
 			WHERE task.task_id=?`
 	rows, err := g.Conn.Query(sql, id)
 	CheckErr("getTask run sql"+sql, err)
@@ -343,7 +343,7 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 			   task.task_cyc,
 			   task.task_start,
 			   task.task_cmd
-			FROM hive.scd_task task`
+			FROM scd_task task`
 	rows, err := g.Conn.Query(sql)
 	CheckErr("getAllTasks run sql"+sql, err)
 
@@ -373,7 +373,7 @@ func getTasks(jobId int64) (tasks map[int64]*Task) { // {{{
 
 	//查询Job中全部Task列表
 	sql := `SELECT jt.task_id
-			FROM hive.scd_job_task jt
+			FROM scd_job_task jt
 			WHERE jt.job_id=?`
 	rows, err := g.Conn.Query(sql, jobId)
 	CheckErr("getTasks run sql"+sql, err)
@@ -400,7 +400,7 @@ func getJobTaskid() (jobtask map[int64]int64, err error) { // {{{
 	//查询Job中全部Task列表
 	sql := `SELECT jt.job_id,
 				jt.task_id
-			FROM hive.scd_job_task jt`
+			FROM scd_job_task jt`
 	rows, err := g.Conn.Query(sql)
 	CheckErr("getJobTaskid run sql"+sql, err)
 
@@ -420,7 +420,7 @@ func getRelTaskId(id int64) (relTaskId []int64) { // {{{
 
 	//查询Task的依赖列表
 	sql := `SELECT tr.rel_task_id
-			FROM hive.scd_task_rel tr
+			FROM scd_task_rel tr
 			Where tr.task_id=?`
 	rows, err := g.Conn.Query(sql, id)
 	CheckErr("getRelTaskId run sql"+sql, err)
@@ -443,7 +443,7 @@ func getRelTasks() (relTasks []*RelTask, err error) { // {{{
 	//查询Task的依赖列表
 	sql := `SELECT tr.task_id,
 				tr.rel_task_id
-			FROM hive.scd_task_rel tr
+			FROM scd_task_rel tr
 			ORDER BY tr.task_id`
 	rows, err := g.Conn.Query(sql)
 	CheckErr("getRelTasks run sql"+sql, err)

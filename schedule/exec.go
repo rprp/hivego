@@ -40,7 +40,7 @@ func (s *ExecSchedule) Run() { // {{{
 	//当一个作业完成后会将自己放入taskChan变量中
 	staskChan := make(chan *ExecTask)
 
-	s.startTime = time.Now()
+	s.startTime = time.Now().Local()
 	s.state = 1
 	s.Log()
 
@@ -52,7 +52,7 @@ func (s *ExecSchedule) Run() { // {{{
 		if len(execTask.relExecTasks) == 0 {
 			//任务所属作业开始时间为空，设置作业启动信息
 			if execTask.execJob.startTime.IsZero() {
-				execTask.execJob.startTime = time.Now()
+				execTask.execJob.startTime = time.Now().Local()
 				execTask.execJob.state = 1
 				execTask.execJob.Log()
 
@@ -84,7 +84,7 @@ func (s *ExecSchedule) Run() { // {{{
 				//计算任务完成百分比
 				j.result = float32(j.job.taskCnt-j.taskCnt) / float32(j.job.taskCnt)
 				if j.taskCnt == 0 { //作业结束
-					j.endTime = time.Now()
+					j.endTime = time.Now().Local()
 					j.state = 3
 					j.Log()
 
@@ -98,7 +98,7 @@ func (s *ExecSchedule) Run() { // {{{
 					if len(nextask.relExecTasks) == 0 {
 						//任务所属作业开始时间为空，设置作业启动信息
 						if nextask.execJob.startTime.IsZero() {
-							nextask.execJob.startTime = time.Now()
+							nextask.execJob.startTime = time.Now().Local()
 							nextask.execJob.state = 1
 							nextask.execJob.Log()
 							g.L.Infoln("job ", nextask.execJob.job.name, " is start ", " batchJobId=", nextask.execJob.batchJobId)
@@ -120,7 +120,7 @@ func (s *ExecSchedule) Run() { // {{{
 
 			if s.taskCnt == 0 { //调度结束
 				//全部完成后，写入日志存储至数据库，设置下次启动时间
-				s.endTime = time.Now()
+				s.endTime = time.Now().Local()
 				s.state = 3
 				s.Log()
 
@@ -173,7 +173,7 @@ func clearFailTask(t *ExecTask) (n int64) { // {{{
 func (s *ExecSchedule) Log() (err error) { // {{{
 
 	if s.state == 0 {
-		sql := `INSERT INTO hive.scd_schedule_log
+		sql := `INSERT INTO scd_schedule_log
 						(batch_id,
 						 scd_id,
 						 start_time,
@@ -190,7 +190,7 @@ func (s *ExecSchedule) Log() (err error) { // {{{
 						 ?)`
 		_, err = g.Conn.Exec(sql, &s.batchId, &s.schedule.id, &s.startTime, &s.endTime, &s.state, &s.result, &s.execType)
 	} else {
-		sql := `UPDATE hive.scd_schedule_log
+		sql := `UPDATE scd_schedule_log
 						 set start_time=?,
 						 end_time=?,
 						 state=?,
@@ -220,7 +220,7 @@ type ExecJob struct {
 //保存执行日志
 func (j *ExecJob) Log() (err error) { // {{{
 	if j.state == 0 {
-		sql := `INSERT INTO hive.scd_job_log
+		sql := `INSERT INTO scd_job_log
 						(batch_job_id,batch_id,
 						 job_id,
 						 start_time,
@@ -238,7 +238,7 @@ func (j *ExecJob) Log() (err error) { // {{{
 						 ?)`
 		_, err = g.Conn.Exec(sql, &j.batchJobId, &j.batchId, &j.job.id, &j.startTime, &j.endTime, &j.state, &j.result, &j.execType)
 	} else {
-		sql := `UPDATE hive.scd_job_log
+		sql := `UPDATE scd_job_log
 						 set start_time=?,
 						 end_time=?,
 						 state=?,
@@ -269,7 +269,7 @@ type ExecTask struct {
 //保存执行日志
 func (t *ExecTask) Log() (err error) { // {{{
 	if t.state == 0 {
-		sql := `INSERT INTO hive.scd_task_log
+		sql := `INSERT INTO scd_task_log
 						(batch_task_id,batch_job_id,batch_id,
 						 task_id,
 						 start_time,
@@ -286,7 +286,7 @@ func (t *ExecTask) Log() (err error) { // {{{
 						 ?)`
 		_, err = g.Conn.Exec(sql, &t.batchTaskId, &t.batchJobId, &t.batchId, &t.task.Id, &t.startTime, &t.endTime, &t.state, &t.execType)
 	} else {
-		sql := `UPDATE hive.scd_task_log
+		sql := `UPDATE scd_task_log
 						 set start_time=?,
 						 end_time=?,
 						 state=?
@@ -312,7 +312,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 		if err := recover(); err != nil {
 			var buf bytes.Buffer
 			buf.Write(debug.Stack())
-			t.endTime = time.Now()
+			t.endTime = time.Now().Local()
 			t.state = 5
 			g.L.Warningln("task run error", "batchTaskId=", t.batchTaskId, "TaskName=",
 				t.task.Name, "output=", rl.Stdout, "err=", err, " stack=", buf.String())
@@ -331,7 +331,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 		return
 	}
 
-	t.startTime = time.Now()
+	t.startTime = time.Now().Local()
 	t.state = 1
 
 	t.Log()
@@ -342,7 +342,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	if t.task.TaskCyc != "" && !t.isReady() {
 		t.state = 4
 		t.output = "task is ignored"
-		t.endTime = time.Now()
+		t.endTime = time.Now().Local()
 		g.L.Infoln("task", t.task.Name, "is ignore batchTaskId=", t.batchTaskId)
 		t.Log()
 		taskChan <- t
@@ -371,7 +371,7 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	}
 
 	t.output = t.output + rl.Stdout
-	t.endTime = time.Now()
+	t.endTime = time.Now().Local()
 
 	t.Log()
 	g.L.Infoln("task", t.task.Name, "is end batchTaskId =", t.batchTaskId, "state =",
@@ -384,8 +384,8 @@ func (t *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 //isReady方法会根据Task的调度周期与启动时间判断是否符合执行条件
 //符合返回true，反之false
 func (t *ExecTask) isReady() (b bool) { // {{{
-	td := TruncDate(t.task.TaskCyc, time.Now()).Add(t.task.StartSecond)
-	sd := TruncDate(t.task.ScheduleCyc, time.Now())
+	td := TruncDate(t.task.TaskCyc, time.Now().Local()).Add(t.task.StartSecond)
+	sd := TruncDate(t.task.ScheduleCyc, time.Now().Local())
 	if TruncDate(t.task.ScheduleCyc, td) == sd {
 		b = true
 	}
@@ -397,7 +397,7 @@ func (t *ExecTask) isReady() (b bool) { // {{{
 //执行结构包含完整的执行链
 func NewExecSchedule(s *Schedule) (es *ExecSchedule, err error) { // {{{// {{{
 	//批次ID
-	bid := fmt.Sprintf("%s %d", time.Now().Format("2006-01-02 15:04:05.000000"), s.id)
+	bid := fmt.Sprintf("%s %d", time.Now().Local().Format("2006-01-02 15:04:05.000000"), s.id)
 	return NewExecScheduleById(bid, s)
 
 } // }}}
@@ -546,7 +546,7 @@ func Restore(batchId string, scdId int64) (err error) { // {{{
 func getSuccessTaskId(batchId string) []int64 { // {{{
 
 	sql := `SELECT task_id
-			FROM   hive.scd_task_log
+			FROM   scd_task_log
 			WHERE  state = 3
 			   AND batch_id =?`
 	rows, err := g.Conn.Query(sql, batchId)
