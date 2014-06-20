@@ -5,6 +5,7 @@ cpuprofile
 memprofile
 worker_pid_file
 bin/*
+build.py
 
 !*.go
 !*.js

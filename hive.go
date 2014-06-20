@@ -57,7 +57,7 @@ func main() {
 	config = LoadHiveConfig("hive.toml")
 	global, cpuProfName, memProfName := setConfig(config)
 
-	if *isSchedule {
+	if *isSchedule { // {{{
 		if config.SchedulePidFile != "" {
 			if err := checkAndSetPid(config.SchedulePidFile); err != nil {
 				log.Fatalf(err.Error())
@@ -104,9 +104,9 @@ func main() {
 		schedule.StartSchedule(global)
 
 		waitExit("Schedule")
-	} else {
+	} else { // }}}
 
-		if config.SchedulePidFile != "" {
+		if config.SchedulePidFile != "" { // {{{
 			if err := checkAndSetPid(config.WorkerPidFile); err != nil {
 				log.Fatalf(err.Error())
 			}
@@ -116,7 +116,7 @@ func main() {
 					log.Fatalf("Unable to remove pidfile '%s': %s", config.WorkerPidFile, err)
 				}
 			}()
-		}
+		} // }}}
 
 		worker.ListenAndServer(global.Port)
 
@@ -125,7 +125,7 @@ func main() {
 
 }
 
-func checkAndSetPid(pidFile string) error {
+func checkAndSetPid(pidFile string) error { // {{{
 	contents, err := ioutil.ReadFile(pidFile)
 	if err == nil {
 		pid, err := strconv.Atoi(strings.TrimSpace(string(contents)))
@@ -153,9 +153,9 @@ func checkAndSetPid(pidFile string) error {
 	log.Printf("Wrote pid to pidfile '%s'", pidFile)
 
 	return nil
-}
+} // }}}
 
-func waitExit(name string) {
+func waitExit(name string) { // {{{
 	sig := make(chan os.Signal)
 	// wait for sigint
 	signal.Notify(sig, syscall.SIGKILL, syscall.SIGINT, syscall.SIGHUP, syscall.SIGALRM, syscall.SIGTERM)
@@ -167,4 +167,4 @@ func waitExit(name string) {
 			return
 		}
 	}
-}
+} // }}}

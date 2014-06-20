@@ -61,11 +61,8 @@ func (sl *ScheduleList) StartSchedule() { // {{{
 func StartSchedule(global *GlobalConfigStruct) { // {{{
 	g = global
 
-	//创建并初始化调度列表
-	sLst := &ScheduleList{}
-
 	//执行调度
-	sLst.StartSchedule()
+	g.Schedules.StartSchedule()
 
 	return
 } // }}}

@@ -34,6 +34,8 @@ os.environ['GOARCH'] = 'amd64'
 os.environ['GOOS'] = 'darwin' 
 os.system('go install')
 
+os.system('cp *.toml bin/')
+
 if oldpath is not None:
     os.environ['GOPATH']= oldpath
 else:
