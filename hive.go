@@ -95,12 +95,19 @@ func main() {
 			}()
 		}
 
-		cnn, err := sql.Open(config.Dbtype, config.Conn)
+		cnn, err := sql.Open(config.Dbinfo["hivedb"].Dbtype, config.Dbinfo["hivedb"].Conn)
 		if err != nil {
 			log.Fatalf("Unable to connect metadata database. %s", err)
 		}
-		global.Conn = cnn
-		defer global.Conn.Close()
+		global.HiveConn = cnn
+		defer global.HiveConn.Close()
+
+		cnn, err = sql.Open(config.Dbinfo["logdb"].Dbtype, config.Dbinfo["logdb"].Conn)
+		if err != nil {
+			log.Fatalf("Unable to connect metadata database. %s", err)
+		}
+		global.LogConn = cnn
+		defer global.LogConn.Close()
 
 		schedule.StartSchedule(global)
 

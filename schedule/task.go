@@ -101,7 +101,7 @@ func (t *Task) Add() (err error) { // {{{
              task_cmd, task_desc, create_user_id, create_time,
              modify_user_id, modify_time)
 			VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = g.Conn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
+	_, err = g.HiveConn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
 	if err == nil {
 		for _, rt := range t.RelTasks {
 			t.AddRelTask(rt.Id)
@@ -123,7 +123,7 @@ func (t *Task) AddParam(pname string) (err error) { // {{{
             (scd_param_id,task_id, scd_param_name, scd_param_value,
              create_user_id, create_time)
 			VALUES      (?, ?, ?, ?, ?, ?)`
-	_, err = g.Conn.Exec(sql, &pid, &t.Id, &pname, &pv, &t.CreateUserId, &t.CreateTime)
+	_, err = g.HiveConn.Exec(sql, &pid, &t.Id, &pname, &pv, &t.CreateUserId, &t.CreateTime)
 
 	return err
 } // }}}
@@ -134,7 +134,7 @@ func (t *Task) AddRelTask(id int64) (err error) { // {{{
 	sql := `INSERT INTO scd_task_rel
             (task_rel_id, task_id, rel_task_id, create_user_id, create_time)
 			VALUES      (?, ?, ?, ?, ? )`
-	_, err = g.Conn.Exec(sql, &relid, &t.Id, &id, &t.CreateUserId, &t.CreateTime)
+	_, err = g.HiveConn.Exec(sql, &relid, &t.Id, &id, &t.CreateUserId, &t.CreateTime)
 
 	return err
 } // }}}
@@ -153,7 +153,7 @@ func (t *Task) Update() (err error) { // {{{
 				modify_user_id=?,
 				modify_time=?
 			WHERE task_id=?`
-	_, err = g.Conn.Exec(sql, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.ModifyUserId, &t.ModifyTime, &t.Id)
+	_, err = g.HiveConn.Exec(sql, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.ModifyUserId, &t.ModifyTime, &t.Id)
 
 	return err
 } // }}}
@@ -162,7 +162,7 @@ func (t *Task) Update() (err error) { // {{{
 func (t *Task) DeleteRelTask(id int64) (err error) { // {{{
 
 	sql := `DELETE scd_task_param WHERE task_id=? and scd_param_id=?`
-	_, err = g.Conn.Exec(sql, &t.Id, &id)
+	_, err = g.HiveConn.Exec(sql, &t.Id, &id)
 
 	return err
 } // }}}
@@ -171,13 +171,13 @@ func (t *Task) DeleteRelTask(id int64) (err error) { // {{{
 func (t *Task) Delete() (err error) { // {{{
 
 	sql := `DELETE scd_task_param WHERE task_id=?`
-	_, err = g.Conn.Exec(sql, &t.Id)
+	_, err = g.HiveConn.Exec(sql, &t.Id)
 
 	sql = `DELETE scd_task_rel WHERE task_id=?`
-	_, err = g.Conn.Exec(sql, &t.Id)
+	_, err = g.HiveConn.Exec(sql, &t.Id)
 
 	sql = `DELETE scd_task WHERE task_id=?`
-	_, err = g.Conn.Exec(sql, &t.Id)
+	_, err = g.HiveConn.Exec(sql, &t.Id)
 
 	return err
 } // }}}
@@ -189,7 +189,7 @@ func (t *Task) GetNewParamTaskId() (id int64, err error) { // {{{
 	sql := `SELECT max(p.scd_param_id) as scd_param_id
 			FROM scd_task_param p`
 
-	rows, err := g.Conn.Query(sql)
+	rows, err := g.HiveConn.Query(sql)
 	CheckErr("GetNewParamTaskId run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -208,7 +208,7 @@ func (t *Task) GetNewRelTaskId() (id int64, err error) { // {{{
 	sql := `SELECT max(rt.task_rel_id) as task_rel_id
 			FROM scd_task_rel rt`
 
-	rows, err := g.Conn.Query(sql)
+	rows, err := g.HiveConn.Query(sql)
 	CheckErr("GetNewRelTaskId run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -227,7 +227,7 @@ func (t *Task) SetNewId() (err error) { // {{{
 	//查询全部schedule列表
 	sql := `SELECT max(t.task_id) as task_id
 			FROM scd_task t`
-	rows, err := g.Conn.Query(sql)
+	rows, err := g.HiveConn.Query(sql)
 	CheckErr("SetNewId run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -258,7 +258,7 @@ func getTaskParam(id int64) (taskParam map[string]string, err error) { // {{{
 			FROM   scd_task_param pm
 			WHERE pm.task_id=?`
 
-	rows, err := g.Conn.Query(sql, id)
+	rows, err := g.HiveConn.Query(sql, id)
 	CheckErr("getTaskParam run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -281,7 +281,7 @@ func getTaskAttr(id int64) (taskAttr map[string]string, err error) { // {{{
 			   ta.task_attr_value
 			FROM   scd_task_attr ta
 			WHERE  task_id = ?`
-	rows, err := g.Conn.Query(sql, id)
+	rows, err := g.HiveConn.Query(sql, id)
 	CheckErr("getTaskAttr run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -308,7 +308,7 @@ func getTask(id int64) (task *Task) { // {{{
 			   task.task_cmd
 			FROM scd_task task
 			WHERE task.task_id=?`
-	rows, err := g.Conn.Query(sql, id)
+	rows, err := g.HiveConn.Query(sql, id)
 	CheckErr("getTask run sql"+sql, err)
 
 	task = &Task{}
@@ -344,7 +344,7 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 			   task.task_start,
 			   task.task_cmd
 			FROM scd_task task`
-	rows, err := g.Conn.Query(sql)
+	rows, err := g.HiveConn.Query(sql)
 	CheckErr("getAllTasks run sql"+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -375,7 +375,7 @@ func getTasks(jobId int64) (tasks map[int64]*Task) { // {{{
 	sql := `SELECT jt.task_id
 			FROM scd_job_task jt
 			WHERE jt.job_id=?`
-	rows, err := g.Conn.Query(sql, jobId)
+	rows, err := g.HiveConn.Query(sql, jobId)
 	CheckErr("getTasks run sql"+sql, err)
 
 	//循环读取记录
@@ -401,7 +401,7 @@ func getJobTaskid() (jobtask map[int64]int64, err error) { // {{{
 	sql := `SELECT jt.job_id,
 				jt.task_id
 			FROM scd_job_task jt`
-	rows, err := g.Conn.Query(sql)
+	rows, err := g.HiveConn.Query(sql)
 	CheckErr("getJobTaskid run sql"+sql, err)
 
 	//循环读取记录
@@ -422,7 +422,7 @@ func getRelTaskId(id int64) (relTaskId []int64) { // {{{
 	sql := `SELECT tr.rel_task_id
 			FROM scd_task_rel tr
 			Where tr.task_id=?`
-	rows, err := g.Conn.Query(sql, id)
+	rows, err := g.HiveConn.Query(sql, id)
 	CheckErr("getRelTaskId run sql"+sql, err)
 
 	//循环读取记录
@@ -445,7 +445,7 @@ func getRelTasks() (relTasks []*RelTask, err error) { // {{{
 				tr.rel_task_id
 			FROM scd_task_rel tr
 			ORDER BY tr.task_id`
-	rows, err := g.Conn.Query(sql)
+	rows, err := g.HiveConn.Query(sql)
 	CheckErr("getRelTasks run sql"+sql, err)
 
 	//循环读取记录

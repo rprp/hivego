@@ -103,7 +103,7 @@ func (j *Job) Add() (err error) { // {{{
              next_job_id, create_user_id, create_time,
              modify_user_id, modify_time)
 		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = g.Conn.Exec(sql, &j.id, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.createUserId, &j.createTime, &j.modifyUserId, &j.modifyTime)
+	_, err = g.HiveConn.Exec(sql, &j.id, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.createUserId, &j.createTime, &j.modifyUserId, &j.modifyTime)
 	if err == nil {
 		for i, t := range j.tasks {
 			j.AddTask(t.Id, i)
@@ -123,7 +123,7 @@ func (j *Job) AddTask(taskid int64, taskno int64) (err error) { // {{{
              create_user_id, create_time)
 		VALUES      (?, ?, ?, ?, ?, ?)`
 
-	_, err = g.Conn.Exec(sql, &jobtaskid, &j.id, &taskid, &taskno, &j.createUserId, &j.createTime)
+	_, err = g.HiveConn.Exec(sql, &jobtaskid, &j.id, &taskid, &taskno, &j.createUserId, &j.createTime)
 
 	return err
 } // }}}
@@ -133,7 +133,7 @@ func (j *Job) DeleteTask(taskid int64) (err error) { // {{{
 
 	sql := `DELETE scd_job_task WHERE job_id=? and task_id=?`
 
-	_, err = g.Conn.Exec(sql, &j.id, &taskid)
+	_, err = g.HiveConn.Exec(sql, &j.id, &taskid)
 
 	return err
 } // }}}
@@ -149,7 +149,7 @@ func (j *Job) Update() (err error) { // {{{
             modify_user_id=?, 
 			modify_time=?
 	    WHERE job_id=?`
-	_, err = g.Conn.Exec(sql, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.modifyUserId, &j.modifyTime)
+	_, err = g.HiveConn.Exec(sql, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.modifyUserId, &j.modifyTime)
 	return err
 } // }}}
 
@@ -157,10 +157,10 @@ func (j *Job) Update() (err error) { // {{{
 func (j *Job) Delete() (err error) { // {{{
 
 	sql := `DELETE scd_job_task WHERE job_id=?`
-	_, err = g.Conn.Exec(sql, &j.id)
+	_, err = g.HiveConn.Exec(sql, &j.id)
 
 	sql = `DELETE scd_job WHERE job_id=?`
-	_, err = g.Conn.Exec(sql, &j.id)
+	_, err = g.HiveConn.Exec(sql, &j.id)
 
 	return err
 } // }}}
@@ -172,7 +172,7 @@ func (j *Job) SetNewId() (err error) { // {{{
 	//查询全部schedule列表
 	sql := `SELECT max(job.job_id) as job_id
 			FROM scd_job job`
-	rows, err := g.Conn.Query(sql)
+	rows, err := g.HiveConn.Query(sql)
 	CheckErr("job SetNewId run Sql "+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -191,7 +191,7 @@ func (j *Job) GetNewJobTaskId() (id int64, err error) { // {{{
 	//查询全部schedule列表
 	sql := `SELECT max(jt.job_task_id) as job_task_id
 			FROM scd_job_task jt`
-	rows, err := g.Conn.Query(sql)
+	rows, err := g.HiveConn.Query(sql)
 	CheckErr("GetNewJobTaskId run Sql "+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ
@@ -214,7 +214,7 @@ func getJob(id int64) (job *Job) { // {{{
 			   job.next_job_id
 			FROM scd_job job
 			WHERE job.job_id=?`
-	rows, err := g.Conn.Query(sql, id)
+	rows, err := g.HiveConn.Query(sql, id)
 	CheckErr("getJob run Sql "+sql, err)
 
 	job = &Job{}
@@ -242,7 +242,7 @@ func getAllJobs() (jobs map[int64]*Job, err error) { // {{{
 			   job.prev_job_id,
 			   job.next_job_id
 			FROM scd_job job`
-	rows, err := g.Conn.Query(sql)
+	rows, err := g.HiveConn.Query(sql)
 	CheckErr("getAllJobs run Sql "+sql, err)
 
 	//循环读取记录，格式化后存入变量ｂ

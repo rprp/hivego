@@ -6,6 +6,7 @@ memprofile
 worker_pid_file
 bin/*
 build.py
+log.db
 
 !*.go
 !*.js

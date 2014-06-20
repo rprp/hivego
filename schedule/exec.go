@@ -188,7 +188,7 @@ func (s *ExecSchedule) Log() (err error) { // {{{
 						 ?,
 						 ?,
 						 ?)`
-		_, err = g.Conn.Exec(sql, &s.batchId, &s.schedule.id, &s.startTime, &s.endTime, &s.state, &s.result, &s.execType)
+		_, err = g.LogConn.Exec(sql, &s.batchId, &s.schedule.id, &s.startTime, &s.endTime, &s.state, &s.result, &s.execType)
 	} else {
 		sql := `UPDATE scd_schedule_log
 						 set start_time=?,
@@ -196,7 +196,7 @@ func (s *ExecSchedule) Log() (err error) { // {{{
 						 state=?,
 						 result=?
 				WHERE batch_id=?`
-		_, err = g.Conn.Exec(sql, &s.startTime, &s.endTime, &s.state, &s.result, &s.batchId)
+		_, err = g.LogConn.Exec(sql, &s.startTime, &s.endTime, &s.state, &s.result, &s.batchId)
 	}
 
 	return err
@@ -236,7 +236,7 @@ func (j *ExecJob) Log() (err error) { // {{{
 						 ?,
 						 ?,
 						 ?)`
-		_, err = g.Conn.Exec(sql, &j.batchJobId, &j.batchId, &j.job.id, &j.startTime, &j.endTime, &j.state, &j.result, &j.execType)
+		_, err = g.LogConn.Exec(sql, &j.batchJobId, &j.batchId, &j.job.id, &j.startTime, &j.endTime, &j.state, &j.result, &j.execType)
 	} else {
 		sql := `UPDATE scd_job_log
 						 set start_time=?,
@@ -244,7 +244,7 @@ func (j *ExecJob) Log() (err error) { // {{{
 						 state=?,
 						 result=?
 				WHERE batch_job_id=?`
-		_, err = g.Conn.Exec(sql, &j.startTime, &j.endTime, &j.state, &j.result, &j.batchJobId)
+		_, err = g.LogConn.Exec(sql, &j.startTime, &j.endTime, &j.state, &j.result, &j.batchJobId)
 	}
 
 	return err
@@ -284,14 +284,14 @@ func (t *ExecTask) Log() (err error) { // {{{
 						 ?,
 						 ?,
 						 ?)`
-		_, err = g.Conn.Exec(sql, &t.batchTaskId, &t.batchJobId, &t.batchId, &t.task.Id, &t.startTime, &t.endTime, &t.state, &t.execType)
+		_, err = g.LogConn.Exec(sql, &t.batchTaskId, &t.batchJobId, &t.batchId, &t.task.Id, &t.startTime, &t.endTime, &t.state, &t.execType)
 	} else {
 		sql := `UPDATE scd_task_log
 						 set start_time=?,
 						 end_time=?,
 						 state=?
 				WHERE batch_task_id=?`
-		_, err = g.Conn.Exec(sql, &t.startTime, &t.endTime, &t.state, &t.batchTaskId)
+		_, err = g.LogConn.Exec(sql, &t.startTime, &t.endTime, &t.state, &t.batchTaskId)
 	}
 
 	return err
@@ -549,7 +549,7 @@ func getSuccessTaskId(batchId string) []int64 { // {{{
 			FROM   scd_task_log
 			WHERE  state = 3
 			   AND batch_id =?`
-	rows, err := g.Conn.Query(sql, batchId)
+	rows, err := g.HiveConn.Query(sql, batchId)
 	CheckErr("getSuccessTaskId run Sql "+sql, err)
 
 	taskIds := make([]int64, 0)

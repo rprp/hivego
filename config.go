@@ -6,15 +6,19 @@ import (
 )
 
 type HiveConfig struct {
-	Maxprocs        int    `toml:"maxprocs"`
-	Dbtype          string `toml:"dbtype"`
-	Conn            string `toml:"conn"`
-	Port            string `toml:"port"`
-	Loglevel        uint8  `toml:"loglevel"`
-	SchedulePidFile string `toml:"schedule_pid_file"`
-	WorkerPidFile   string `toml:"worker_pid_file"`
-	CpuProfName     string `toml:"cpuprof"`
-	MemProfName     string `toml:"memprof"`
+	Maxprocs        int                `toml:"maxprocs"`
+	Dbinfo          map[string]*dbinfo `toml:"dbinfo"`
+	Port            string             `toml:"port"`
+	Loglevel        uint8              `toml:"loglevel"`
+	SchedulePidFile string             `toml:"schedule_pid_file"`
+	WorkerPidFile   string             `toml:"worker_pid_file"`
+	CpuProfName     string             `toml:"cpuprof"`
+	MemProfName     string             `toml:"memprof"`
+}
+
+type dbinfo struct {
+	Dbtype string
+	Conn   string
 }
 
 func LoadHiveConfig(configPath string) (config *HiveConfig) {
