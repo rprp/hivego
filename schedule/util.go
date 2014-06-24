@@ -113,13 +113,13 @@ func PrintErr(info string, err error) {
 //打印调度信息
 func printSchedule(scds map[int64]*Schedule) { // {{{
 	for _, scd := range scds {
-		fmt.Println(scd.name, "\tjobs=", scd.jobCnt, " tasks=", scd.taskCnt)
+		fmt.Println(scd.Name, "\tjobs=", scd.JobCnt, " tasks=", scd.TaskCnt)
 		//打印调度中的作业信息
-		for j := scd.job; j != nil; {
+		for j := scd.Job; j != nil; {
 			fmt.Println("\t--------------------------------------")
-			fmt.Println("\t", j.name)
+			fmt.Println("\t", j.Name)
 			//打印作业中的任务信息
-			for _, t := range j.tasks {
+			for _, t := range j.Tasks {
 				fmt.Println("\t\t", t.Name)
 
 				fmt.Print("\t\t\t[")
@@ -131,7 +131,7 @@ func printSchedule(scds map[int64]*Schedule) { // {{{
 				fmt.Print("]\n")
 			}
 			fmt.Print("\n")
-			j = j.nextJob
+			j = j.NextJob
 
 		}
 

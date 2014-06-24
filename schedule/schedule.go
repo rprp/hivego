@@ -59,7 +59,7 @@ func (sl *ScheduleList) StartSchedule() { // {{{
 } // }}}
 
 //StartSchedule函数是调度模块的入口函数。
-func StartSchedule(global *GlobalConfigStruct) { // {{{
+func Start(global *GlobalConfigStruct) { // {{{
 	g = global
 
 	//执行调度
@@ -70,39 +70,39 @@ func StartSchedule(global *GlobalConfigStruct) { // {{{
 
 //调度信息结构
 type Schedule struct { // {{{
-	id           int64           //调度ID
-	name         string          //调度名称
-	count        int8            //调度次数
-	cyc          string          //调度周期
-	startSecond  []time.Duration //周期内启动时间
-	nextStart    time.Time       //周期内启动时间
-	timeOut      int64           //最大执行时间
-	jobId        int64           //作业ID
-	job          *Job            //作业
-	desc         string          //调度说明
-	jobCnt       int64           //调度中作业数量
-	taskCnt      int64           //调度中任务数量
-	createUserId int64           //创建人
-	createTime   time.Time       //创人
-	modifyUserId int64           //修改人
-	modifyTime   time.Time       //修改时间
+	Id           int64           //调度ID
+	Name         string          //调度名称
+	Count        int8            //调度次数
+	Cyc          string          //调度周期
+	StartSecond  []time.Duration //周期内启动时间
+	NextStart    time.Time       //周期内启动时间
+	TimeOut      int64           //最大执行时间
+	JobId        int64           //作业ID
+	Job          *Job            //作业
+	Desc         string          //调度说明
+	JobCnt       int64           //调度中作业数量
+	TaskCnt      int64           //调度中任务数量
+	CreateUserId int64           //创建人
+	CreateTime   time.Time       //创人
+	ModifyUserId int64           //修改人
+	ModifyTime   time.Time       //修改时间
 }
 
 //根据调度的周期及启动时间，按时将调度传至执行列表执行。
 func (s *Schedule) Timer() { // {{{
 
 	//获取距启动的时间（秒）
-	countDown, err := getCountDown(s.cyc, s.startSecond)
+	countDown, err := getCountDown(s.Cyc, s.StartSecond)
 	CheckErr("getCountDown", err)
 
-	s.nextStart = time.Now().Add(countDown)
-	g.L.Println(s.id, s.name, "will start at", s.nextStart)
+	s.NextStart = time.Now().Add(countDown)
+	g.L.Println(s.Id, s.Name, "will start at", s.NextStart)
 	select {
 	case <-time.After(countDown):
 		//刷新调度
 		s.refreshSchedule()
 
-		g.L.Println("schedule", s.id, s.name, "is start")
+		g.L.Println("schedule", s.Id, s.Name, "is start")
 		//启动一个线程开始构建执行结构链
 		es, err := NewExecSchedule(s)
 		CheckErr("New ExecSchedule", err)
@@ -114,28 +114,28 @@ func (s *Schedule) Timer() { // {{{
 
 //refreshSchedule方法用来从元数据库刷新调度信息
 func (s *Schedule) refreshSchedule() { // {{{
-	g.L.Println("refresh schedule", s.name)
-	ts := getSchedule(s.id)
-	s.name = ts.name
-	s.count = ts.count
-	s.cyc = ts.cyc
-	s.startSecond = ts.startSecond
-	s.timeOut = ts.timeOut
-	s.jobId = ts.jobId
-	s.desc = ts.desc
+	g.L.Println("refresh schedule", s.Name)
+	ts := getSchedule(s.Id)
+	s.Name = ts.Name
+	s.Count = ts.Count
+	s.Cyc = ts.Cyc
+	s.StartSecond = ts.StartSecond
+	s.TimeOut = ts.TimeOut
+	s.JobId = ts.JobId
+	s.Desc = ts.Desc
 
-	tj := getJob(s.jobId)
-	tj.scheduleId = s.id
-	tj.scheduleCyc = s.cyc
+	tj := getJob(s.JobId)
+	tj.ScheduleId = s.Id
+	tj.ScheduleCyc = s.Cyc
 	tj.refreshJob()
-	s.job = tj
+	s.Job = tj
 
-	s.jobCnt = 0
-	s.taskCnt = 0
-	for j := s.job; j != nil; {
-		s.jobCnt++
-		s.taskCnt += j.taskCnt
-		j = j.nextJob
+	s.JobCnt = 0
+	s.TaskCnt = 0
+	for j := s.Job; j != nil; {
+		s.JobCnt++
+		s.TaskCnt += j.TaskCnt
+		j = j.NextJob
 	}
 	g.L.Println("schedule refreshed", s)
 } // }}}
@@ -152,8 +152,8 @@ func (s *Schedule) String() string { // {{{
 		" nextStart=%v"+
 		" createTime=%v"+
 		" desc=%s}\n",
-		s.id, s.name, s.cyc, s.startSecond,
-		s.timeOut, s.jobCnt, s.taskCnt, s.nextStart, s.createTime, s.desc)
+		s.Id, s.Name, s.Cyc, s.StartSecond,
+		s.TimeOut, s.JobCnt, s.TaskCnt, s.NextStart, s.CreateTime, s.Desc)
 } // }}}
 
 //Add方法会将Schedule对象增加到元数据库中。
@@ -164,9 +164,9 @@ func (s *Schedule) Add() (err error) { // {{{
              scd_timeout, scd_job_id, scd_desc, create_user_id,
              create_time, modify_user_id, modify_time)
 		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = g.HiveConn.Exec(sql, &s.id, &s.name, &s.count, &s.cyc,
-		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime)
-	g.L.Debugln("schedule", s.name, " was added.")
+	_, err = g.HiveConn.Exec(sql, &s.Id, &s.Name, &s.Count, &s.Cyc,
+		&s.TimeOut, &s.JobId, &s.Desc, &s.CreateUserId, &s.CreateTime, &s.ModifyUserId, &s.ModifyTime)
+	g.L.Debugln("schedule", s.Name, " was added.")
 
 	return err
 } // }}}
@@ -185,9 +185,9 @@ func (s *Schedule) Update() (err error) { // {{{
              modify_user_id=?,
              modify_time=?
 		 WHERE scd_id=?`
-	_, err = g.HiveConn.Exec(sql, &s.name, &s.count, &s.cyc,
-		&s.timeOut, &s.jobId, &s.desc, &s.createUserId, &s.createTime, &s.modifyUserId, &s.modifyTime, &s.id)
-	g.L.Debugln("schedule", s.name, " was updated.")
+	_, err = g.HiveConn.Exec(sql, &s.Name, &s.Count, &s.Cyc,
+		&s.TimeOut, &s.JobId, &s.Desc, &s.CreateUserId, &s.CreateTime, &s.ModifyUserId, &s.ModifyTime, &s.Id)
+	g.L.Debugln("schedule", s.Name, " was updated.")
 
 	return err
 } // }}}
@@ -195,16 +195,16 @@ func (s *Schedule) Update() (err error) { // {{{
 //Delete方法，删除元数据库中的调度信息
 func (s *Schedule) Delete() error { // {{{
 	sql := `Delete scd_schedule WHERE scd_id=?`
-	_, err := g.HiveConn.Exec(sql, &s.id)
-	g.L.Debugln("schedule", s.name, " was deleted.")
+	_, err := g.HiveConn.Exec(sql, &s.Id)
+	g.L.Debugln("schedule", s.Name, " was deleted.")
 
 	return err
 } // }}}
 
 //SetJob方法，设置调度下的Job
 func (s *Schedule) SetJob(jobid int64) { // {{{
-	s.jobId = jobid
-	s.job = getJob(jobid)
+	s.JobId = jobid
+	s.Job = getJob(jobid)
 	return
 } // }}}
 
@@ -222,7 +222,7 @@ func (s *Schedule) SetNewId() { // {{{
 		err = rows.Scan(&id)
 		CheckErr("get schedule new id", err)
 	}
-	s.id = id + 1
+	s.Id = id + 1
 
 	return
 
@@ -280,13 +280,13 @@ func getSchedule(id int64) (scd *Schedule) { // {{{
 	CheckErr("getSchedule run Sql "+sql, err)
 
 	scd = &Schedule{}
-	scd.startSecond = make([]time.Duration, 0)
+	scd.StartSecond = make([]time.Duration, 0)
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc,
-			&scd.timeOut, &scd.jobId, &scd.desc)
+		err = rows.Scan(&scd.Id, &scd.Name, &scd.Count, &scd.Cyc,
+			&scd.TimeOut, &scd.JobId, &scd.Desc)
 		PrintErr("get schedule info", err)
-		scd.startSecond = getStart(scd.id)
+		scd.StartSecond = getStart(scd.Id)
 		g.L.Debugln("get Schedule", scd)
 
 	}
@@ -316,14 +316,14 @@ func getAllSchedules() (scds map[int64]*Schedule) { // {{{
 
 	for rows.Next() {
 		scd := &Schedule{}
-		scd.startSecond = make([]time.Duration, 0)
-		err = rows.Scan(&scd.id, &scd.name, &scd.count, &scd.cyc, &scd.timeOut,
-			&scd.jobId, &scd.desc, &scd.createUserId, &scd.createTime, &scd.modifyUserId,
-			&scd.modifyTime)
+		scd.StartSecond = make([]time.Duration, 0)
+		err = rows.Scan(&scd.Id, &scd.Name, &scd.Count, &scd.Cyc, &scd.TimeOut,
+			&scd.JobId, &scd.Desc, &scd.CreateUserId, &scd.CreateTime, &scd.ModifyUserId,
+			&scd.ModifyTime)
 		PrintErr("get schedule info", err)
-		scd.startSecond = getStart(scd.id)
+		scd.StartSecond = getStart(scd.Id)
 
-		scds[scd.id] = scd
+		scds[scd.Id] = scd
 		g.L.Debugln("get Schedule", scd)
 	}
 

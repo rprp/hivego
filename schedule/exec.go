@@ -44,7 +44,7 @@ func (s *ExecSchedule) Run() { // {{{
 	s.state = 1
 	s.Log()
 
-	g.L.Infoln("schedule", s.schedule.name, "is start", "batchId=", s.batchId)
+	g.L.Infoln("schedule", s.schedule.Name, "is start", "batchId=", s.batchId)
 
 	//启动独立的任务
 	for _, execTask := range s.execTasks { // {{{
@@ -56,7 +56,7 @@ func (s *ExecSchedule) Run() { // {{{
 				execTask.execJob.state = 1
 				execTask.execJob.Log()
 
-				g.L.Infoln("job ", execTask.execJob.job.name, " is start ", " batchJobId=", execTask.execJob.batchJobId)
+				g.L.Infoln("job ", execTask.execJob.job.Name, " is start ", " batchJobId=", execTask.execJob.batchJobId)
 
 			}
 
@@ -73,7 +73,7 @@ func (s *ExecSchedule) Run() { // {{{
 			s.taskCnt--
 
 			//计算任务完成百分比
-			s.result = float32(s.schedule.taskCnt-s.taskCnt) / float32(s.schedule.taskCnt)
+			s.result = float32(s.schedule.TaskCnt-s.taskCnt) / float32(s.schedule.TaskCnt)
 
 			if t.state == 3 || t.state == 4 { //任务执行成功或可以忽略
 				s.successTaskCnt++
@@ -82,13 +82,13 @@ func (s *ExecSchedule) Run() { // {{{
 				j := t.execJob
 				j.taskCnt--
 				//计算任务完成百分比
-				j.result = float32(j.job.taskCnt-j.taskCnt) / float32(j.job.taskCnt)
+				j.result = float32(j.job.TaskCnt-j.taskCnt) / float32(j.job.TaskCnt)
 				if j.taskCnt == 0 { //作业结束
 					j.endTime = time.Now().Local()
 					j.state = 3
 					j.Log()
 
-					g.L.Infoln("job ", j.job.name, " is end ", " batchJobId=", j.batchJobId, " result=", j.result)
+					g.L.Infoln("job ", j.job.Name, " is end ", " batchJobId=", j.batchJobId, " result=", j.result)
 				}
 
 				//任务成功执行，将该任务从其它任务的依赖列表中删除。
@@ -101,7 +101,7 @@ func (s *ExecSchedule) Run() { // {{{
 							nextask.execJob.startTime = time.Now().Local()
 							nextask.execJob.state = 1
 							nextask.execJob.Log()
-							g.L.Infoln("job ", nextask.execJob.job.name, " is start ", " batchJobId=", nextask.execJob.batchJobId)
+							g.L.Infoln("job ", nextask.execJob.job.Name, " is start ", " batchJobId=", nextask.execJob.batchJobId)
 						}
 						go nextask.Run(staskChan)
 					}
@@ -124,7 +124,7 @@ func (s *ExecSchedule) Run() { // {{{
 				s.state = 3
 				s.Log()
 
-				g.L.Infoln("schedule ", s.schedule.name, " is end ", " batchId=", s.batchId,
+				g.L.Infoln("schedule ", s.schedule.Name, " is end ", " batchId=", s.batchId,
 					" success=", s.successTaskCnt, " fail=", s.failTaskCnt, " result=", s.result)
 
 				//自动调度执行，完成后设置下次执行时间
@@ -188,7 +188,7 @@ func (s *ExecSchedule) Log() (err error) { // {{{
 						 ?,
 						 ?,
 						 ?)`
-		_, err = g.LogConn.Exec(sql, &s.batchId, &s.schedule.id, &s.startTime, &s.endTime, &s.state, &s.result, &s.execType)
+		_, err = g.LogConn.Exec(sql, &s.batchId, &s.schedule.Id, &s.startTime, &s.endTime, &s.state, &s.result, &s.execType)
 	} else {
 		sql := `UPDATE scd_schedule_log
 						 set start_time=?,
@@ -236,7 +236,7 @@ func (j *ExecJob) Log() (err error) { // {{{
 						 ?,
 						 ?,
 						 ?)`
-		_, err = g.LogConn.Exec(sql, &j.batchJobId, &j.batchId, &j.job.id, &j.startTime, &j.endTime, &j.state, &j.result, &j.execType)
+		_, err = g.LogConn.Exec(sql, &j.batchJobId, &j.batchId, &j.job.Id, &j.startTime, &j.endTime, &j.state, &j.result, &j.execType)
 	} else {
 		sql := `UPDATE scd_job_log
 						 set start_time=?,
@@ -397,7 +397,7 @@ func (t *ExecTask) isReady() (b bool) { // {{{
 //执行结构包含完整的执行链
 func NewExecSchedule(s *Schedule) (es *ExecSchedule, err error) { // {{{// {{{
 	//批次ID
-	bid := fmt.Sprintf("%s %d", time.Now().Local().Format("2006-01-02 15:04:05.000000"), s.id)
+	bid := fmt.Sprintf("%s %d", time.Now().Local().Format("2006-01-02 15:04:05.000000"), s.Id)
 	return NewExecScheduleById(bid, s)
 
 } // }}}
@@ -412,15 +412,15 @@ func NewExecScheduleById(bid string, s *Schedule) (es *ExecSchedule, err error) 
 		state:     0,
 		result:    0,
 		execType:  1,
-		jobCnt:    s.jobCnt,
-		taskCnt:   s.taskCnt,
+		jobCnt:    s.JobCnt,
+		taskCnt:   s.TaskCnt,
 		execTasks: make(map[int64]*ExecTask), //设置任务列表
 	}
 
 	err = es.Log()
 
 	//构建调度中的作业执行结构
-	es.execJob, err = NewExecJob(bid, s.job)
+	es.execJob, err = NewExecJob(bid, s.Job)
 
 	//生成调度中的任务列表
 	for j := es.execJob; j != nil; {
@@ -430,14 +430,14 @@ func NewExecScheduleById(bid string, s *Schedule) (es *ExecSchedule, err error) 
 		j = j.nextJob
 	}
 
-	g.L.Infoln("ExecSchedule ", es.schedule.name, " is create batchId=", bid)
+	g.L.Infoln("ExecSchedule ", es.schedule.Name, " is create batchId=", bid)
 
 	return es, err
 } // }}}
 
 //NewExecJob根据输入的job和batchId构建作业执行链，并返回。
 func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
-	bjd := fmt.Sprintf("%s.%d", batchId, job.id)
+	bjd := fmt.Sprintf("%s.%d", batchId, job.Id)
 
 	execJob = &ExecJob{
 		batchJobId: bjd,
@@ -452,7 +452,7 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 	err = execJob.Log()
 
 	//构建当前作业中的任务执行结构
-	for _, t := range execJob.job.tasks { // {{{
+	for _, t := range execJob.job.Tasks { // {{{
 		execTask := new(ExecTask)
 		bjtd := fmt.Sprintf("%s.%d", bjd, t.Id)
 		execTask.batchTaskId = bjtd
@@ -488,12 +488,12 @@ func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
 		g.L.Infoln("ExecTask ", execTask.task.Name, " is create batchTaskId=", execTask.batchTaskId)
 	} // }}}
 
-	g.L.Infoln("ExecJob ", execJob.job.name, " is create batchJobId=", execJob.batchJobId)
+	g.L.Infoln("ExecJob ", execJob.job.Name, " is create batchJobId=", execJob.batchJobId)
 
 	//继续构建作业的下级作业
-	if job.nextJob != nil {
+	if job.NextJob != nil {
 		//递归调用，直到最后一个作业
-		execJob.nextJob, err = NewExecJob(batchId, job.nextJob)
+		execJob.nextJob, err = NewExecJob(batchId, job.NextJob)
 	}
 	return execJob, err
 

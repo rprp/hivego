@@ -8,6 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rprp/hive/manager"
 	"github.com/rprp/hive/schedule"
 	"github.com/rprp/hive/worker"
 	"io/ioutil"
@@ -109,7 +110,11 @@ func main() {
 		global.LogConn = cnn
 		defer global.LogConn.Close()
 
-		schedule.StartSchedule(global)
+		//启动调度
+		go schedule.Start(global)
+
+		//启动管理模块
+		go manager.StartManager(global.Schedules)
 
 		waitExit("Schedule")
 	} else { // }}}

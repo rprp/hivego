@@ -7,53 +7,53 @@ import (
 
 //作业信息结构
 type Job struct {
-	id           int64           //作业ID
-	scheduleId   int64           //调度ID
-	scheduleCyc  string          //调度周期
-	name         string          //作业名称
-	desc         string          //作业说明
-	preJobId     int64           //上级作业ID
-	preJob       *Job            //上级作业
-	nextJobId    int64           //下级作业ID
-	nextJob      *Job            //下级作业
-	tasks        map[int64]*Task //作业中的任务
-	taskCnt      int64           //调度中任务数量
-	createUserId int64           //创建人
-	createTime   time.Time       //创人
-	modifyUserId int64           //修改人
-	modifyTime   time.Time       //修改时间
+	Id           int64           //作业ID
+	ScheduleId   int64           //调度ID
+	ScheduleCyc  string          //调度周期
+	Name         string          //作业名称
+	Desc         string          //作业说明
+	PreJobId     int64           //上级作业ID
+	PreJob       *Job            //上级作业
+	NextJobId    int64           //下级作业ID
+	NextJob      *Job            //下级作业
+	Tasks        map[int64]*Task //作业中的任务
+	TaskCnt      int64           //调度中任务数量
+	CreateUserId int64           //创建人
+	CreateTime   time.Time       //创人
+	ModifyUserId int64           //修改人
+	ModifyTime   time.Time       //修改时间
 }
 
 //refreshJob方法用来从元数据库刷新作业信息
 func (j *Job) refreshJob() { // {{{
-	g.L.Println("refresh job", j.name)
-	tj := getJob(j.id)
-	j.name = tj.name
-	j.desc = tj.desc
-	j.preJobId = tj.preJobId
-	j.nextJobId = tj.nextJobId
-	j.nextJob = tj.nextJob
-	j.tasks = make(map[int64]*Task)
-	j.taskCnt = 0
+	g.L.Println("refresh job", j.Name)
+	tj := getJob(j.Id)
+	j.Name = tj.Name
+	j.Desc = tj.Desc
+	j.PreJobId = tj.PreJobId
+	j.NextJobId = tj.NextJobId
+	j.NextJob = tj.NextJob
+	j.Tasks = make(map[int64]*Task)
+	j.TaskCnt = 0
 
-	pj := getJob(j.preJobId)
-	j.preJob = pj
+	pj := getJob(j.PreJobId)
+	j.PreJob = pj
 
-	t := getTasks(j.id)
-	j.tasks = t
+	t := getTasks(j.Id)
+	j.Tasks = t
 	for _, tt := range t {
-		tt.ScheduleCyc = j.scheduleCyc
-		j.taskCnt++
+		tt.ScheduleCyc = j.ScheduleCyc
+		j.TaskCnt++
 		g.L.Infoln("create task", tt.Name)
-		tt.refreshTask(j.id)
+		tt.refreshTask(j.Id)
 	}
 
 	//获取下级任务
-	if nj := getJob(j.nextJobId); nj.id != 0 {
-		nj.scheduleId = j.scheduleId
-		nj.scheduleCyc = j.scheduleCyc
+	if nj := getJob(j.NextJobId); nj.Id != 0 {
+		nj.ScheduleId = j.ScheduleId
+		nj.ScheduleCyc = j.ScheduleCyc
 		nj.refreshJob()
-		j.nextJob = nj
+		j.NextJob = nj
 	}
 	g.L.Println("job refreshed", j)
 } // }}}
@@ -61,16 +61,16 @@ func (j *Job) refreshJob() { // {{{
 //打印job结构信息
 func (j *Job) String() string { // {{{
 	var preName, nextName string
-	if j.preJob != nil {
-		preName = j.preJob.name
+	if j.PreJob != nil {
+		preName = j.PreJob.Name
 	}
 
-	if j.nextJob != nil {
-		nextName = j.nextJob.name
+	if j.NextJob != nil {
+		nextName = j.NextJob.Name
 	}
 
 	t1 := make([]string, 1)
-	for _, t := range j.tasks {
+	for _, t := range j.Tasks {
 		t1 = append(t1, t.Name)
 	}
 
@@ -83,15 +83,15 @@ func (j *Job) String() string { // {{{
 		" taskCnt=%d"+
 		" createTime=%v"+
 		" modifyTime=%v}\n",
-		j.id,
-		j.name,
-		j.desc,
+		j.Id,
+		j.Name,
+		j.Desc,
 		preName,
 		nextName,
 		t1,
-		j.taskCnt,
-		j.createTime,
-		j.modifyTime)
+		j.TaskCnt,
+		j.CreateTime,
+		j.ModifyTime)
 
 } // }}}
 
@@ -103,9 +103,9 @@ func (j *Job) Add() (err error) { // {{{
              next_job_id, create_user_id, create_time,
              modify_user_id, modify_time)
 		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = g.HiveConn.Exec(sql, &j.id, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.createUserId, &j.createTime, &j.modifyUserId, &j.modifyTime)
+	_, err = g.HiveConn.Exec(sql, &j.Id, &j.Name, &j.Desc, &j.PreJobId, &j.NextJobId, &j.CreateUserId, &j.CreateTime, &j.ModifyUserId, &j.ModifyTime)
 	if err == nil {
-		for i, t := range j.tasks {
+		for i, t := range j.Tasks {
 			j.AddTask(t.Id, i)
 		}
 	}
@@ -123,7 +123,7 @@ func (j *Job) AddTask(taskid int64, taskno int64) (err error) { // {{{
              create_user_id, create_time)
 		VALUES      (?, ?, ?, ?, ?, ?)`
 
-	_, err = g.HiveConn.Exec(sql, &jobtaskid, &j.id, &taskid, &taskno, &j.createUserId, &j.createTime)
+	_, err = g.HiveConn.Exec(sql, &jobtaskid, &j.Id, &taskid, &taskno, &j.CreateUserId, &j.CreateTime)
 
 	return err
 } // }}}
@@ -133,7 +133,7 @@ func (j *Job) DeleteTask(taskid int64) (err error) { // {{{
 
 	sql := `DELETE scd_job_task WHERE job_id=? and task_id=?`
 
-	_, err = g.HiveConn.Exec(sql, &j.id, &taskid)
+	_, err = g.HiveConn.Exec(sql, &j.Id, &taskid)
 
 	return err
 } // }}}
@@ -149,7 +149,7 @@ func (j *Job) Update() (err error) { // {{{
             modify_user_id=?, 
 			modify_time=?
 	    WHERE job_id=?`
-	_, err = g.HiveConn.Exec(sql, &j.name, &j.desc, &j.preJobId, &j.nextJobId, &j.modifyUserId, &j.modifyTime)
+	_, err = g.HiveConn.Exec(sql, &j.Name, &j.Desc, &j.PreJobId, &j.NextJobId, &j.ModifyUserId, &j.ModifyTime)
 	return err
 } // }}}
 
@@ -157,10 +157,10 @@ func (j *Job) Update() (err error) { // {{{
 func (j *Job) Delete() (err error) { // {{{
 
 	sql := `DELETE scd_job_task WHERE job_id=?`
-	_, err = g.HiveConn.Exec(sql, &j.id)
+	_, err = g.HiveConn.Exec(sql, &j.Id)
 
 	sql = `DELETE scd_job WHERE job_id=?`
-	_, err = g.HiveConn.Exec(sql, &j.id)
+	_, err = g.HiveConn.Exec(sql, &j.Id)
 
 	return err
 } // }}}
@@ -179,7 +179,7 @@ func (j *Job) SetNewId() (err error) { // {{{
 	for rows.Next() {
 		err = rows.Scan(&id)
 	}
-	j.id = id + 1
+	j.Id = id + 1
 
 	return err
 
@@ -220,10 +220,10 @@ func getJob(id int64) (job *Job) { // {{{
 	job = &Job{}
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		err = rows.Scan(&job.id, &job.name, &job.desc, &job.preJobId, &job.nextJobId)
+		err = rows.Scan(&job.Id, &job.Name, &job.Desc, &job.PreJobId, &job.NextJobId)
 		CheckErr("getJob ", err)
 		//初始化Task内存
-		job.tasks = make(map[int64]*Task)
+		job.Tasks = make(map[int64]*Task)
 		g.L.Debugln("get job", job)
 	}
 
@@ -248,11 +248,11 @@ func getAllJobs() (jobs map[int64]*Job, err error) { // {{{
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
 		job := &Job{}
-		err = rows.Scan(&job.id, &job.name, &job.desc, &job.preJobId, &job.nextJobId)
+		err = rows.Scan(&job.Id, &job.Name, &job.Desc, &job.PreJobId, &job.NextJobId)
 
 		//初始化Task内存
-		job.tasks = make(map[int64]*Task)
-		jobs[job.id] = job
+		job.Tasks = make(map[int64]*Task)
+		jobs[job.Id] = job
 	}
 
 	return jobs, err
