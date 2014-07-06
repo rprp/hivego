@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"sort"
 	"time"
 )
 
@@ -18,7 +17,7 @@ type GlobalConfigStruct struct {
 	ExecScdChan chan *ExecSchedule
 	Tasks       map[int64]*Task
 	ExecTasks   map[int64]*ExecTask
-	Schedules   *ScheduleList
+	Schedules   *ScheduleManager
 }
 
 func DefaultGlobal() *GlobalConfigStruct {
@@ -30,7 +29,7 @@ func DefaultGlobal() *GlobalConfigStruct {
 	sc.ExecScdChan = make(chan *ExecSchedule)
 	sc.ExecTasks = make(map[int64]*ExecTask)
 	sc.Tasks = make(map[int64]*Task)
-	sc.Schedules = &ScheduleList{}
+	sc.Schedules = &ScheduleManager{Global: sc}
 	return sc
 }
 
@@ -40,14 +39,16 @@ var (
 )
 
 //ScheduleList 调度列表结构，它包含了全部的调度信息，并有两个方法来初始化和启动其中的调度。
-type ScheduleList struct {
-	ScheduleList map[int64]*Schedule //调度列表
+type ScheduleManager struct {
+	ScheduleList []*Schedule //调度列表
+	Global       *GlobalConfigStruct
 }
 
 //从元数据库获取Schedule列表
 //StartSchedule方法，会遍历列表中的Schedule并启动goroutine调用它的Timer方法。
-func (sl *ScheduleList) StartSchedule() { // {{{
+func (sl *ScheduleManager) StartSchedule() { // {{{
 
+	g = sl.Global
 	//从元数据库读取调度信息,初始化调度列表
 	sl.ScheduleList = getAllSchedules()
 
@@ -58,16 +59,6 @@ func (sl *ScheduleList) StartSchedule() { // {{{
 
 } // }}}
 
-//StartSchedule函数是调度模块的入口函数。
-func Start(global *GlobalConfigStruct) { // {{{
-	g = global
-
-	//执行调度
-	g.Schedules.StartSchedule()
-
-	return
-} // }}}
-
 //调度信息结构
 type Schedule struct { // {{{
 	Id           int64           //调度ID
@@ -75,7 +66,8 @@ type Schedule struct { // {{{
 	Count        int8            //调度次数
 	Cyc          string          //调度周期
 	StartSecond  []time.Duration //周期内启动时间
-	NextStart    time.Time       //周期内启动时间
+	StartMonth   []int           //周期内启动月份
+	NextStart    time.Time       //下次启动时间
 	TimeOut      int64           //最大执行时间
 	JobId        int64           //作业ID
 	Job          *Job            //作业
@@ -92,7 +84,7 @@ type Schedule struct { // {{{
 func (s *Schedule) Timer() { // {{{
 
 	//获取距启动的时间（秒）
-	countDown, err := getCountDown(s.Cyc, s.StartSecond)
+	countDown, err := getCountDown(s.Cyc, s.StartMonth, s.StartSecond)
 	CheckErr("getCountDown", err)
 
 	s.NextStart = time.Now().Add(countDown)
@@ -229,39 +221,65 @@ func (s *Schedule) SetNewId() { // {{{
 } // }}}// }}}
 
 //getStart，从元数据库获取指定Schedule的启动时间。
-func getStart(id int64) (st []time.Duration) { // {{{
+func (s *Schedule) setStart() { // {{{
 
-	st = make([]time.Duration, 0)
+	s.StartSecond = make([]time.Duration, 0)
+	s.StartMonth = make([]int, 0)
 
 	//查询全部schedule启动时间列表
-	sql := `SELECT s.scd_start
+	sql := `SELECT s.scd_start,s.scd_start_month
 			FROM scd_start s
 			WHERE s.scd_id=?`
-	rows, err := g.HiveConn.Query(sql, id)
-	CheckErr("getStart run Sql "+sql, err)
+	rows, err := g.HiveConn.Query(sql, s.Id)
+	CheckErr("setStart run Sql "+sql, err)
 
 	for rows.Next() {
 		var td int64
-		err = rows.Scan(&td)
+		var tm int
+		err = rows.Scan(&td, &tm)
 		PrintErr("get schedule start", err)
-		st = append(st, time.Duration(td)*time.Second)
+		s.StartSecond = append(s.StartSecond, time.Duration(td)*time.Second)
+		if tm > 0 {
+			//DB中存储的Start_month是指第几月，但后续对年周期进行时间运算时，会从每年1月开始加，所以这里先减去1个月
+			tm -= 1
+		}
+		s.StartMonth = append(s.StartMonth, tm)
 	}
 
 	//若没有查到Schedule的启动时间，则赋默认值。
-	if len(st) == 0 {
-		st = append(st, time.Duration(0))
+	if len(s.StartSecond) == 0 {
+		s.StartSecond = append(s.StartSecond, time.Duration(0))
+		s.StartMonth = append(s.StartMonth, int(0))
 	}
 
-	sort.Sort(timeSort(st))
-	return st
+	//排序时间
+	s.sortStart()
 } // }}}
 
-//time.Duration列表排序
-type timeSort []time.Duration // {{{
+//启动时间排序
+//算法选择排序
+func (s *Schedule) sortStart() {
+	var i, j, k int
 
-func (a timeSort) Len() int           { return len(a) }
-func (a timeSort) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a timeSort) Less(i, j int) bool { return a[i] < a[j] } // }}}
+	for i = 0; i < len(s.StartMonth); i++ {
+		k = i
+
+		for j = i + 1; j < len(s.StartMonth); j++ {
+			if s.StartMonth[j] < s.StartMonth[k] {
+				k = j
+			} else if (s.StartMonth[j] == s.StartMonth[k]) && (s.StartSecond[j] < s.StartSecond[k]) {
+				k = j
+			}
+		}
+
+		if k != i {
+			s.StartMonth[k], s.StartMonth[i] = s.StartMonth[i], s.StartMonth[k]
+			s.StartSecond[k], s.StartSecond[i] = s.StartSecond[i], s.StartSecond[k]
+		}
+
+	}
+
+}
 
 //getSchedule，从元数据库获取指定的Schedule信息。
 func getSchedule(id int64) (scd *Schedule) { // {{{
@@ -286,7 +304,7 @@ func getSchedule(id int64) (scd *Schedule) { // {{{
 		err = rows.Scan(&scd.Id, &scd.Name, &scd.Count, &scd.Cyc,
 			&scd.TimeOut, &scd.JobId, &scd.Desc)
 		PrintErr("get schedule info", err)
-		scd.StartSecond = getStart(scd.Id)
+		scd.setStart()
 		g.L.Debugln("get Schedule", scd)
 
 	}
@@ -295,8 +313,8 @@ func getSchedule(id int64) (scd *Schedule) { // {{{
 } // }}}
 
 //从元数据库获取Schedule列表。
-func getAllSchedules() (scds map[int64]*Schedule) { // {{{
-	scds = make(map[int64]*Schedule)
+func getAllSchedules() (scds []*Schedule) { // {{{
+	scds = make([]*Schedule, 0)
 
 	//查询全部schedule列表
 	sql := `SELECT scd.scd_id,
@@ -321,9 +339,9 @@ func getAllSchedules() (scds map[int64]*Schedule) { // {{{
 			&scd.JobId, &scd.Desc, &scd.CreateUserId, &scd.CreateTime, &scd.ModifyUserId,
 			&scd.ModifyTime)
 		PrintErr("get schedule info", err)
-		scd.StartSecond = getStart(scd.Id)
+		scd.setStart()
 
-		scds[scd.Id] = scd
+		scds = append(scds, scd)
 		g.L.Debugln("get Schedule", scd)
 	}
 

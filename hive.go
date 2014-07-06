@@ -111,7 +111,7 @@ func main() {
 		defer global.LogConn.Close()
 
 		//启动调度
-		go schedule.Start(global)
+		go global.Schedules.StartSchedule()
 
 		//启动管理模块
 		go manager.StartManager(global.Schedules)

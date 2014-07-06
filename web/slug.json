@@ -1,0 +1,28 @@
+{
+  "routes": [
+    { ""        : "./public" }
+  ],
+
+  "packages": {
+    "spine.hive": {
+      "modules" : [
+        "es5-shimify", 
+        "json2ify", 
+        "jqueryify", 
+        "momentify",
+        "spine",
+        "spine/lib/local",
+        "spine/lib/ajax",
+        "spine/lib/route",
+        "spine/lib/list",
+        "spine/lib/manager"
+      ],
+      "paths"  : ["./app"],
+      "target" : "./public/js/application.js"
+    },
+    "css": {
+      "paths"  : "./css",
+      "target" : "./public/css/application.css"
+    }
+  }
+}

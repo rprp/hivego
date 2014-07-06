@@ -1,0 +1,40 @@
+<div class="panel panel-default">
+    <!-- 标题 -->
+    <div class="title col-sm-10">
+        <h4><%= @Name %></h4>
+    </div>
+    <div class="col-sm-1">
+        <!-- 周期 -->
+        <span class="label <%= @GetCycStyle() %> cyc"><%= @GetCyc() %></span>
+    </div>
+        
+	<div class="panel-body row container-fluid">
+        <div class="col-sm-12">
+            <!-- 下次启动时间 -->
+            <h5><%= @GetSecond() %></h5>
+        </div>
+        <div id="jobcnt" class="col-sm-12" >
+            <h5>任务数：<span class="jobcnt badge"><%= @TaskCnt %></span></h5>
+        </div>
+        <div class="col-sm-12 nextstart">
+            <h5>下次执行：<%= @GetNextStart() %></h5>
+        </div>
+
+        <div class="col-sm-3 user">
+            <button type="button" class="btn btn-default">
+              <span class="glyphicon glyphicon-user"> User</span>
+            </button>
+        </div>
+        <div class="col-sm-3 user">
+            <span class="glyphicon glyphicon-th-list"></span>
+        </div>
+        <div class="col-sm-3 user">
+            <span class="glyphicon glyphicon-th-list"></span>
+        </div>
+        <div class="col-sm-2">
+            <!-- 周期 -->
+            <span class="label <%= @GetCycStyle() %> cyc"><%= @GetCyc() %></span>
+        </div>
+
+	</div>
+</div>

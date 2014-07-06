@@ -11,10 +11,10 @@ import (
 	"time"
 )
 
-func StartManager(sl *schedule.ScheduleList) {
+func StartManager(sl *schedule.ScheduleManager) {
 	m := martini.Classic()
 	m.Use(Logger)
-	m.Use(martini.Static("public"))
+	m.Use(martini.Static("web/public"))
 	m.Use(web.ContextWithCookieSecret(""))
 	m.Use(render.Renderer(render.Options{
 		Directory:       "templates",                // Specify what path to load the templates from.
@@ -36,11 +36,15 @@ func StartManager(sl *schedule.ScheduleList) {
 }
 
 func controller(m *martini.ClassicMartini) {
-	m.Group("/v0.0.1", func(r martini.Router) {
+	m.Get("/", func(r render.Render) {
+		r.HTML(200, "index", nil)
+	})
+
+	m.Group("", func(r martini.Router) {
 		r.Get("/schedules", getSchedules)
 		r.Post("/schedules", addSchedule)
 		r.Get("/schedules/ID", getScheduleById)
-		r.Put("/schedules/ID", updateSchedule)
+		r.Put("/schedules/:ID", updateSchedule)
 		r.Delete("/schedules/ID", deleteSchedule)
 	})
 
@@ -51,40 +55,40 @@ func controller(m *martini.ClassicMartini) {
 
 }
 
-func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleList) {
-	r.HTML(200, "index", Ss)
-	//for _, s := range Ss.ScheduleList {
-	//r.JSON(200, s)
-
-	//}
+func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
+	sl := make([]*schedule.Schedule, 0)
+	for _, s := range Ss.ScheduleList {
+		d := &schedule.Schedule{}
+		schedule.Copy(d, s)
+		d.Job = nil
+		sl = append(sl, d)
+	}
+	r.JSON(200, sl)
 
 }
 
-func getScheduleById(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleList) {
+func getScheduleById(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
 	for _, s := range Ss.ScheduleList {
 		res.Write([]byte(s.String()))
 	}
 
 }
 
-func addSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleList) {
+func addSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
+	fmt.Println(ctx.Params)
+	fmt.Println(ctx.Request)
+
+}
+
+func deleteSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
 	for _, s := range Ss.ScheduleList {
 		res.Write([]byte(s.String()))
 	}
 
 }
 
-func deleteSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleList) {
-	for _, s := range Ss.ScheduleList {
-		res.Write([]byte(s.String()))
-	}
-
-}
-
-func updateSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleList) {
-	for _, s := range Ss.ScheduleList {
-		res.Write([]byte(s.String()))
-	}
+func updateSchedule(params martini.Params, ctx *web.Context, res http.ResponseWriter) {
+	fmt.Println(params)
 
 }
 
