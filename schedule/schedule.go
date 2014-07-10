@@ -53,6 +53,8 @@ func (sl *ScheduleManager) StartSchedule() { // {{{
 	sl.ScheduleList = getAllSchedules()
 
 	for _, scd := range sl.ScheduleList {
+		//刷新调度链信息
+		scd.refreshSchedule()
 		//Timer方法会根据调度周期及启动时间，按时启动，随后会依据Schedule信息构建执行结构
 		go scd.Timer()
 	}

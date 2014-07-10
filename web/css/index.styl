@@ -4,7 +4,7 @@
 .stack
   position: relative
   
-  > *:not(.active)
+.smain > *:not(.active)
     display: none
     
 body, html
@@ -403,3 +403,39 @@ header#header h1
 .panel-danger > .panel-footer + .panel-collapse .panel-body 
   border-bottom-color: #ebccd1;
 
+.label-white 
+  background-color: #f5f5f5;
+
+.label-white[href]:hover,
+.label-white[href]:focus 
+  background-color: #808080;
+
+@keyframes fade-in 
+    0% {opacity: 0;}/*初始状态 透明度为0*/  
+    40% {opacity: 0.05;}/*过渡状态 透明度为0*/  
+    100% {opacity: 1;}/*结束状态 透明度为1*/  
+  
+@-webkit-keyframes fade-in /*针对webkit内核*/  
+    0% {opacity: 0;}  
+    40% {opacity: 0.05;}  
+    100% {opacity: 1;}  
+  
+.fdin    
+    animation: fade-in;/*动画名称*/  
+    animation-duration: 0.618s;/*动画持续时间*/  
+    -webkit-animation:fade-in 0.618s;/*针对webkit内核*/  
+  
+@keyframes sl
+    0% {left:200px; top:0px;}
+    40% {left:400px; top:0px;}
+    100% {left:800px; top:0px;}
+
+@-webkit-keyframes sl /*针对webkit内核*/  
+    0% {left:200px; top:0px;}
+    40% {left:400px; top:0px;}
+    100% {left:800px; top:0px;}
+
+.sinfo
+    animation: sl;/*动画名称*/  
+    animation-duration: 5.618s;/*动画持续时间*/  
+    -webkit-animation:fade-in 5.618s;/*针对webkit内核*/  

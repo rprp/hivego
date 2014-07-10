@@ -10,6 +10,8 @@
         "json2ify", 
         "jqueryify", 
         "momentify",
+        "raphael",
+        "eve",
         "spine",
         "spine/lib/local",
         "spine/lib/ajax",
