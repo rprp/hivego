@@ -13315,6 +13315,73 @@ var eve = require('eve');
     R.fn = paperproto = Paper.prototype = R.prototype;
     R._id = 0;
     R._oid = 0;
+
+
+
+    R.fn.connection = function (obj1, obj2, line, bg) {
+        if (obj1.line && obj1.from && obj1.to) {
+            line = obj1;
+            obj1 = line.from;
+            obj2 = line.to;
+        }
+        var bb1 = obj1.getBBox(),
+            bb2 = obj2.getBBox(),
+            p = [{x: bb1.x + bb1.width / 2, y: bb1.y - 1},
+            {x: bb1.x + bb1.width / 2, y: bb1.y + bb1.height + 1},
+            {x: bb1.x - 1, y: bb1.y + bb1.height / 2},
+            {x: bb1.x + bb1.width + 1, y: bb1.y + bb1.height / 2},
+            {x: bb2.x + bb2.width / 2, y: bb2.y - 1},
+            {x: bb2.x + bb2.width / 2, y: bb2.y + bb2.height + 1},
+            {x: bb2.x - 1, y: bb2.y + bb2.height / 2},
+            {x: bb2.x + bb2.width + 1, y: bb2.y + bb2.height / 2}],
+            d = {}, dis = [];
+        for (var i = 0; i < 4; i++) {
+            for (var j = 4; j < 8; j++) {
+                var dx = Math.abs(p[i].x - p[j].x),
+                    dy = Math.abs(p[i].y - p[j].y);
+                if ((i == j - 4) || (((i != 3 && j != 6) || p[i].x < p[j].x) && ((i != 2 && j != 7) || p[i].x > p[j].x) && ((i != 0 && j != 5) || p[i].y > p[j].y) && ((i != 1 && j != 4) || p[i].y < p[j].y))) {
+                    dis.push(dx + dy);
+                    d[dis[dis.length - 1]] = [i, j];
+                }
+            }
+        }
+        if (dis.length == 0) {
+            var res = [0, 4];
+        } else {
+            res = d[Math.min.apply(Math, dis)];
+        }
+        var x1 = p[res[0]].x,
+            y1 = p[res[0]].y,
+            x4 = p[res[1]].x,
+            y4 = p[res[1]].y;
+        dx = Math.max(Math.abs(x1 - x4) / 2, 10);
+        dy = Math.max(Math.abs(y1 - y4) / 2, 10);
+        var x2 = [x1, x1, x1 - dx, x1 + dx][res[0]].toFixed(3),
+            y2 = [y1 - dy, y1 + dy, y1, y1][res[0]].toFixed(3),
+            x3 = [0, 0, 0, 0, x4, x4, x4 - dx, x4 + dx][res[1]].toFixed(3),
+            y3 = [0, 0, 0, 0, y1 + dy, y1 - dy, y4, y4][res[1]].toFixed(3);
+        var path = ["M", x1.toFixed(3), y1.toFixed(3), "C", x2, y2, x3, y3, x4.toFixed(3), y4.toFixed(3)].join(",");
+        if (line && line.line) {
+            line.bg && line.bg.attr({path: path});
+            line.line.attr({path: path});
+        } else {
+            var color = typeof line == "string" ? line : "#000";
+            return {
+                bg: bg && bg.split && this.path(path).attr({stroke: bg.split("|")[0], fill: "none", "stroke-width": bg.split("|")[1] || 3}),
+                line: this.path(path).attr({stroke: color, fill: "none"}),
+                from: obj1,
+                to: obj2
+            };
+        }
+    };
+
+
+
+
+
+
+
+
     /*\
      * Raphael.is
      [ method ]
@@ -23800,7 +23867,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedulesinfo": function(exports, require, module) {(function() {
-  var $, Raphael, Schedule, ScheduleInfo, Spine,
+  var $, Eve, Raphael, Schedule, ScheduleInfo, Shape, Spine,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -23808,6 +23875,8 @@ Released under the MIT License
   Spine = require('spine');
 
   Raphael = require('raphael');
+
+  Eve = require('eve');
 
   Schedule = require('models/schedule');
 
@@ -23847,16 +23916,142 @@ Released under the MIT License
     };
 
     ScheduleInfo.prototype.draw = function() {
-      var cc, circle, paper;
+      var paper, rect, sp, sp1, t1, t2, t3, t4, t5, t6;
       paper = Raphael(this.pant.get(0), '100%', '100%');
-      circle = paper.circle(200, 40, 50);
-      cc = paper.text(200, 30, "xxxx");
-      return circle.attr("fill", "#f00");
+      sp = paper.rect(100, 20, 800, 200, 6);
+      sp.attr({
+        stroke: "blue",
+        "fill-opacity": 0,
+        "stroke-width": 1
+      });
+      sp1 = paper.rect(100, 250, 800, 200);
+      sp1.attr({
+        stroke: "blue",
+        "fill-opacity": 0,
+        "stroke-width": 1
+      });
+      rect = new Shape(paper);
+      t1 = rect.draw(120, 185, 60, 30, "task 1");
+      t2 = rect.draw(200, 185, 60, 30, "task 2");
+      t3 = rect.draw(280, 185, 60, 30, "task 3");
+      t4 = rect.draw(360, 185, 60, 30, "task 4");
+      t5 = rect.draw(440, 185, 60, 30, "task 5");
+      t6 = rect.draw(520, 185, 60, 30, "task 6");
+      t1.rel = [t2, t3];
+      t1.re = t1.connect();
+      t2.re = t1.re;
+      return t3.re = t1.re;
     };
 
     return ScheduleInfo;
 
   })(Spine.Controller);
+
+  Shape = (function() {
+    function Shape(paper) {
+      this.paper = paper;
+    }
+
+    Shape.prototype.dragger = function() {
+      this.ox = this.attr("x");
+      this.oy = this.attr("y");
+      if (this.type !== "text") {
+        this.animate({
+          "fill-opacity": .2
+        }, 500);
+      }
+      this.pair.ox = this.attr("x");
+      this.pair.oy = this.attr("y");
+      if (this.pair.type !== "text") {
+        return this.pair.animate({
+          "fill-opacity": .2
+        }, 500);
+      }
+    };
+
+    Shape.prototype.move = function(dx, dy) {
+      var att;
+      att = {
+        x: this.ox + dx,
+        y: this.oy + dy
+      };
+      this.attr(att);
+      att = {
+        x: this.pair.ox + (dx + this.width / 2),
+        y: this.pair.oy + (dy + this.height / 2)
+      };
+      this.pair.attr(att);
+      return this.refresh();
+    };
+
+    Shape.prototype.up = function() {
+      if (this.type !== "text") {
+        this.animate({
+          "fill-opacity": 0
+        }, 500);
+      }
+      if (this.pair.type !== "text") {
+        return this.pair.animate({
+          "fill-opacity": 0
+        }, 500);
+      }
+    };
+
+    Shape.prototype.draw = function(x, y, width, height, text) {
+      var color, st;
+      this.paper.setStart();
+      color = Raphael.getColor();
+      this.sp = this.paper.rect(x, y, width, height, 10);
+      this.sp.width = width;
+      this.sp.height = height;
+      this.sp.attr({
+        fill: color,
+        stroke: color,
+        "fill-opacity": 0,
+        "stroke-width": 2,
+        cursor: "move"
+      });
+      this.sp.connect = function() {
+        var i, r, _i, _len, _ref, _results;
+        _ref = this.rel;
+        _results = [];
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          r = _ref[i];
+          _results.push(this.paper.connection(this, r, "#333"));
+        }
+        return _results;
+      };
+      this.sp.refresh = function() {
+        var i, r, _i, _len, _ref, _results;
+        _ref = this.re;
+        _results = [];
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          r = _ref[i];
+          _results.push(this.paper.connection(r));
+        }
+        return _results;
+      };
+      this.sp.drag(this.move, this.dragger, this.up);
+      this.text = this.paper.text(x + width / 2, (y + height / 2) / 2, text);
+      this.text.width = width;
+      this.text.height = height;
+      this.text.toBack();
+      this.text.attr({
+        fill: color,
+        stroke: "none",
+        "font-size": 15,
+        "fill-opacity": 1,
+        "stroke-width": 1,
+        cursor: "move"
+      });
+      this.sp.pair = this.text;
+      st = this.paper.setFinish();
+      return this.sp;
+    };
+
+    return Shape;
+
+  })();
 
   module.exports = ScheduleInfo;
 
