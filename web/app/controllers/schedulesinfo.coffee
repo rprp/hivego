@@ -12,9 +12,15 @@ class ScheduleInfo extends Spine.Controller
 
   constructor: ->
     super
+    Schedule.bind("refresh",  @getData)
     @active @change
 
+  getData: ->
+      console.log(Schedule.find(id:1))
+
   change: (params) =>
+
+    a=Schedule.fetch({id:'0'})
     @item = Schedule.find(params.id)
     @render(@item)
 
@@ -29,38 +35,108 @@ class ScheduleInfo extends Spine.Controller
   draw: ->
     paper = Raphael(@pant.get(0),'100%','100%')
 
-    sp = paper.rect(100, 20, 800, 200, 6)
-    sp.attr({stroke: "blue", "fill-opacity": 0, "stroke-width": 1})
+    Raphael.getColor()
+    Raphael.getColor()
+    color = Raphael.getColor()
 
-    sp1=paper.rect(100,250,800,200)
-    sp1.attr({stroke: "blue", "fill-opacity": 0, "stroke-width": 1})
+    ts= new TaskSymbol(paper,120,185,"ttttttttttttt",color)
 
-    rect= new Shape(paper)
+    Raphael.getColor()
+    Raphael.getColor()
+    Raphael.getColor()
+    color = Raphael.getColor()
+    ts1= new TaskSymbol(paper,120,285,"tt",color)
+    ts2= new TaskSymbol(paper,220,285,"tt",color)
+    ts3= new TaskSymbol(paper,320,285,"tt",color)
+    ts4= new TaskSymbol(paper,420,285,"tt",color)
 
-    t1 = rect.draw(120,185,60,30,"task 1")
-    t2 = rect.draw(200,185,60,30,"task 2")
-    t3 = rect.draw(280,185,60,30,"task 3")
-    t4 = rect.draw(360,185,60,30,"task 4")
-    t5 = rect.draw(440,185,60,30,"task 5")
-    t6 = rect.draw(520,185,60,30,"task aaaaaaaaaaaaaaaaa\ndddddd\ndddd\nddddf6")
 
-    t6.insertAfter(t1)
+    Raphael.getColor()
+    Raphael.getColor()
+    Raphael.getColor()
+    color = Raphael.getColor()
+    ts5= new TaskSymbol(paper,420,385,"tt",color)
 
-    t1.rel=[t2,t3]
-    t1.re=t1.connect()
-    t2.re=t1.re
-    t3.re=t1.re
+
+    Raphael.getColor()
+    Raphael.getColor()
+    Raphael.getColor()
+    color = Raphael.getColor()
+    ts6= new TaskSymbol(paper,420,485,"tt",color)
+    ts7= new TaskSymbol(paper,520,485,"tt",color)
+
+    ts.addNext(ts1)
+    ts.addNext(ts2)
+    ts.addNext(ts3)
+    ts.addNext(ts4)
+
+    ts1.addNext(ts5)
+    ts2.addNext(ts5)
+    ts3.addNext(ts5)
+    ts4.addNext(ts6)
+    ts4.addNext(ts7)
+    ts5.addNext(ts6)
+    ts5.addNext(ts7)
+
+#class ScheduleSymbol
+  #constructor: (@paper, @cx, @cy, @name, @color) ->
+
+
+#class JobSymbol
+  #constructor: (@paper, @cx, @cy, @name, @color) ->
+
 
 class TaskSymbol
-  constructor: (@paper, @x, @y, @name) ->
+  constructor: (@paper, @cx, @cy, @name, @color) ->
+    @pre=[]
+    @preRel=[]
+
+    @next=[]
+    @nextRel=[]
+
+    @paper.setStart()
+    @sp=@paper.circle(@cx, @cy, 30)
+    @sp.ts=@
+    @sp.cx = @cx
+    @sp.cy = @cy
+    @sp.attr({fill: color, stroke: color, "fill-opacity": 0.2, "stroke-width": 2, cursor: "move"})
+
+    @sp.refresh = ->
+      if @ts.nextRel
+        for r,i in @ts.nextRel
+          @paper.connection(r)
+      if @ts.preRel
+        for r,i in @ts.preRel
+          @paper.connection(r)
+
+    @sp.drag(@move, @dragger, @up)
+
+    @text = @paper.text(@cx, @cy, @name)
+    @text.toBack()
+    @text.attr({fill: color, stroke: "none", "font-size": 15, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
+    @sp.pair=@text
+
+    an = Raphael.animation({"fill-opacity": .2}, 200)
+    @sp.animate(an.repeat(10)) 
+
+    st = @paper.setFinish()
+    @sp
+
+  addNext: (ts) ->
+    @next.push(ts)
+    r=@paper.connection(@sp,ts.sp,@sp.attr('fill'),"#{@sp.attr('fill')}|2")
+    @nextRel.push(r)
+
+    ts.pre.push(@)
+    ts.preRel.push(r)
 
   click: ->
     alert(@.data('a'))
 
   dragger: ->
-    @ox = @attr("x")
-    @oy = @attr("y")
-    @animate({"fill-opacity": .2}, 500) if @type isnt "text"
+    @ox = @attr("cx")
+    @oy = @attr("cy")
+    @animate({"fill-opacity": .5}, 500) if @type isnt "text"
 
     @pair.ox = @attr("x")
     @pair.oy = @attr("y")
@@ -68,51 +144,17 @@ class TaskSymbol
 
   move: (dx, dy) ->
     att =
-        x:@ox + dx
-        y:@oy + dy
+        cx:@ox + dx
+        cy:@oy + dy
     @attr(att)
     att =
-        x:@pair.ox + (dx + @width/2)
-        y:@pair.oy + (dy + @height/2)
+        x:@ox + (dx)
+        y:@oy + (dy)
     @pair.attr(att)
     @refresh()
 
   up: ->
-    @animate({"fill-opacity": 0}, 500) if @type isnt "text"
-    @pair.animate({"fill-opacity": 0}, 500) if @pair.type isnt "text"
-
-  draw: (x, y, width, height, text) ->
-      @paper.setStart()
-      color = Raphael.getColor()
-      @sp=@paper.rect(x, y, width, height, 10)
-      @sp.width = width
-      @sp.height = height
-      @sp.attr({fill: color, stroke: color, "fill-opacity": 0, "stroke-width": 2, cursor: "move"})
-
-      @sp.connect = ->
-        if @rel
-          for r,i in @rel
-            @paper.connection(@,r,"#333")
-
-      @sp.refresh = ->
-        if @re
-          for r,i in @re
-            @paper.connection(r)
-
-      @sp.drag(@move, @dragger, @up)
-
-      @text = @paper.text(x+width/2, y+height/2, text)
-      @text.width = width
-
-      @text.height = height
-      @text.toBack()
-      @text.attr({fill: color, stroke: "none", "font-size": 15, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
-      @sp.pair=@text
-
-      an = Raphael.animation({"fill-opacity": .2}, 200)
-      @sp.animate(an.repeat(10)) 
-
-      st = @paper.setFinish()
-      @sp
+    @animate({"fill-opacity": 0.2}, 500) if @type isnt "text"
+    @pair.animate({"fill-opacity": 0.2}, 500) if @pair.type isnt "text"
 
 module.exports = ScheduleInfo

@@ -13,7 +13,6 @@
     "raphael":"latest",
     "eve":"latest",
     "moment": "latest",
-    "jqueryify": "~>0.0.1",
-    "spine": "latest"
+    "jqueryify": "~>0.0.1"
   }
 }

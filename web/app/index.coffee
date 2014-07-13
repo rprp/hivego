@@ -1,7 +1,7 @@
 require('lib/setup')
 
 Spine    = require('spine')
-Manager = require('spine/lib/manager')
+Manager = require('manager')
 Schedule = require('models/schedule')
 ScheduleList = require('controllers/schedules')
 ScheduleInfo = require('controllers/schedulesinfo')
@@ -33,6 +33,7 @@ class App extends Spine.Controller
       '/schedules/:id': (params) -> main.scheduleInfo.active(params)
       #'/contacts/:id':    (params) -> @show.active(params)
       #'/contacts':        (params) -> @list.active(params)
+      #
 
     Spine.Route.setup()
 
