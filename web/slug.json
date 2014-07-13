@@ -11,7 +11,13 @@
         "jqueryify", 
         "momentify",
         "raphael",
-        "eve"
+        "eve",
+        "spine",
+        "spine/lib/local",
+        "spine/lib/ajax",
+        "spine/lib/route",
+        "spine/lib/list",
+        "spine/lib/manager"
       ],
       "paths"  : ["./app"],
       "target" : "./public/js/application.js"
