@@ -29,7 +29,6 @@ class ScheduleInfo extends Spine.Controller
   draw: ->
     paper = Raphael(@pant.get(0),'100%','100%')
 
-
     sp = paper.rect(100, 20, 800, 200, 6)
     sp.attr({stroke: "blue", "fill-opacity": 0, "stroke-width": 1})
 
@@ -43,25 +42,28 @@ class ScheduleInfo extends Spine.Controller
     t3 = rect.draw(280,185,60,30,"task 3")
     t4 = rect.draw(360,185,60,30,"task 4")
     t5 = rect.draw(440,185,60,30,"task 5")
-    t6 = rect.draw(520,185,60,30,"task 6")
+    t6 = rect.draw(520,185,60,30,"task aaaaaaaaaaaaaaaaa\ndddddd\ndddd\nddddf6")
+
+    t6.insertAfter(t1)
 
     t1.rel=[t2,t3]
     t1.re=t1.connect()
     t2.re=t1.re
     t3.re=t1.re
 
-class Shape
-  constructor: (@paper) ->
-    
+class TaskSymbol
+  constructor: (@paper, @x, @y, @name) ->
+
+  click: ->
+    alert(@.data('a'))
+
   dragger: ->
     @ox = @attr("x")
     @oy = @attr("y")
-
     @animate({"fill-opacity": .2}, 500) if @type isnt "text"
 
     @pair.ox = @attr("x")
     @pair.oy = @attr("y")
-
     @pair.animate({"fill-opacity": .2}, 500) if @pair.type isnt "text"
 
   move: (dx, dy) ->
@@ -88,22 +90,27 @@ class Shape
       @sp.attr({fill: color, stroke: color, "fill-opacity": 0, "stroke-width": 2, cursor: "move"})
 
       @sp.connect = ->
-        for r,i in @rel
-          @paper.connection(@,r,"#333")
+        if @rel
+          for r,i in @rel
+            @paper.connection(@,r,"#333")
 
       @sp.refresh = ->
-        for r,i in @re
-          @paper.connection(r)
+        if @re
+          for r,i in @re
+            @paper.connection(r)
 
       @sp.drag(@move, @dragger, @up)
 
-      @text = @paper.text(x+width/2, (y+height/2)/2, text)
+      @text = @paper.text(x+width/2, y+height/2, text)
       @text.width = width
+
       @text.height = height
       @text.toBack()
       @text.attr({fill: color, stroke: "none", "font-size": 15, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
-
       @sp.pair=@text
+
+      an = Raphael.animation({"fill-opacity": .2}, 200)
+      @sp.animate(an.repeat(10)) 
 
       st = @paper.setFinish()
       @sp

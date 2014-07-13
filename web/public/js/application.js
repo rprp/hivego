@@ -13317,7 +13317,6 @@ var eve = require('eve');
     R._oid = 0;
 
 
-
     R.fn.connection = function (obj1, obj2, line, bg) {
         if (obj1.line && obj1.from && obj1.to) {
             line = obj1;
@@ -13326,40 +13325,31 @@ var eve = require('eve');
         }
         var bb1 = obj1.getBBox(),
             bb2 = obj2.getBBox(),
-            p = [{x: bb1.x + bb1.width / 2, y: bb1.y - 1},
-            {x: bb1.x + bb1.width / 2, y: bb1.y + bb1.height + 1},
-            {x: bb1.x - 1, y: bb1.y + bb1.height / 2},
-            {x: bb1.x + bb1.width + 1, y: bb1.y + bb1.height / 2},
-            {x: bb2.x + bb2.width / 2, y: bb2.y - 1},
-            {x: bb2.x + bb2.width / 2, y: bb2.y + bb2.height + 1},
-            {x: bb2.x - 1, y: bb2.y + bb2.height / 2},
-            {x: bb2.x + bb2.width + 1, y: bb2.y + bb2.height / 2}],
+            p = [{x: bb1.x + bb1.width / 2, y: bb1.y + bb1.height + 1},
+            {x: bb2.x + bb2.width / 2, y: bb2.y - 1}],
             d = {}, dis = [];
-        for (var i = 0; i < 4; i++) {
-            for (var j = 4; j < 8; j++) {
-                var dx = Math.abs(p[i].x - p[j].x),
-                    dy = Math.abs(p[i].y - p[j].y);
-                if ((i == j - 4) || (((i != 3 && j != 6) || p[i].x < p[j].x) && ((i != 2 && j != 7) || p[i].x > p[j].x) && ((i != 0 && j != 5) || p[i].y > p[j].y) && ((i != 1 && j != 4) || p[i].y < p[j].y))) {
-                    dis.push(dx + dy);
-                    d[dis[dis.length - 1]] = [i, j];
-                }
-            }
-        }
+
+            dis.push(Math.abs(p[0].x - p[1].x) + Math.abs(p[0].y - p[1].y));
+            d[dis[dis.length - 1]] = [0, 1];
+            dis.push(Math.abs(p[1].x - p[0].x) + Math.abs(p[1].y - p[0].y));
+            d[dis[dis.length - 1]] = [1, 0];
+
         if (dis.length == 0) {
-            var res = [0, 4];
+            var res = [0, 2];
         } else {
             res = d[Math.min.apply(Math, dis)];
         }
-        var x1 = p[res[0]].x,
-            y1 = p[res[0]].y,
-            x4 = p[res[1]].x,
-            y4 = p[res[1]].y;
+        var x1 = p[res[1]].x,
+            y1 = p[res[1]].y,
+            x4 = p[res[0]].x,
+            y4 = p[res[0]].y;
         dx = Math.max(Math.abs(x1 - x4) / 2, 10);
         dy = Math.max(Math.abs(y1 - y4) / 2, 10);
-        var x2 = [x1, x1, x1 - dx, x1 + dx][res[0]].toFixed(3),
-            y2 = [y1 - dy, y1 + dy, y1, y1][res[0]].toFixed(3),
-            x3 = [0, 0, 0, 0, x4, x4, x4 - dx, x4 + dx][res[1]].toFixed(3),
-            y3 = [0, 0, 0, 0, y1 + dy, y1 - dy, y4, y4][res[1]].toFixed(3);
+        var x2 = [x1 - dx, x1 + dx][res[0]].toFixed(3),
+            y2 = [y1 - dy, y1 + dy][res[0]].toFixed(3),
+            x3 = [x4 - dx, x4 + dx][res[1]].toFixed(3),
+            y3 = [y1 + dy, y1 - dy][res[1]].toFixed(3);
+
         var path = ["M", x1.toFixed(3), y1.toFixed(3), "C", x2, y2, x3, y3, x4.toFixed(3), y4.toFixed(3)].join(",");
         if (line && line.line) {
             line.bg && line.bg.attr({path: path});
@@ -13377,9 +13367,62 @@ var eve = require('eve');
 
 
 
-
-
-
+    //R.fn.connection = function (obj1, obj2, line, bg) {
+        //if (obj1.line && obj1.from && obj1.to) {
+            //line = obj1;
+            //obj1 = line.from;
+            //obj2 = line.to;
+        //}
+        //var bb1 = obj1.getBBox(),
+            //bb2 = obj2.getBBox(),
+            //p = [{x: bb1.x + bb1.width / 2, y: bb1.y - 1},
+            //{x: bb1.x + bb1.width / 2, y: bb1.y + bb1.height + 1},
+            //{x: bb1.x - 1, y: bb1.y + bb1.height / 2},
+            //{x: bb1.x + bb1.width + 1, y: bb1.y + bb1.height / 2},
+            //{x: bb2.x + bb2.width / 2, y: bb2.y - 1},
+            //{x: bb2.x + bb2.width / 2, y: bb2.y + bb2.height + 1},
+            //{x: bb2.x - 1, y: bb2.y + bb2.height / 2},
+            //{x: bb2.x + bb2.width + 1, y: bb2.y + bb2.height / 2}],
+            //d = {}, dis = [];
+        //for (var i = 0; i < 4; i++) {
+            //for (var j = 4; j < 8; j++) {
+                //var dx = Math.abs(p[i].x - p[j].x),
+                    //dy = Math.abs(p[i].y - p[j].y);
+                //if ((i == j - 4) || (((i != 3 && j != 6) || p[i].x < p[j].x) && ((i != 2 && j != 7) || p[i].x > p[j].x) && ((i != 0 && j != 5) || p[i].y > p[j].y) && ((i != 1 && j != 4) || p[i].y < p[j].y))) {
+                    //dis.push(dx + dy);
+                    //d[dis[dis.length - 1]] = [i, j];
+                //}
+            //}
+        //}
+        //if (dis.length == 0) {
+            //var res = [0, 4];
+        //} else {
+            //res = d[Math.min.apply(Math, dis)];
+        //}
+        //var x1 = p[res[0]].x,
+            //y1 = p[res[0]].y,
+            //x4 = p[res[1]].x,
+            //y4 = p[res[1]].y;
+        //dx = Math.max(Math.abs(x1 - x4) / 2, 10);
+        //dy = Math.max(Math.abs(y1 - y4) / 2, 10);
+        //var x2 = [x1, x1, x1 - dx, x1 + dx][res[0]].toFixed(3),
+            //y2 = [y1 - dy, y1 + dy, y1, y1][res[0]].toFixed(3),
+            //x3 = [0, 0, 0, 0, x4, x4, x4 - dx, x4 + dx][res[1]].toFixed(3),
+            //y3 = [0, 0, 0, 0, y1 + dy, y1 - dy, y4, y4][res[1]].toFixed(3);
+        //var path = ["M", x1.toFixed(3), y1.toFixed(3), "C", x2, y2, x3, y3, x4.toFixed(3), y4.toFixed(3)].join(",");
+        //if (line && line.line) {
+            //line.bg && line.bg.attr({path: path});
+            //line.line.attr({path: path});
+        //} else {
+            //var color = typeof line == "string" ? line : "#000";
+            //return {
+                //bg: bg && bg.split && this.path(path).attr({stroke: bg.split("|")[0], fill: "none", "stroke-width": bg.split("|")[1] || 3}),
+                //line: this.path(path).attr({stroke: color, fill: "none"}),
+                //from: obj1,
+                //to: obj2
+            //};
+        //}
+    //};
 
 
     /*\
@@ -19219,7 +19262,12 @@ window.Raphael && window.Raphael.svg && function (R) {
         el._.dirty = 1;
         var bb = el._getBBox(),
             dif = a.y - (bb.y + bb.height / 2);
-        dif && R.is(dif, "finite") && $(tspans[0], {dy: dif});
+        //dif && R.is(dif, "finite") && $(tspans[0], {dy: dif});
+        if (bb.y === 0 && bb.height === 0) {
+            dif && R.is(dif, "finite") && $(tspans[0], {dy: [0]});
+        } else {
+            dif && R.is(dif, "finite") && $(tspans[0], {dy: dif});
+        }
     },
     Element = function (node, svg) {
         var X = 0,
@@ -19987,7 +20035,8 @@ window.Raphael && window.Raphael.svg && function (R) {
             };
         })(method);
     }
-}(window.Raphael);}, "raphael/raphael.vml": function(exports, require, module) {// ┌─────────────────────────────────────────────────────────────────────┐ \\
+}(window.Raphael);
+}, "raphael/raphael.vml": function(exports, require, module) {// ┌─────────────────────────────────────────────────────────────────────┐ \\
 // │ Raphaël - JavaScript Vector Library                                 │ \\
 // ├─────────────────────────────────────────────────────────────────────┤ \\
 // │ VML Module                                                          │ \\
@@ -23867,7 +23916,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedulesinfo": function(exports, require, module) {(function() {
-  var $, Eve, Raphael, Schedule, ScheduleInfo, Shape, Spine,
+  var $, Eve, Raphael, Schedule, ScheduleInfo, Spine, TaskSymbol,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -23936,7 +23985,8 @@ Released under the MIT License
       t3 = rect.draw(280, 185, 60, 30, "task 3");
       t4 = rect.draw(360, 185, 60, 30, "task 4");
       t5 = rect.draw(440, 185, 60, 30, "task 5");
-      t6 = rect.draw(520, 185, 60, 30, "task 6");
+      t6 = rect.draw(520, 185, 60, 30, "task aaaaaaaaaaaaaaaaa\ndddddd\ndddd\nddddf6");
+      t6.insertAfter(t1);
       t1.rel = [t2, t3];
       t1.re = t1.connect();
       t2.re = t1.re;
@@ -23947,12 +23997,19 @@ Released under the MIT License
 
   })(Spine.Controller);
 
-  Shape = (function() {
-    function Shape(paper) {
+  TaskSymbol = (function() {
+    function TaskSymbol(paper, x, y, name) {
       this.paper = paper;
+      this.x = x;
+      this.y = y;
+      this.name = name;
     }
 
-    Shape.prototype.dragger = function() {
+    TaskSymbol.prototype.click = function() {
+      return alert(this.data('a'));
+    };
+
+    TaskSymbol.prototype.dragger = function() {
       this.ox = this.attr("x");
       this.oy = this.attr("y");
       if (this.type !== "text") {
@@ -23969,7 +24026,7 @@ Released under the MIT License
       }
     };
 
-    Shape.prototype.move = function(dx, dy) {
+    TaskSymbol.prototype.move = function(dx, dy) {
       var att;
       att = {
         x: this.ox + dx,
@@ -23984,7 +24041,7 @@ Released under the MIT License
       return this.refresh();
     };
 
-    Shape.prototype.up = function() {
+    TaskSymbol.prototype.up = function() {
       if (this.type !== "text") {
         this.animate({
           "fill-opacity": 0
@@ -23997,8 +24054,8 @@ Released under the MIT License
       }
     };
 
-    Shape.prototype.draw = function(x, y, width, height, text) {
-      var color, st;
+    TaskSymbol.prototype.draw = function(x, y, width, height, text) {
+      var an, color, st;
       this.paper.setStart();
       color = Raphael.getColor();
       this.sp = this.paper.rect(x, y, width, height, 10);
@@ -24013,26 +24070,30 @@ Released under the MIT License
       });
       this.sp.connect = function() {
         var i, r, _i, _len, _ref, _results;
-        _ref = this.rel;
-        _results = [];
-        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-          r = _ref[i];
-          _results.push(this.paper.connection(this, r, "#333"));
+        if (this.rel) {
+          _ref = this.rel;
+          _results = [];
+          for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+            r = _ref[i];
+            _results.push(this.paper.connection(this, r, "#333"));
+          }
+          return _results;
         }
-        return _results;
       };
       this.sp.refresh = function() {
         var i, r, _i, _len, _ref, _results;
-        _ref = this.re;
-        _results = [];
-        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-          r = _ref[i];
-          _results.push(this.paper.connection(r));
+        if (this.re) {
+          _ref = this.re;
+          _results = [];
+          for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+            r = _ref[i];
+            _results.push(this.paper.connection(r));
+          }
+          return _results;
         }
-        return _results;
       };
       this.sp.drag(this.move, this.dragger, this.up);
-      this.text = this.paper.text(x + width / 2, (y + height / 2) / 2, text);
+      this.text = this.paper.text(x + width / 2, y + height / 2, text);
       this.text.width = width;
       this.text.height = height;
       this.text.toBack();
@@ -24045,11 +24106,15 @@ Released under the MIT License
         cursor: "move"
       });
       this.sp.pair = this.text;
+      an = Raphael.animation({
+        "fill-opacity": .2
+      }, 200);
+      this.sp.animate(an.repeat(10));
       st = this.paper.setFinish();
       return this.sp;
     };
 
-    return Shape;
+    return TaskSymbol;
 
   })();
 
