@@ -63,7 +63,7 @@ class ScheduleItem extends Spine.Controller
     alert('！')
 
   showschedule: (e)->
-    @navigate('/schedules', @item.id)
+    @navigate('/schedules', @item.Id)
 
   ck: (e) ->
     if e.target.className.indexOf("glyphicon-plus")>=0

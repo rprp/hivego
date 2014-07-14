@@ -5,6 +5,4 @@ class MScheduleInfo extends Spine.Model
 
   @extend Spine.Model.Ajax
 
-  @url: "/schedules"
-  
 module.exports = MScheduleInfo

@@ -1,7 +1,7 @@
 require('lib/setup')
 
 Spine    = require('spine')
-Manager = require('manager')
+Manager = require('spine/lib/manager')
 Schedule = require('models/schedule')
 ScheduleList = require('controllers/schedules')
 ScheduleInfo = require('controllers/schedulesinfo')
@@ -21,8 +21,8 @@ class App extends Spine.Controller
 
     Schedule.bind "ajaxError", (record, xhr, settings, error) -> 
         console.log(error)
-    Schedule.bind "ajaxSuccess", (status,xhr) -> 
-        console.log(xhr)
+    Schedule.bind "ajaxSuccess", (data,status,xhr) -> 
+        console.log("ajaxSuccess#{data}    #{xhr}   #{status}")
 
     main = new Main
     @append main

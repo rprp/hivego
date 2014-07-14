@@ -1,0 +1,19 @@
+{
+  "name": "app",
+  "version": "0.0.3",
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": { 
+    "serveup": "latest",
+    "hem": "latest",
+    "es5-shimify": "latest",
+    "json2ify": "latest",
+    "momentify": "latest",
+    "raphael":"latest",
+    "eve":"latest",
+    "moment": "latest",
+    "jqueryify": "~>0.0.1",
+    "spine": "latest"
+  }
+}
