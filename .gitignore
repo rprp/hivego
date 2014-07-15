@@ -7,6 +7,7 @@ worker_pid_file
 bin/*
 build.py
 log.db
+application.js
 
 !*.go
 !*.js

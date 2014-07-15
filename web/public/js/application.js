@@ -23948,11 +23948,10 @@ Released under the MIT License
     };
 
     ScheduleInfo.prototype.draw = function(rs) {
-      var paper;
+      var paper, _ref;
       this.item = Schedule.find(rs.Id);
       paper = Raphael(this.pant.get(0), '100%', '100%');
-      this.width = parseFloat(this.pant.css("width"));
-      this.height = parseFloat(this.pant.css("height"));
+      _ref = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref[0], this.height = _ref[1];
       return this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
     };
 
@@ -23962,26 +23961,36 @@ Released under the MIT License
 
   ScheduleSymbol = (function() {
     function ScheduleSymbol(paper, width, height, item) {
-      var color, ed, i, j, job, jobflg, left, r, rt, rts, spacing, st, t, task, title, top, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+      var color, ed, i, j, job, jobflg, left, r, rt, rts, slider, spacing, st, t, task, title, top, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
       this.paper = paper;
       this.width = width;
       this.height = height;
       this.item = item;
-      st = Raphael.animation({
-        "fill-opacity": .2
-      }, 2000, function() {
-        return this.animate(ed);
+      color = ['#FF8C00', '#008000', '#2F4F4F', '#DA70D6', '#0000FF', '#8A2BE2', '#6495ED', '#B8860B', '#FF4500', '#AFEEEE', '#DB7093', '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#00BFFF', '#008B8B', '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#7FFF00', '#DEB887', '#98FB98', '#FFD700', '#5F9EA0', '#D2691E', '#A9A9A9', '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0', '#006400', '#BDB76B', '#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32'];
+      _ref = [
+        Raphael.animation({
+          "fill-opacity": .2
+        }, 2000, function() {
+          return this.animate(ed);
+        }), Raphael.animation({
+          "fill-opacity": .5
+        }, 2000, function() {
+          return this.animate(st);
+        })
+      ], st = _ref[0], ed = _ref[1];
+      slider = this.paper.path("M " + (this.width - 300) + ",10L " + (this.width - 300) + "," + this.height);
+      slider.attr({
+        fill: "#333",
+        "fill-opacity": 0.3,
+        "stroke-width": 6,
+        "stroke-opacity": 0.2
       });
-      ed = Raphael.animation({
-        "fill-opacity": .5
-      }, 2000, function() {
-        return this.animate(st);
-      });
-      title = this.paper.text(this.width / 2, 30, this.item.Name);
+      title = this.paper.text(this.width - 285, 15, this.item.Name);
       title.attr({
         fill: "#333",
+        "text-anchor": "start",
         stroke: "none",
-        "font-size": 30,
+        "font-size": 20,
         "fill-opacity": 1,
         "stroke-width": 2
       });
@@ -24003,15 +24012,13 @@ Released under the MIT License
           r: 15
         });
       }));
-      color = ['#FFD700', '#008000', '#DA70D6', '#98FB98', '#6495ED', '#B8860B', '#2F4F4F', '#FF4500', '#AFEEEE', '#DB7093', '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#FF8C00', '#00BFFF', '#008B8B', '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#0000FF', '#8A2BE2', '#7FFF00', '#DEB887', '#5F9EA0', '#D2691E', '#A9A9A9', '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0', '#006400', '#BDB76B', '#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32'];
-      top = 0;
+      top = 40;
       this.ts = [];
-      _ref = this.item.Job;
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        job = _ref[i];
-        top += 120;
+      _ref1 = this.item.Job;
+      for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
+        job = _ref1[i];
         if (job.Tasks.length > 0) {
-          spacing = (this.width - 100) / job.Tasks.length;
+          spacing = (this.width - 200) / job.Tasks.length;
         }
         if (spacing < 100 && spacing > 50) {
           r = 15;
@@ -24024,31 +24031,32 @@ Released under the MIT License
           spacing = 100;
         }
         if (job.Tasks.length > 0) {
-          left = (this.width - 100) / 2 - (job.Tasks.length / 2) * spacing;
+          left = (this.width - 200) / 2 - (job.Tasks.length / 2) * spacing;
         }
-        _ref1 = job.Tasks;
-        for (j = _j = 0, _len1 = _ref1.length; _j < _len1; j = ++_j) {
-          task = _ref1[j];
+        _ref2 = job.Tasks;
+        for (j = _j = 0, _len1 = _ref2.length; _j < _len1; j = ++_j) {
+          task = _ref2[j];
           t = new TaskSymbol(paper, left, top, task.Name, color[i], r);
           t.Id = task.Id;
           t.RelTaskId = (function() {
-            var _k, _len2, _ref2, _results;
-            _ref2 = task.RelTasks;
+            var _k, _len2, _ref3, _results;
+            _ref3 = task.RelTasks;
             _results = [];
-            for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-              rt = _ref2[_k];
+            for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
+              rt = _ref3[_k];
               _results.push(rt.Id);
             }
             return _results;
           })();
           this.ts.push(t);
-          _ref2 = this.getTaskSymbol(t.RelTaskId);
-          for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-            rts = _ref2[_k];
+          _ref3 = this.getTaskSymbol(t.RelTaskId);
+          for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
+            rts = _ref3[_k];
             rts.addNext(t);
           }
           left += spacing;
         }
+        top += 120;
       }
     }
 
@@ -24165,8 +24173,9 @@ Released under the MIT License
     TaskSymbol.prototype.hoveron = function() {
       var a, n, p, r, rp, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
       a = Raphael.animation({
-        "stroke-width": 6
-      }, 600);
+        "stroke-width": 6,
+        "fill-opacity": 0.5
+      }, 300);
       this.sp.animate(a);
       _ref = this.nextRel;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -24195,8 +24204,9 @@ Released under the MIT License
     TaskSymbol.prototype.hoverout = function() {
       var b, n, p, r, rp, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
       b = Raphael.animation({
-        "stroke-width": 1
-      }, 600);
+        "stroke-width": 1,
+        "fill-opacity": 0.2
+      }, 300);
       this.sp.animate(b);
       _ref = this.nextRel;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -24223,15 +24233,14 @@ Released under the MIT License
     };
 
     TaskSymbol.prototype.dragger = function() {
-      this.ox = this.attr("cx");
-      this.oy = this.attr("cy");
+      var _ref, _ref1;
+      _ref = [this.attr("cx"), this.attr("cy")], this.ox = _ref[0], this.oy = _ref[1];
       if (this.type !== "text") {
         this.animate({
           "fill-opacity": .5
         }, 500);
       }
-      this.pair.ox = this.attr("x");
-      this.pair.oy = this.attr("y");
+      _ref1 = [this.attr("x"), this.attr("y")], this.pair.ox = _ref1[0], this.pair.oy = _ref1[1];
       if (this.pair.type !== "text") {
         return this.pair.animate({
           "fill-opacity": .2
@@ -24240,17 +24249,18 @@ Released under the MIT License
     };
 
     TaskSymbol.prototype.move = function(dx, dy) {
-      var att;
-      att = {
-        cx: this.ox + dx,
-        cy: this.oy + dy
-      };
-      this.attr(att);
-      att = {
-        x: this.ox + dx,
-        y: this.oy + dy
-      };
-      this.pair.attr(att);
+      this.attr([
+        {
+          cx: this.ox + dx,
+          cy: this.oy + dy
+        }
+      ]);
+      this.pair.attr([
+        {
+          x: this.ox + dx,
+          y: this.oy + dy
+        }
+      ]);
       return this.refresh();
     };
 
@@ -24651,7 +24661,7 @@ Released under the MIT License
   }
   (function() {
     (function() {
-      __out.push('<div class="panel panel-default fdin">\n    <div class="pant">\n    </div>\n</div>\n');
+      __out.push('<div class="panel panel-default fdin">\n    <nav class="navbar navbar-default navbar-static-top" role="navigation">\n        <button type="button" class="navbar-btn pull-left btn btn-default">\n            <span class="glyphicon glyphicon-arrow-left"></span>\n            Prev\n        </button>\n        <button type="button" class="navbar-btn pull-right btn btn-default">\n            Next\n            <span class="glyphicon glyphicon-arrow-right"></span>\n        </button>\n    </nav>\n    <div class="pant">\n    </div>\n</div>\n');
     
     }).call(this);
     

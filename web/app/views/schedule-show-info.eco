@@ -1,4 +1,14 @@
 <div class="panel panel-default fdin">
+    <nav class="navbar navbar-default navbar-static-top" role="navigation">
+        <button type="button" class="navbar-btn pull-left btn btn-default">
+            <span class="glyphicon glyphicon-arrow-left"></span>
+            Prev
+        </button>
+        <button type="button" class="navbar-btn pull-right btn btn-default">
+            Next
+            <span class="glyphicon glyphicon-arrow-right"></span>
+        </button>
+    </nav>
     <div class="pant">
     </div>
 </div>
