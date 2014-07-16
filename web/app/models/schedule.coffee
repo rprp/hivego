@@ -35,6 +35,15 @@ class Schedule extends Spine.Model
       when "y" then "Year"
       else "无"
 
+  SplitName: (len) =>
+    s = @Name.split("")
+    sname = ""
+    for si,i in s
+      sname += si
+      if i>0 and i%%len is 0
+        sname += "\n"
+    sname
+
   GetSecond: ->
     for t,i in @StartSecond
 

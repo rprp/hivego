@@ -4,7 +4,7 @@ Spine    = require('spine')
 Manager = require('spine/lib/manager')
 Schedule = require('models/schedule')
 ScheduleList = require('controllers/schedules')
-ScheduleInfo = require('controllers/schedulesinfo')
+ScheduleInfo = require('controllers/schedule.info')
 
 class Main extends Spine.Stack
   className: 'smain'

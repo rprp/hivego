@@ -7,7 +7,13 @@
     <div class="panel-heading">
         <!-- 标题 -->
         <div class="panel-title title">
-            <span class="sname h4" style="cursor: pointer;"><%= @Name %></span>
+            <span class="sname h4" style="cursor: pointer;">
+                <% if @Name.length>7: %>
+                    <%= @Name.substr(0,7) %>...
+                <% else: %>
+                    <%= @Name %>
+                <% end %>
+            </span>
             <!-- 周期 -->
             <span class="cyc pull-right label <%= gstyle %> cyc" style="cursor: pointer;"><%= gcyc %></span>
         </div>
