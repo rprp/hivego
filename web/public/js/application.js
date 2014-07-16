@@ -23672,7 +23672,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedule.info": function(exports, require, module) {(function() {
-  var $, Eve, JobSymbol, Raphael, Schedule, ScheduleInfo, ScheduleSymbol, Spine, TaskSymbol,
+  var $, Eve, Job, JobSymbol, Raphael, Schedule, ScheduleDetail, ScheduleInfo, ScheduleSymbol, Spine, TaskSymbol,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -23685,6 +23685,10 @@ Released under the MIT License
   Eve = require('eve');
 
   Schedule = require('models/schedule');
+
+  ScheduleDetail = require('controllers/schedule.info.detail');
+
+  Job = require('controllers/schedule.info.job');
 
   $ = Spine.$;
 
@@ -23744,15 +23748,6 @@ Released under the MIT License
           "fill-opacity": .5
         }, 1000)
       ], this.st = _ref[0], this.ed = _ref[1];
-      slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
-      slider.attr({
-        fill: "#333",
-        "fill-opacity": 0.3,
-        "stroke-width": 3,
-        "stroke-opacity": 0.1
-      });
-      top = this.printSchedule(25, this.width - 205);
-      this.printJob(top, this.width - 205);
       top = 40;
       this.ts = [];
       _ref1 = this.item.Job;
@@ -23779,6 +23774,7 @@ Released under the MIT License
           task = _ref2[j];
           t = new TaskSymbol(paper, left, top, task.Name, this.color[i], r);
           t.Id = task.Id;
+          t.JobId = job.Id;
           t.RelTaskId = (function() {
             var _k, _len2, _ref3, _results;
             _ref3 = task.RelTasks;
@@ -23799,6 +23795,18 @@ Released under the MIT License
         }
         top += 120;
       }
+      slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
+      slider.attr({
+        fill: "#333",
+        "fill-opacity": 0.3,
+        "stroke-width": 3,
+        "stroke-opacity": 0.1
+      });
+      this.scheduleDetail = new ScheduleDetail(this.paper, this.color, this.item, 220);
+      this.scheduleDetail.set.transform("t960,0");
+      this.job = new Job(this.paper, this.color, this.item, 220, this);
+      this.job.set.transform("t960," + this.scheduleDetail.height);
+      this.job.addButton.transform("t1020," + (this.scheduleDetail.height + this.job.height) + "s2.5");
     }
 
     ScheduleSymbol.prototype.getTaskSymbol = function(Ids) {
@@ -23814,103 +23822,46 @@ Released under the MIT License
       return _results;
     };
 
-    ScheduleSymbol.prototype.printSchedule = function(top, left) {
-      var att, betweenline, c, cyc, ff, gs, ss, title, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
-      ff = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      _ref = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref[0], left = _ref[1];
-      title = this.paper.text(left, top, this.item.SplitName(7));
-      title.attr({
-        fill: "#333",
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 22,
-        "fill-opacity": 1,
-        "stroke-width": 2
-      });
-      att = {
-        fill: "#333",
-        "font-family": ff,
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 14,
-        "fill-opacity": 1,
-        "stroke-width": 1
-      };
-      _ref1 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
-      cyc = this.paper.text(left, top, "调度周期：" + (this.item.GetCyc()));
-      cyc.attr(att);
-      gs = this.item.GetSecond();
-      _ref2 = [top + 30, left], top = _ref2[0], left = _ref2[1];
-      this.paper.text(left, top, "启动时间：").attr(att);
-      for (_i = 0, _len = gs.length; _i < _len; _i++) {
-        ss = gs[_i];
-        _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
-        c = this.paper.text(left + 20, top, "" + ss);
-        c.attr(att);
+    ScheduleSymbol.prototype.hlight = function(Id) {
+      var a, t, _i, _len, _ref, _results;
+      a = Raphael.animation({
+        "fill-opacity": 0.7
+      }, 500);
+      _ref = this.ts;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        t = _ref[_i];
+        if (t.JobId === Id) {
+          t.sp.animate(a);
+          _results.push(t.sp.g = t.sp.glow({
+            color: t.sp.attr("fill"),
+            "fill-opacity": 0.2,
+            width: 10
+          }));
+        } else {
+          _results.push(void 0);
+        }
       }
-      _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
-      this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(att);
-      _ref5 = [top + 30, left], top = _ref5[0], left = _ref5[1];
-      this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(att);
-      _ref6 = [top + 30, left], top = _ref6[0], left = _ref6[1];
-      betweenline = this.paper.path("M " + left + "," + top + "L " + (this.width - 30) + "," + top);
-      betweenline.attr({
-        stroke: "#A0522D",
-        "stroke-width": 2,
-        "stroke-opacity": 0.2
-      });
-      return top;
+      return _results;
     };
 
-    ScheduleSymbol.prototype.printJob = function(top, left) {
-      var addbtn, ff, i, job, jobcir, jobname, jtitle, _i, _len, _ref, _ref1, _ref2, _ref3;
-      ff = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      _ref = [top + 30, left], top = _ref[0], left = _ref[1];
-      jtitle = this.paper.text(left, top, "任务列表");
-      jtitle.attr({
-        fill: "#333",
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 18,
-        "fill-opacity": 1,
-        "stroke-width": 2
-      });
-      _ref1 = [top + 40, left], top = _ref1[0], left = _ref1[1];
-      _ref2 = this.item.Job;
-      for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
-        job = _ref2[i];
-        if (!(job.Id !== 0)) {
-          continue;
+    ScheduleSymbol.prototype.nlight = function(Id) {
+      var a, t, _i, _len, _ref, _results;
+      a = Raphael.animation({
+        "fill-opacity": 0.2
+      }, 500);
+      _ref = this.ts;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        t = _ref[_i];
+        if (t.JobId === Id) {
+          t.sp.animate(a);
+          _results.push(t.sp.g.remove());
+        } else {
+          _results.push(void 0);
         }
-        jobname = this.paper.text(left + 80, top, job.Name);
-        jobname.attr({
-          stroke: this.color[i],
-          "fill": this.color[i],
-          "font-family": ff,
-          "font-size": 16,
-          "stroke-opacity": 1,
-          "fill-opacity": 1,
-          "stroke-width": 1
-        });
-        jobcir = this.paper.circle(left + 25, top, 15);
-        jobcir.attr({
-          fill: this.color[i],
-          stroke: this.color[i],
-          "fill-opacity": 0.2,
-          "stroke-width": 1
-        });
-        _ref3 = [top + 50, left], top = _ref3[0], left = _ref3[1];
       }
-      addbtn = this.paper.path("M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z");
-      addbtn.transform("t" + (left + 60) + "," + (top - 10) + "s2");
-      return addbtn.attr({
-        fill: "#00FF00",
-        stroke: "#00FF00",
-        "fill-opacity": 0.1,
-        "stroke-opacity": 0.2,
-        "stroke-width": 1,
-        cursor: "hand"
-      });
+      return _results;
     };
 
     return ScheduleSymbol;
@@ -24123,11 +24074,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedule.info.detail": function(exports, require, module) {(function() {
-  var $, Eve, Raphael, Schedule, ScheduleInfo, ScheduleSymbol, Spine,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+  var $, Eve, Raphael, Schedule, ScheduleDetail, Spine;
 
   Spine = require('spine');
 
@@ -24139,457 +24086,129 @@ Released under the MIT License
 
   $ = Spine.$;
 
-  ScheduleInfo = (function(_super) {
-    __extends(ScheduleInfo, _super);
-
-    ScheduleInfo.prototype.className = 'scheduleinfo';
-
-    ScheduleInfo.prototype.elements = {
-      ".pant": "pant"
-    };
-
-    function ScheduleInfo() {
-      this.draw = __bind(this.draw, this);
-      this.render = __bind(this.render, this);
-      this.change = __bind(this.change, this);
-      ScheduleInfo.__super__.constructor.apply(this, arguments);
-      Schedule.bind("findRecord", this.draw);
-      this.active(this.change);
-    }
-
-    ScheduleInfo.prototype.change = function(params) {
-      Schedule.fetch({
-        Id: params.id
-      });
-      return this.render();
-    };
-
-    ScheduleInfo.prototype.render = function() {
-      return this.html(require('views/schedule-show-info')());
-    };
-
-    ScheduleInfo.prototype.draw = function(rs) {
-      var paper, _ref;
-      this.item = Schedule.find(rs.Id);
-      paper = Raphael(this.pant.get(0), '100%', '100%');
-      _ref = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref[0], this.height = _ref[1];
-      return this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
-    };
-
-    return ScheduleInfo;
-
-  })(Spine.Controller);
-
-  ScheduleSymbol = (function() {
-    function ScheduleSymbol(paper, width, height, item) {
-      var i, j, job, left, r, rt, rts, slider, spacing, t, task, top, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
+  ScheduleDetail = (function() {
+    function ScheduleDetail(paper, color, item, width) {
+      var gs, left, ss, top, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       this.paper = paper;
-      this.width = width;
-      this.height = height;
+      this.color = color;
       this.item = item;
-      this.color = ['#FF8C00', '#008000', '#2F4F4F', '#DA70D6', '#0000FF', '#8A2BE2', '#6495ED', '#B8860B', '#FF4500', '#AFEEEE', '#DB7093', '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#00BFFF', '#008B8B', '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#7FFF00', '#DEB887', '#98FB98', '#FFD700', '#5F9EA0', '#D2691E', '#A9A9A9', '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0', '#006400', '#BDB76B', '#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32'];
-      _ref = [
-        Raphael.animation({
-          "fill-opacity": .2
-        }, 1000), Raphael.animation({
-          "fill-opacity": .5
-        }, 1000)
-      ], this.st = _ref[0], this.ed = _ref[1];
-      slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
-      slider.attr({
+      this.width = width;
+      this.font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
+      this.fontStyle = {
         fill: "#333",
-        "fill-opacity": 0.3,
-        "stroke-width": 3,
-        "stroke-opacity": 0.1
-      });
-      top = this.printSchedule(25, this.width - 205);
-      this.printJob(top, this.width - 205);
-      top = 40;
-      this.ts = [];
-      _ref1 = this.item.Job;
-      for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
-        job = _ref1[i];
-        if (job.Tasks.length > 0) {
-          spacing = (this.width - 200) / job.Tasks.length;
-        }
-        if (spacing < 100 && spacing > 50) {
-          r = 15;
-          spacing = 60;
-        } else if (spacing <= 50) {
-          r = 8;
-          spacing = 40;
-        } else {
-          r = 25;
-          spacing = 100;
-        }
-        if (job.Tasks.length > 0) {
-          left = (this.width - 200) / 2 - (job.Tasks.length / 2) * spacing;
-        }
-        _ref2 = job.Tasks;
-        for (j = _j = 0, _len1 = _ref2.length; _j < _len1; j = ++_j) {
-          task = _ref2[j];
-          t = new TaskSymbol(paper, left, top, task.Name, this.color[i], r);
-          t.Id = task.Id;
-          t.RelTaskId = (function() {
-            var _k, _len2, _ref3, _results;
-            _ref3 = task.RelTasks;
-            _results = [];
-            for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-              rt = _ref3[_k];
-              _results.push(rt.Id);
-            }
-            return _results;
-          })();
-          this.ts.push(t);
-          _ref3 = this.getTaskSymbol(t.RelTaskId);
-          for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-            rts = _ref3[_k];
-            rts.addNext(t);
-          }
-          left += spacing;
-        }
-        top += 120;
-      }
-    }
-
-    ScheduleSymbol.prototype.getTaskSymbol = function(Ids) {
-      var t, _i, _len, _ref, _ref1, _results;
-      _ref = this.ts;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        t = _ref[_i];
-        if (_ref1 = t.Id, __indexOf.call(Ids, _ref1) >= 0) {
-          _results.push(t);
-        }
-      }
-      return _results;
-    };
-
-    ScheduleSymbol.prototype.printSchedule = function(top, left) {
-      var att, betweenline, c, cyc, ff, gs, ss, title, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
-      ff = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      _ref = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref[0], left = _ref[1];
-      title = this.paper.text(left, top, this.item.SplitName(7));
-      title.attr({
-        fill: "#333",
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 22,
-        "fill-opacity": 1,
-        "stroke-width": 2
-      });
-      att = {
-        fill: "#333",
-        "font-family": ff,
+        "font-family": this.font,
         "text-anchor": "start",
         stroke: "none",
         "font-size": 14,
         "fill-opacity": 1,
         "stroke-width": 1
       };
-      _ref1 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
-      cyc = this.paper.text(left, top, "调度周期：" + (this.item.GetCyc()));
-      cyc.attr(att);
+      this.height = 0;
+      this.paper.setStart();
+      _ref = [20, 10], top = _ref[0], left = _ref[1];
+      _ref1 = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
+      this.title = this.paper.text(left, top, this.item.SplitName(7)).attr(this.fontStyle);
+      this.title.attr("font-size", 22);
+      _ref2 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref2[0], left = _ref2[1];
+      this.cyc = this.paper.text(left, top, "调度周期：" + (this.item.GetCyc())).attr(this.fontStyle);
       gs = this.item.GetSecond();
-      _ref2 = [top + 30, left], top = _ref2[0], left = _ref2[1];
-      this.paper.text(left, top, "启动时间：").attr(att);
+      _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
+      this.startSecond = this.paper.text(left, top, "启动时间：").attr(this.fontStyle);
+      this.startSecondList = [];
       for (_i = 0, _len = gs.length; _i < _len; _i++) {
         ss = gs[_i];
-        _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
-        c = this.paper.text(left + 20, top, "" + ss);
-        c.attr(att);
+        _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
+        this.startSecondList.push(this.paper.text(left + 20, top, "" + ss).attr(this.fontStyle));
       }
-      _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
-      this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(att);
       _ref5 = [top + 30, left], top = _ref5[0], left = _ref5[1];
-      this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(att);
+      this.taskCnt = this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(this.fontStyle);
       _ref6 = [top + 30, left], top = _ref6[0], left = _ref6[1];
-      betweenline = this.paper.path("M " + left + "," + top + "L " + (this.width - 30) + "," + top);
-      betweenline.attr({
+      this.nextStart = this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(this.fontStyle);
+      _ref7 = [top + 30, left], top = _ref7[0], left = _ref7[1];
+      this.betweenline = this.paper.path("M " + left + "," + top + "L " + (this.width - 30) + "," + top).attr({
         stroke: "#A0522D",
         "stroke-width": 2,
         "stroke-opacity": 0.2
       });
-      return top;
-    };
+      this.set = this.paper.setFinish();
+      this.height = top;
+    }
 
-    ScheduleSymbol.prototype.printJob = function(top, left) {
-      var addbtn, ff, i, job, jobcir, jobname, jtitle, _i, _len, _ref, _ref1, _ref2, _ref3;
-      ff = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      _ref = [top + 30, left], top = _ref[0], left = _ref[1];
-      jtitle = this.paper.text(left, top, "任务列表");
-      jtitle.attr({
-        fill: "#333",
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 18,
-        "fill-opacity": 1,
-        "stroke-width": 2
-      });
-      _ref1 = [top + 40, left], top = _ref1[0], left = _ref1[1];
-      _ref2 = this.item.Job;
-      for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
-        job = _ref2[i];
-        if (!(job.Id !== 0)) {
-          continue;
-        }
-        jobname = this.paper.text(left + 80, top, job.Name);
-        jobname.attr({
-          stroke: this.color[i],
-          "fill": this.color[i],
-          "font-family": ff,
-          "font-size": 16,
-          "stroke-opacity": 1,
-          "fill-opacity": 1,
-          "stroke-width": 1
-        });
-        jobcir = this.paper.circle(left + 25, top, 15);
-        jobcir.attr({
-          fill: this.color[i],
-          stroke: this.color[i],
-          "fill-opacity": 0.2,
-          "stroke-width": 1
-        });
-        _ref3 = [top + 50, left], top = _ref3[0], left = _ref3[1];
-      }
-      addbtn = this.paper.path("M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z");
-      addbtn.transform("t" + (left + 60) + "," + (top - 10) + "s2");
-      return addbtn.attr({
-        fill: "#00FF00",
-        stroke: "#00FF00",
-        "fill-opacity": 0.1,
-        "stroke-opacity": 0.2,
-        "stroke-width": 1,
-        cursor: "hand"
-      });
-    };
-
-    return ScheduleSymbol;
+    return ScheduleDetail;
 
   })();
+
+  module.exports = ScheduleDetail;
 
 }).call(this);
 }, "controllers/schedule.info.job": function(exports, require, module) {(function() {
-  var $, Eve, JobSymbol, Raphael, Schedule, ScheduleInfo, ScheduleSymbol, Spine, TaskSymbol,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  var $, Eve, Events, Job, Module, Raphael, Schedule, ScheduleInfo, Spine,
     __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Spine = require('spine');
+
+  Events = Spine.Events;
+
+  Module = Spine.Module;
 
   Raphael = require('raphael');
 
   Eve = require('eve');
 
+  ScheduleInfo = require('controllers/schedule.info');
+
   Schedule = require('models/schedule');
 
   $ = Spine.$;
 
-  ScheduleInfo = (function(_super) {
-    __extends(ScheduleInfo, _super);
+  Job = (function(_super) {
+    __extends(Job, _super);
 
-    ScheduleInfo.prototype.className = 'scheduleinfo';
-
-    ScheduleInfo.prototype.elements = {
-      ".pant": "pant"
-    };
-
-    function ScheduleInfo() {
-      this.draw = __bind(this.draw, this);
-      this.render = __bind(this.render, this);
-      this.change = __bind(this.change, this);
-      ScheduleInfo.__super__.constructor.apply(this, arguments);
-      Schedule.bind("findRecord", this.draw);
-      this.active(this.change);
-    }
-
-    ScheduleInfo.prototype.change = function(params) {
-      Schedule.fetch({
-        Id: params.id
-      });
-      return this.render();
-    };
-
-    ScheduleInfo.prototype.render = function() {
-      return this.html(require('views/schedule-show-info')());
-    };
-
-    ScheduleInfo.prototype.draw = function(rs) {
-      var paper, _ref;
-      this.item = Schedule.find(rs.Id);
-      paper = Raphael(this.pant.get(0), '100%', '100%');
-      _ref = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref[0], this.height = _ref[1];
-      return this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
-    };
-
-    return ScheduleInfo;
-
-  })(Spine.Controller);
-
-  ScheduleSymbol = (function() {
-    function ScheduleSymbol(paper, width, height, item) {
-      var i, j, job, left, r, rt, rts, slider, spacing, t, task, top, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
+    function Job(paper, color, item, width, sinfo) {
+      var i, job, jobcir, jobname, jobrect, left, s, top, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
       this.paper = paper;
-      this.width = width;
-      this.height = height;
+      this.color = color;
       this.item = item;
-      this.color = ['#FF8C00', '#008000', '#2F4F4F', '#DA70D6', '#0000FF', '#8A2BE2', '#6495ED', '#B8860B', '#FF4500', '#AFEEEE', '#DB7093', '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#00BFFF', '#008B8B', '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#7FFF00', '#DEB887', '#98FB98', '#FFD700', '#5F9EA0', '#D2691E', '#A9A9A9', '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0', '#006400', '#BDB76B', '#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32'];
-      _ref = [
-        Raphael.animation({
-          "fill-opacity": .2
-        }, 1000), Raphael.animation({
-          "fill-opacity": .5
-        }, 1000)
-      ], this.st = _ref[0], this.ed = _ref[1];
-      slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
-      slider.attr({
+      this.width = width;
+      this.sinfo = sinfo;
+      Job.__super__.constructor.apply(this, arguments);
+      this.font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
+      this.fontStyle = {
         fill: "#333",
-        "fill-opacity": 0.3,
-        "stroke-width": 3,
-        "stroke-opacity": 0.1
-      });
-      top = this.printSchedule(25, this.width - 205);
-      this.printJob(top, this.width - 205);
-      top = 40;
-      this.ts = [];
-      _ref1 = this.item.Job;
-      for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
-        job = _ref1[i];
-        if (job.Tasks.length > 0) {
-          spacing = (this.width - 200) / job.Tasks.length;
-        }
-        if (spacing < 100 && spacing > 50) {
-          r = 15;
-          spacing = 60;
-        } else if (spacing <= 50) {
-          r = 8;
-          spacing = 40;
-        } else {
-          r = 25;
-          spacing = 100;
-        }
-        if (job.Tasks.length > 0) {
-          left = (this.width - 200) / 2 - (job.Tasks.length / 2) * spacing;
-        }
-        _ref2 = job.Tasks;
-        for (j = _j = 0, _len1 = _ref2.length; _j < _len1; j = ++_j) {
-          task = _ref2[j];
-          t = new TaskSymbol(paper, left, top, task.Name, this.color[i], r);
-          t.Id = task.Id;
-          t.RelTaskId = (function() {
-            var _k, _len2, _ref3, _results;
-            _ref3 = task.RelTasks;
-            _results = [];
-            for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-              rt = _ref3[_k];
-              _results.push(rt.Id);
-            }
-            return _results;
-          })();
-          this.ts.push(t);
-          _ref3 = this.getTaskSymbol(t.RelTaskId);
-          for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-            rts = _ref3[_k];
-            rts.addNext(t);
-          }
-          left += spacing;
-        }
-        top += 120;
-      }
-    }
-
-    ScheduleSymbol.prototype.getTaskSymbol = function(Ids) {
-      var t, _i, _len, _ref, _ref1, _results;
-      _ref = this.ts;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        t = _ref[_i];
-        if (_ref1 = t.Id, __indexOf.call(Ids, _ref1) >= 0) {
-          _results.push(t);
-        }
-      }
-      return _results;
-    };
-
-    ScheduleSymbol.prototype.printSchedule = function(top, left) {
-      var att, betweenline, c, cyc, ff, gs, ss, title, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
-      ff = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      _ref = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref[0], left = _ref[1];
-      title = this.paper.text(left, top, this.item.SplitName(7));
-      title.attr({
-        fill: "#333",
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 22,
-        "fill-opacity": 1,
-        "stroke-width": 2
-      });
-      att = {
-        fill: "#333",
-        "font-family": ff,
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 14,
-        "fill-opacity": 1,
-        "stroke-width": 1
-      };
-      _ref1 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
-      cyc = this.paper.text(left, top, "调度周期：" + (this.item.GetCyc()));
-      cyc.attr(att);
-      gs = this.item.GetSecond();
-      _ref2 = [top + 30, left], top = _ref2[0], left = _ref2[1];
-      this.paper.text(left, top, "启动时间：").attr(att);
-      for (_i = 0, _len = gs.length; _i < _len; _i++) {
-        ss = gs[_i];
-        _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
-        c = this.paper.text(left + 20, top, "" + ss);
-        c.attr(att);
-      }
-      _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
-      this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(att);
-      _ref5 = [top + 30, left], top = _ref5[0], left = _ref5[1];
-      this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(att);
-      _ref6 = [top + 30, left], top = _ref6[0], left = _ref6[1];
-      betweenline = this.paper.path("M " + left + "," + top + "L " + (this.width - 30) + "," + top);
-      betweenline.attr({
-        stroke: "#A0522D",
-        "stroke-width": 2,
-        "stroke-opacity": 0.2
-      });
-      return top;
-    };
-
-    ScheduleSymbol.prototype.printJob = function(top, left) {
-      var addbtn, ff, i, job, jobcir, jobname, jtitle, _i, _len, _ref, _ref1, _ref2, _ref3;
-      ff = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      _ref = [top + 30, left], top = _ref[0], left = _ref[1];
-      jtitle = this.paper.text(left, top, "任务列表");
-      jtitle.attr({
-        fill: "#333",
+        "font-family": this.font,
         "text-anchor": "start",
         stroke: "none",
         "font-size": 18,
         "fill-opacity": 1,
-        "stroke-width": 2
-      });
-      _ref1 = [top + 40, left], top = _ref1[0], left = _ref1[1];
-      _ref2 = this.item.Job;
-      for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
-        job = _ref2[i];
+        "stroke-width": 1
+      };
+      this.jobFontStyle = {
+        stroke: this.color[i],
+        "fill": this.color[i],
+        "font-family": this.font,
+        "font-size": 16,
+        "stroke-opacity": 1,
+        "fill-opacity": 1,
+        "stroke-width": 1
+      };
+      this.height = 0;
+      this.paper.setStart();
+      _ref = [0, 10], top = _ref[0], left = _ref[1];
+      _ref1 = [top + 30, left], top = _ref1[0], left = _ref1[1];
+      this.title = this.paper.text(left, top, "任务列表").attr(this.fontStyle);
+      _ref2 = [top + 40, left], top = _ref2[0], left = _ref2[1];
+      this.list = [];
+      _ref3 = this.item.Job;
+      for (i = _i = 0, _len = _ref3.length; _i < _len; i = ++_i) {
+        job = _ref3[i];
         if (!(job.Id !== 0)) {
           continue;
         }
-        jobname = this.paper.text(left + 80, top, job.Name);
-        jobname.attr({
-          stroke: this.color[i],
-          "fill": this.color[i],
-          "font-family": ff,
-          "font-size": 16,
-          "stroke-opacity": 1,
-          "fill-opacity": 1,
-          "stroke-width": 1
-        });
+        s = this.paper.set();
+        jobname = this.paper.text(left + 80, top, job.Name).attr(this.jobFontStyle);
+        jobname.attr("stroke", this.color[i]);
+        jobname.attr("fill", this.color[i]);
         jobcir = this.paper.circle(left + 25, top, 15);
         jobcir.attr({
           fill: this.color[i],
@@ -24597,227 +24216,58 @@ Released under the MIT License
           "fill-opacity": 0.2,
           "stroke-width": 1
         });
-        _ref3 = [top + 50, left], top = _ref3[0], left = _ref3[1];
+        jobrect = this.paper.rect(left, top - 20, 180, 40, 5);
+        jobrect.attr({
+          fill: this.color[i],
+          stroke: this.color[i],
+          "fill-opacity": 0.1,
+          "stroke-width": 0
+        });
+        s.push(jobname, jobcir, jobrect);
+        s.data("Id", job.Id);
+        s.data("sinfo", this.sinfo);
+        s.hover(this.hoveron, this.hoverout);
+        this.list.push(s);
+        _ref4 = [top + 50, left], top = _ref4[0], left = _ref4[1];
       }
-      addbtn = this.paper.path("M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z");
-      addbtn.transform("t" + (left + 60) + "," + (top - 10) + "s2");
-      return addbtn.attr({
+      this.addButton = this.paper.path("M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z");
+      this.addButton.transform("t" + (left + 60) + "," + (top - 10) + "s2.5");
+      this.addButton.attr({
         fill: "#00FF00",
         stroke: "#00FF00",
-        "fill-opacity": 0.1,
-        "stroke-opacity": 0.2,
+        "fill-opacity": 0.2,
+        "stroke-opacity": 0.8,
+        "stroke-dasharray": "-",
         "stroke-width": 1,
         cursor: "hand"
       });
-    };
-
-    return ScheduleSymbol;
-
-  })();
-
-  JobSymbol = (function() {
-    function JobSymbol(paper, cx, cy, name, color) {
-      this.paper = paper;
-      this.cx = cx;
-      this.cy = cy;
-      this.name = name;
-      this.color = color;
+      this.set = this.paper.setFinish();
+      this.height = top;
     }
 
-    return JobSymbol;
-
-  })();
-
-  TaskSymbol = (function() {
-    function TaskSymbol(paper, cx, cy, name, color, r) {
-      var an, st;
-      this.paper = paper;
-      this.cx = cx;
-      this.cy = cy;
-      this.name = name;
-      this.color = color;
-      this.r = r != null ? r : 20;
-      this.hoverout = __bind(this.hoverout, this);
-      this.hoveron = __bind(this.hoveron, this);
-      this.pre = [];
-      this.preRel = [];
-      this.next = [];
-      this.nextRel = [];
-      this.paper.setStart();
-      this.sp = this.paper.circle(this.cx, this.cy, this.r);
-      this.sp.ts = this;
-      this.sp.hover(this.hoveron, this.hoverout);
-      this.sp.attr({
-        fill: this.color,
-        stroke: this.color,
-        "fill-opacity": 0.2,
-        "stroke-width": 1,
-        cursor: "move"
-      });
-      this.sp.refresh = function() {
-        var i, _i, _j, _len, _len1, _ref, _ref1, _results;
-        if (this.ts.nextRel) {
-          _ref = this.ts.nextRel;
-          for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-            r = _ref[i];
-            this.paper.connection(r);
-          }
-        }
-        if (this.ts.preRel) {
-          _ref1 = this.ts.preRel;
-          _results = [];
-          for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
-            r = _ref1[i];
-            _results.push(this.paper.connection(r));
-          }
-          return _results;
-        }
-      };
-      this.sp.drag(this.move, this.dragger, this.up);
-      this.text = this.paper.text(this.cx, this.cy, this.name);
-      this.text.toBack();
-      this.text.attr({
-        fill: "#333",
-        stroke: "none",
-        "font-size": 15,
-        "fill-opacity": 1,
-        "stroke-width": 1,
-        cursor: "move"
-      });
-      this.sp.pair = this.text;
-      an = Raphael.animation({
-        "fill-opacity": .2
-      }, 200);
-      this.sp.animate(an.repeat(10));
-      st = this.paper.setFinish();
-      this.sp;
-    }
-
-    TaskSymbol.prototype.addNext = function(ts) {
-      var r;
-      this.next.push(ts);
-      r = this.paper.connection(this.sp, ts.sp, this.sp.attr('fill'), "" + (this.sp.attr('fill')) + "|2");
-      this.nextRel.push(r);
-      ts.pre.push(this);
-      return ts.preRel.push(r);
-    };
-
-    TaskSymbol.prototype.click = function() {
-      return alert(this.data('a'));
-    };
-
-    TaskSymbol.prototype.hoveron = function() {
-      var a, n, p, r, rp, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
+    Job.prototype.hoveron = function() {
+      var a;
       a = Raphael.animation({
-        "stroke-width": 6,
-        "fill-opacity": 0.5
+        "fill-opacity": 0.6
       }, 300);
-      this.sp.animate(a);
-      _ref = this.nextRel;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        r = _ref[_i];
-        r.line.animate(a);
-      }
-      _ref1 = this.next;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        n = _ref1[_j];
-        n.sp.animate(a);
-      }
-      _ref2 = this.preRel;
-      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-        rp = _ref2[_k];
-        rp.line.animate(a);
-      }
-      _ref3 = this.pre;
-      _results = [];
-      for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-        p = _ref3[_l];
-        _results.push(p.sp.animate(a));
-      }
-      return _results;
+      this.animate(a);
+      return this.data("sinfo").hlight(this.data("Id"));
     };
 
-    TaskSymbol.prototype.hoverout = function() {
-      var b, n, p, r, rp, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
+    Job.prototype.hoverout = function() {
+      var b;
       b = Raphael.animation({
-        "stroke-width": 1,
-        "fill-opacity": 0.2
+        "fill-opacity": 0.1
       }, 300);
-      this.sp.animate(b);
-      _ref = this.nextRel;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        r = _ref[_i];
-        r.line.animate(b);
-      }
-      _ref1 = this.next;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        n = _ref1[_j];
-        n.sp.animate(b);
-      }
-      _ref2 = this.preRel;
-      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-        rp = _ref2[_k];
-        rp.line.animate(b);
-      }
-      _ref3 = this.pre;
-      _results = [];
-      for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-        p = _ref3[_l];
-        _results.push(p.sp.animate(b));
-      }
-      return _results;
+      this.animate(b);
+      return this.data("sinfo").nlight(this.data("Id"));
     };
 
-    TaskSymbol.prototype.dragger = function() {
-      var _ref, _ref1;
-      _ref = [this.attr("cx"), this.attr("cy")], this.ox = _ref[0], this.oy = _ref[1];
-      if (this.type !== "text") {
-        this.animate({
-          "fill-opacity": .5
-        }, 500);
-      }
-      _ref1 = [this.attr("x"), this.attr("y")], this.pair.ox = _ref1[0], this.pair.oy = _ref1[1];
-      if (this.pair.type !== "text") {
-        return this.pair.animate({
-          "fill-opacity": .2
-        }, 500);
-      }
-    };
+    return Job;
 
-    TaskSymbol.prototype.move = function(dx, dy) {
-      this.attr([
-        {
-          cx: this.ox + dx,
-          cy: this.oy + dy
-        }
-      ]);
-      this.pair.attr([
-        {
-          x: this.ox + dx,
-          y: this.oy + dy
-        }
-      ]);
-      return this.refresh();
-    };
+  })(Spine.Controller);
 
-    TaskSymbol.prototype.up = function() {
-      if (this.type !== "text") {
-        this.animate({
-          "fill-opacity": 0.2
-        }, 500);
-      }
-      if (this.pair.type !== "text") {
-        return this.pair.animate({
-          "fill-opacity": 0.2
-        }, 500);
-      }
-    };
-
-    return TaskSymbol;
-
-  })();
-
-  module.exports = ScheduleInfo;
+  module.exports = Job;
 
 }).call(this);
 }, "controllers/schedule.info.task": function(exports, require, module) {(function() {
@@ -25895,7 +25345,7 @@ Released under the MIT License
   }
   (function() {
     (function() {
-      __out.push('<div class="panel panel-default fdin">\n    <nav class="navbar navbar-default navbar-static-top" role="navigation">\n        <button type="button" class="navbar-btn pull-left btn btn-default">\n            <span class="glyphicon glyphicon-arrow-left"></span>\n            Prev\n        </button>\n        <button type="button" class="navbar-btn pull-right btn btn-default">\n            Next\n            <span class="glyphicon glyphicon-arrow-right"></span>\n        </button>\n    </nav>\n    <div class="pant">\n    </div>\n</div>\n');
+      __out.push('<div class="panel panel-default fdin">\n    <!--\n    <nav class="navbar navbar-default navbar-static-top" role="navigation">\n        <button type="button" class="navbar-btn pull-left btn btn-default">\n            <span class="glyphicon glyphicon-arrow-left"></span>\n            Prev\n        </button>\n        <button type="button" class="navbar-btn pull-right btn btn-default">\n            Next\n            <span class="glyphicon glyphicon-arrow-right"></span>\n        </button>\n    </nav>\n    --!>\n    <div class="pant">\n    </div>\n</div>\n');
     
     }).call(this);
     
