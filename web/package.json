@@ -5,15 +5,15 @@
     "node": "*"
   },
   "dependencies": { 
-    "serveup": "latest",
-    "hem": "latest",
-    "es5-shimify": "latest",
-    "json2ify": "latest",
-    "momentify": "latest",
-    "raphael":"latest",
-    "eve":"latest",
+    "serveup": "0.0.5",
+    "hem": "0.3.6",
+    "es5-shimify": "2.3.0",
+    "json2ify": "0.0.4",
+    "momentifycn": "0.0.1",
+    "raphaelify":"0.0.1",
+    "eve":"0.5.0",
+    "spineify":"0.0.2",
     "jquery-mousewheel":"3.1.12",
-    "moment": "latest",
-    "jqueryify": "~>0.0.1"
+    "jqueryify": "0.0.3"
   }
 }

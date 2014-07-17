@@ -1,7 +1,7 @@
 require('lib/setup')
 
-Spine    = require('spine')
-Manager = require('spine/lib/manager')
+Spine    = require('spineify')
+Manager = require('spineify/lib/manager')
 Schedule = require('models/schedule')
 ScheduleList = require('controllers/schedules')
 ScheduleInfo = require('controllers/schedule.info')

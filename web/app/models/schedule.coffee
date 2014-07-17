@@ -1,5 +1,5 @@
-Moment = require('momentify')
-Spine = require('spine')
+Moment = require('momentifycn')
+Spine = require('spineify')
 
 class Schedule extends Spine.Model
   @configure 'Schedule', 'Id', 'Name', 'TaskCnt', 'Job', 'Count', 'Cyc', 'StartMonth', 'StartSecond', 'NextStart', 'TimeOut', 'Desc', 'CreateTime', 'CreateUserId', 'ModifyTime', 'ModifyUserId'

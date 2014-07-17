@@ -1,7 +1,7 @@
-Spine = require('spine')
+Spine = require('spineify')
 Events  = Spine.Events
 Module  = Spine.Module
-Raphael = require('raphael')
+Raphael = require('raphaelify')
 Eve = require('eve')
 ScheduleInfo = require('controllers/schedule.info')
 Schedule = require('models/schedule')

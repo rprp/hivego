@@ -4,9 +4,11 @@ hive
 cpuprofile
 memprofile
 worker_pid_file
+schedule_pid_file
 bin/*
 build.py
 log.db
+hive.db
 application.js
 
 !*.go

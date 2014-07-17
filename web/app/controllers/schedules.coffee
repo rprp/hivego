@@ -1,4 +1,4 @@
-Spine = require('spine')
+Spine = require('spineify')
 Schedule = require('models/schedule')
 ScheduleItem = require('controllers/schedules.item')
 $       = Spine.$

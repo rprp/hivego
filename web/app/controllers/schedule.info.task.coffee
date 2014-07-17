@@ -1,5 +1,5 @@
-Spine = require('spine')
-Raphael = require('raphael')
+Spine = require('spineify')
+Raphael = require('raphaelify')
 Eve = require('eve')
 Schedule = require('models/schedule')
 $       = Spine.$
