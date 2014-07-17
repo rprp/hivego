@@ -8,18 +8,25 @@ Schedule = require('models/schedule')
 $       = Spine.$
 
 class Job extends Spine.Controller
+  elements:
+    ".close":  "close"
+
+  events:
+    "click .close": "cl"
+
   constructor: (@paper, @color, @item, @width, @sinfo) ->
     super
     @font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif"
     @fontStyle = {fill: "#333", "font-family":@font, "text-anchor": "start", stroke: "none", "font-size": 18, "fill-opacity": 1, "stroke-width": 1}
     @jobFontStyle = {stroke: @color[i], "fill": @color[i], "font-family":@font , "font-size": 16, "stroke-opacity":1, "fill-opacity": 1, "stroke-width": 1}
+    icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z"
     @height = 0
 
     @paper.setStart()
 
     [top,left] = [0, 10]
     [top,left]=[top+30,left]
-    @title = @paper.text(left, top, "任务列表").attr(@fontStyle)
+    @title = @paper.text(left, top, "作业列表").attr(@fontStyle)
 
     [top,left]=[top+40,left]
     @list = []
@@ -32,7 +39,7 @@ class Job extends Spine.Controller
       jobcir = @paper.circle(left+25,top,15)
       jobcir.attr({fill: @color[i], stroke: @color[i], "fill-opacity": 0.2, "stroke-width": 1})
 
-      jobrect = @paper.rect(left,top-20,180,40,5)
+      jobrect = @paper.rect(left,top-20,190,40,5)
       jobrect.attr({fill: @color[i], stroke: @color[i], "fill-opacity": 0.1, "stroke-width": 0})
 
       s.push(jobname, jobcir, jobrect)
@@ -42,21 +49,38 @@ class Job extends Spine.Controller
       @list.push(s)
       [top,left]=[top+50,left]
 
-    @addButton = @paper.path("M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z")
-    @addButton.transform("t#{left+60},#{top-10}s2.5")
-    @addButton.attr({fill: "#00FF00", stroke: "#00FF00", "fill-opacity": 0.2, "stroke-opacity":0.8, "stroke-dasharray" : "-","stroke-width": 1, cursor: "hand"})
+    addbtn = @paper.rect(left,top-20,190,40,5).attr({fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.1, "stroke-width": 0, cursor: "hand"})
+    addbtn.hover(@hoveron,@hoverout)
+    addbtn.click(@addjob)
+    @addButton = @paper.path(icoplus)
+    @addButton.attr({fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.4, "stroke-opacity":0.8, "stroke-dasharray" : "-","stroke-width": 1, cursor: "hand"})
+    @addButton.toBack()
 
     @set = @paper.setFinish()
-    @height = top 
+    @height = top
 
   hoveron: ->
     a = Raphael.animation({"fill-opacity": 0.6}, 300)
     @.animate(a)
-    @data("sinfo").hlight(@data("Id"))
+    @data("sinfo")?.task.hlight(@data("Id"))
       
   hoverout: ->
     b = Raphael.animation({"fill-opacity": 0.1}, 300)
     @.animate(b)
-    @data("sinfo").nlight(@data("Id"))
+    @data("sinfo")?.task.nlight(@data("Id"))
+
+  render: (x, y) =>
+    @html(require('views/schedule-add-job')())
+    @el.css("left",x)
+    @el.css("top",y)
+    @el.css("position","absolute")
+    @el.css("display","block")
+    
+  addjob: (e) =>
+    Spine.trigger("addjob",e.screenX,e.screenY)
+
+  cl: (e) ->
+    @el.css("display","none")
+
  
 module.exports = Job

@@ -11,7 +11,6 @@ wheel = require("jquery-mousewheel")($)
 class ScheduleInfo extends Spine.Controller
   className: 'scheduleinfo'
 
-
   elements:
     ".pant":          "pant"
 
@@ -21,6 +20,7 @@ class ScheduleInfo extends Spine.Controller
   constructor: ->
     super
     Schedule.bind("findRecord",  @draw)
+    Spine.bind("addjob", @addjob)
     @active @change
 
   change: (params) =>
@@ -30,12 +30,13 @@ class ScheduleInfo extends Spine.Controller
   render: =>
     @html(require('views/schedule-show-info')())
 
-
   mousewheel: (event, delta, deltaX, deltaY)->
     if delta > 0
-      @ssl.job.set.transform("...s1.1")
+      @ssl.task.set.transform("...s1.1")
+      tt.sp.refresh() for tt in @ssl.task.ts
     else
-      @ssl.job.set.transform("...s0.9")
+      @ssl.task.set.transform("...s0.9")
+      tt.sp.refresh() for tt in @ssl.task.ts
 
     event.stopPropagation()
     
@@ -47,6 +48,9 @@ class ScheduleInfo extends Spine.Controller
     [@width, @height] = [parseFloat(@pant.css("width")), parseFloat(@pant.css("height"))]
 
     @ssl = new ScheduleSymbol(paper,@width,@height,@item)
+
+  addjob: (x, y) =>
+    @append(@ssl.job.render(@width-300,@height-380))
 
 class ScheduleSymbol
   constructor: (@paper, @width, @height, @item) ->
@@ -65,32 +69,15 @@ class ScheduleSymbol
     [@st, @ed] = [Raphael.animation({"fill-opacity": .2}, 1000),
                 Raphael.animation({"fill-opacity": .5}, 1000)]
 
-    top = 80
-    @ts = []
-    for job,i in @item.Job
-
-      spacing = (@width-200)/job.Tasks.length if job.Tasks.length > 0
-      r = 25
-      spacing = 100
-
-      left = (@width-200)/2-(job.Tasks.length/2) * spacing if job.Tasks.length > 0
-      for task,j in job.Tasks
-        t= new Task(paper,left,top,task.Name,@color[i],r)
-        t.Id = task.Id
-        t.JobId = job.Id
-        t.RelTaskId = (rt.Id for rt in task.RelTasks)
-        @ts.push(t)
-
-        rts.addNext(t) for rts in @getTaskSymbol(t.RelTaskId)
-        left += spacing
-
-      top += 120
+    @task = new Task(@paper,@color,@item,@width,@height)
 
     slider = @paper.path("M #{@width-220},10L #{@width-220},#{@height}")
     slider.attr({fill: "#333", "fill-opacity": 0.3, "stroke-width": 2, "stroke-opacity": 0.1})
     
     @scheduleDetail = new ScheduleDetail(@paper,@color,@item,220)
     @job = new Job(@paper,@color,@item,220,@)
+
+    
 
     @layout()
 
@@ -101,26 +88,9 @@ class ScheduleSymbol
 
     #jobflg.click =>
 
-  getTaskSymbol: (Ids) ->
-     t for t in @ts when t.Id in Ids
-
-  hlight: (Id) ->
-    a = Raphael.animation({"fill-opacity": 0.7}, 500)
-    for t in @ts
-      if t.JobId is Id
-        t.sp.animate(a)
-        t.sp.g = t.sp.glow({color: t.sp.attr("fill"), "fill-opacity": 0.2, width:10})
-
-  nlight: (Id) ->
-    a = Raphael.animation({"fill-opacity": 0.2}, 500)
-    for t in @ts
-      if t.JobId is Id
-        t.sp.animate(a)
-        t.sp.g.remove()
-
   layout: ->
     @scheduleDetail.set.transform("t#{@width-220},10")
     @job.set.transform("t#{@width-220},#{@scheduleDetail.height+10}")
-    @job.addButton.transform("t1020,#{@scheduleDetail.height + @job.height}s2.5")
+    @job.addButton.transform("t#{@width-60},#{@scheduleDetail.height + @job.height - 5}s1.5")
 
 module.exports = ScheduleInfo
