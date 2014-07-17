@@ -12935,6 +12935,227 @@ module.exports = jQuery;}, "momentify/index": function(exports, require, module)
         });
     }
 }).call(this);
+}, "jquery-mousewheel/index": function(exports, require, module) {/*! Copyright (c) 2013 Brandon Aaron (http://brandon.aaron.sh)
+ * Licensed under the MIT License (LICENSE.txt).
+ *
+ * Version: 3.1.12
+ *
+ * Requires: jQuery 1.2.2+
+ */
+
+(function (factory) {
+    if ( typeof define === 'function' && define.amd ) {
+        // AMD. Register as an anonymous module.
+        define(['jquery'], factory);
+    } else if (typeof exports === 'object') {
+        // Node/CommonJS style for Browserify
+        module.exports = factory;
+    } else {
+        // Browser globals
+        factory(jQuery);
+    }
+}(function ($) {
+
+    var toFix  = ['wheel', 'mousewheel', 'DOMMouseScroll', 'MozMousePixelScroll'],
+        toBind = ( 'onwheel' in document || document.documentMode >= 9 ) ?
+                    ['wheel'] : ['mousewheel', 'DomMouseScroll', 'MozMousePixelScroll'],
+        slice  = Array.prototype.slice,
+        nullLowestDeltaTimeout, lowestDelta;
+
+    if ( $.event.fixHooks ) {
+        for ( var i = toFix.length; i; ) {
+            $.event.fixHooks[ toFix[--i] ] = $.event.mouseHooks;
+        }
+    }
+
+    var special = $.event.special.mousewheel = {
+        version: '3.1.12',
+
+        setup: function() {
+            if ( this.addEventListener ) {
+                for ( var i = toBind.length; i; ) {
+                    this.addEventListener( toBind[--i], handler, false );
+                }
+            } else {
+                this.onmousewheel = handler;
+            }
+            // Store the line height and page height for this particular element
+            $.data(this, 'mousewheel-line-height', special.getLineHeight(this));
+            $.data(this, 'mousewheel-page-height', special.getPageHeight(this));
+        },
+
+        teardown: function() {
+            if ( this.removeEventListener ) {
+                for ( var i = toBind.length; i; ) {
+                    this.removeEventListener( toBind[--i], handler, false );
+                }
+            } else {
+                this.onmousewheel = null;
+            }
+            // Clean up the data we added to the element
+            $.removeData(this, 'mousewheel-line-height');
+            $.removeData(this, 'mousewheel-page-height');
+        },
+
+        getLineHeight: function(elem) {
+            var $elem = $(elem),
+                $parent = $elem['offsetParent' in $.fn ? 'offsetParent' : 'parent']();
+            if (!$parent.length) {
+                $parent = $('body');
+            }
+            return parseInt($parent.css('fontSize'), 10) || parseInt($elem.css('fontSize'), 10) || 16;
+        },
+
+        getPageHeight: function(elem) {
+            return $(elem).height();
+        },
+
+        settings: {
+            adjustOldDeltas: true, // see shouldAdjustOldDeltas() below
+            normalizeOffset: true  // calls getBoundingClientRect for each event
+        }
+    };
+
+    $.fn.extend({
+        mousewheel: function(fn) {
+            return fn ? this.bind('mousewheel', fn) : this.trigger('mousewheel');
+        },
+
+        unmousewheel: function(fn) {
+            return this.unbind('mousewheel', fn);
+        }
+    });
+
+
+    function handler(event) {
+        var orgEvent   = event || window.event,
+            args       = slice.call(arguments, 1),
+            delta      = 0,
+            deltaX     = 0,
+            deltaY     = 0,
+            absDelta   = 0,
+            offsetX    = 0,
+            offsetY    = 0;
+        event = $.event.fix(orgEvent);
+        event.type = 'mousewheel';
+
+        // Old school scrollwheel delta
+        if ( 'detail'      in orgEvent ) { deltaY = orgEvent.detail * -1;      }
+        if ( 'wheelDelta'  in orgEvent ) { deltaY = orgEvent.wheelDelta;       }
+        if ( 'wheelDeltaY' in orgEvent ) { deltaY = orgEvent.wheelDeltaY;      }
+        if ( 'wheelDeltaX' in orgEvent ) { deltaX = orgEvent.wheelDeltaX * -1; }
+
+        // Firefox < 17 horizontal scrolling related to DOMMouseScroll event
+        if ( 'axis' in orgEvent && orgEvent.axis === orgEvent.HORIZONTAL_AXIS ) {
+            deltaX = deltaY * -1;
+            deltaY = 0;
+        }
+
+        // Set delta to be deltaY or deltaX if deltaY is 0 for backwards compatabilitiy
+        delta = deltaY === 0 ? deltaX : deltaY;
+
+        // New school wheel delta (wheel event)
+        if ( 'deltaY' in orgEvent ) {
+            deltaY = orgEvent.deltaY * -1;
+            delta  = deltaY;
+        }
+        if ( 'deltaX' in orgEvent ) {
+            deltaX = orgEvent.deltaX;
+            if ( deltaY === 0 ) { delta  = deltaX * -1; }
+        }
+
+        // No change actually happened, no reason to go any further
+        if ( deltaY === 0 && deltaX === 0 ) { return; }
+
+        // Need to convert lines and pages to pixels if we aren't already in pixels
+        // There are three delta modes:
+        //   * deltaMode 0 is by pixels, nothing to do
+        //   * deltaMode 1 is by lines
+        //   * deltaMode 2 is by pages
+        if ( orgEvent.deltaMode === 1 ) {
+            var lineHeight = $.data(this, 'mousewheel-line-height');
+            delta  *= lineHeight;
+            deltaY *= lineHeight;
+            deltaX *= lineHeight;
+        } else if ( orgEvent.deltaMode === 2 ) {
+            var pageHeight = $.data(this, 'mousewheel-page-height');
+            delta  *= pageHeight;
+            deltaY *= pageHeight;
+            deltaX *= pageHeight;
+        }
+
+        // Store lowest absolute delta to normalize the delta values
+        absDelta = Math.max( Math.abs(deltaY), Math.abs(deltaX) );
+
+        if ( !lowestDelta || absDelta < lowestDelta ) {
+            lowestDelta = absDelta;
+
+            // Adjust older deltas if necessary
+            if ( shouldAdjustOldDeltas(orgEvent, absDelta) ) {
+                lowestDelta /= 40;
+            }
+        }
+
+        // Adjust older deltas if necessary
+        if ( shouldAdjustOldDeltas(orgEvent, absDelta) ) {
+            // Divide all the things by 40!
+            delta  /= 40;
+            deltaX /= 40;
+            deltaY /= 40;
+        }
+
+        // Get a whole, normalized value for the deltas
+        delta  = Math[ delta  >= 1 ? 'floor' : 'ceil' ](delta  / lowestDelta);
+        deltaX = Math[ deltaX >= 1 ? 'floor' : 'ceil' ](deltaX / lowestDelta);
+        deltaY = Math[ deltaY >= 1 ? 'floor' : 'ceil' ](deltaY / lowestDelta);
+
+        // Normalise offsetX and offsetY properties
+        if ( special.settings.normalizeOffset && this.getBoundingClientRect ) {
+            var boundingRect = this.getBoundingClientRect();
+            offsetX = event.clientX - boundingRect.left;
+            offsetY = event.clientY - boundingRect.top;
+        }
+
+        // Add information to the event object
+        event.deltaX = deltaX;
+        event.deltaY = deltaY;
+        event.deltaFactor = lowestDelta;
+        event.offsetX = offsetX;
+        event.offsetY = offsetY;
+        // Go ahead and set deltaMode to 0 since we converted to pixels
+        // Although this is a little odd since we overwrite the deltaX/Y
+        // properties with normalized deltas.
+        event.deltaMode = 0;
+
+        // Add event and delta to the front of the arguments
+        args.unshift(event, delta, deltaX, deltaY);
+
+        // Clearout lowestDelta after sometime to better
+        // handle multiple device types that give different
+        // a different lowestDelta
+        // Ex: trackpad = 3 and mouse wheel = 120
+        if (nullLowestDeltaTimeout) { clearTimeout(nullLowestDeltaTimeout); }
+        nullLowestDeltaTimeout = setTimeout(nullLowestDelta, 200);
+
+        return ($.event.dispatch || $.event.handle).apply(this, args);
+    }
+
+    function nullLowestDelta() {
+        lowestDelta = null;
+    }
+
+    function shouldAdjustOldDeltas(orgEvent, absDelta) {
+        // If this is an older event and the delta is divisable by 120,
+        // then we are assuming that the browser is treating this as an
+        // older mouse wheel event and that we should divide the deltas
+        // by 40 to try and get a more usable deltaFactor.
+        // Side note, this actually impacts the reported scroll distance
+        // in older browsers and can cause scrolling to be slower than native.
+        // Turn this off by setting $.event.special.mousewheel.settings.adjustOldDeltas to false.
+        return special.settings.adjustOldDeltas && orgEvent.type === 'mousewheel' && absDelta % 120 === 0;
+    }
+
+}));
 }, "raphael/index": function(exports, require, module) {// ┌─────────────────────────────────────────────────────────────────────┐ \\
 // │ "Raphaël 2.1.0" - JavaScript Vector Library                         │ \\
 // ├─────────────────────────────────────────────────────────────────────┤ \\
@@ -23672,7 +23893,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedule.info": function(exports, require, module) {(function() {
-  var $, Eve, Job, JobSymbol, Raphael, Schedule, ScheduleDetail, ScheduleInfo, ScheduleSymbol, Spine, TaskSymbol,
+  var $, Eve, Job, Raphael, Schedule, ScheduleDetail, ScheduleInfo, ScheduleSymbol, Spine, Task, wheel,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -23690,7 +23911,11 @@ Released under the MIT License
 
   Job = require('controllers/schedule.info.job');
 
+  Task = require('controllers/schedule.info.task');
+
   $ = Spine.$;
+
+  wheel = require("jquery-mousewheel")($);
 
   ScheduleInfo = (function(_super) {
     __extends(ScheduleInfo, _super);
@@ -23699,6 +23924,10 @@ Released under the MIT License
 
     ScheduleInfo.prototype.elements = {
       ".pant": "pant"
+    };
+
+    ScheduleInfo.prototype.events = {
+      "mousewheel .pant": "mousewheel"
     };
 
     function ScheduleInfo() {
@@ -23719,6 +23948,15 @@ Released under the MIT License
 
     ScheduleInfo.prototype.render = function() {
       return this.html(require('views/schedule-show-info')());
+    };
+
+    ScheduleInfo.prototype.mousewheel = function(event, delta, deltaX, deltaY) {
+      if (delta > 0) {
+        this.ssl.job.set.transform("...s1.1");
+      } else {
+        this.ssl.job.set.transform("...s0.9");
+      }
+      return event.stopPropagation();
     };
 
     ScheduleInfo.prototype.draw = function(rs) {
@@ -23748,7 +23986,7 @@ Released under the MIT License
           "fill-opacity": .5
         }, 1000)
       ], this.st = _ref[0], this.ed = _ref[1];
-      top = 40;
+      top = 80;
       this.ts = [];
       _ref1 = this.item.Job;
       for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
@@ -23756,23 +23994,15 @@ Released under the MIT License
         if (job.Tasks.length > 0) {
           spacing = (this.width - 200) / job.Tasks.length;
         }
-        if (spacing < 100 && spacing > 50) {
-          r = 15;
-          spacing = 60;
-        } else if (spacing <= 50) {
-          r = 8;
-          spacing = 40;
-        } else {
-          r = 25;
-          spacing = 100;
-        }
+        r = 25;
+        spacing = 100;
         if (job.Tasks.length > 0) {
           left = (this.width - 200) / 2 - (job.Tasks.length / 2) * spacing;
         }
         _ref2 = job.Tasks;
         for (j = _j = 0, _len1 = _ref2.length; _j < _len1; j = ++_j) {
           task = _ref2[j];
-          t = new TaskSymbol(paper, left, top, task.Name, this.color[i], r);
+          t = new Task(paper, left, top, task.Name, this.color[i], r);
           t.Id = task.Id;
           t.JobId = job.Id;
           t.RelTaskId = (function() {
@@ -23799,14 +24029,12 @@ Released under the MIT License
       slider.attr({
         fill: "#333",
         "fill-opacity": 0.3,
-        "stroke-width": 3,
+        "stroke-width": 2,
         "stroke-opacity": 0.1
       });
       this.scheduleDetail = new ScheduleDetail(this.paper, this.color, this.item, 220);
-      this.scheduleDetail.set.transform("t960,0");
       this.job = new Job(this.paper, this.color, this.item, 220, this);
-      this.job.set.transform("t960," + this.scheduleDetail.height);
-      this.job.addButton.transform("t1020," + (this.scheduleDetail.height + this.job.height) + "s2.5");
+      this.layout();
     }
 
     ScheduleSymbol.prototype.getTaskSymbol = function(Ids) {
@@ -23864,209 +24092,13 @@ Released under the MIT License
       return _results;
     };
 
+    ScheduleSymbol.prototype.layout = function() {
+      this.scheduleDetail.set.transform("t" + (this.width - 220) + ",10");
+      this.job.set.transform("t" + (this.width - 220) + "," + (this.scheduleDetail.height + 10));
+      return this.job.addButton.transform("t1020," + (this.scheduleDetail.height + this.job.height) + "s2.5");
+    };
+
     return ScheduleSymbol;
-
-  })();
-
-  JobSymbol = (function() {
-    function JobSymbol(paper, cx, cy, name, color) {
-      this.paper = paper;
-      this.cx = cx;
-      this.cy = cy;
-      this.name = name;
-      this.color = color;
-    }
-
-    return JobSymbol;
-
-  })();
-
-  TaskSymbol = (function() {
-    function TaskSymbol(paper, cx, cy, name, color, r) {
-      var an, st;
-      this.paper = paper;
-      this.cx = cx;
-      this.cy = cy;
-      this.name = name;
-      this.color = color;
-      this.r = r != null ? r : 20;
-      this.hoverout = __bind(this.hoverout, this);
-      this.hoveron = __bind(this.hoveron, this);
-      this.pre = [];
-      this.preRel = [];
-      this.next = [];
-      this.nextRel = [];
-      this.paper.setStart();
-      this.sp = this.paper.circle(this.cx, this.cy, this.r);
-      this.sp.ts = this;
-      this.sp.hover(this.hoveron, this.hoverout);
-      this.sp.attr({
-        fill: this.color,
-        stroke: this.color,
-        "fill-opacity": 0.2,
-        "stroke-width": 1,
-        cursor: "move"
-      });
-      this.sp.refresh = function() {
-        var i, _i, _j, _len, _len1, _ref, _ref1, _results;
-        if (this.ts.nextRel) {
-          _ref = this.ts.nextRel;
-          for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-            r = _ref[i];
-            this.paper.connection(r);
-          }
-        }
-        if (this.ts.preRel) {
-          _ref1 = this.ts.preRel;
-          _results = [];
-          for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
-            r = _ref1[i];
-            _results.push(this.paper.connection(r));
-          }
-          return _results;
-        }
-      };
-      this.sp.drag(this.move, this.dragger, this.up);
-      this.text = this.paper.text(this.cx, this.cy, this.name);
-      this.text.toBack();
-      this.text.attr({
-        fill: "#333",
-        stroke: "none",
-        "font-size": 15,
-        "fill-opacity": 1,
-        "stroke-width": 1,
-        cursor: "move"
-      });
-      this.sp.pair = this.text;
-      an = Raphael.animation({
-        "fill-opacity": .2
-      }, 200);
-      this.sp.animate(an.repeat(10));
-      st = this.paper.setFinish();
-      this.sp;
-    }
-
-    TaskSymbol.prototype.addNext = function(ts) {
-      var r;
-      this.next.push(ts);
-      r = this.paper.connection(this.sp, ts.sp, this.sp.attr('fill'), "" + (this.sp.attr('fill')) + "|2");
-      this.nextRel.push(r);
-      ts.pre.push(this);
-      return ts.preRel.push(r);
-    };
-
-    TaskSymbol.prototype.click = function() {
-      return alert(this.data('a'));
-    };
-
-    TaskSymbol.prototype.hoveron = function() {
-      var a, n, p, r, rp, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
-      a = Raphael.animation({
-        "stroke-width": 6,
-        "fill-opacity": 0.5
-      }, 300);
-      this.sp.animate(a);
-      _ref = this.nextRel;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        r = _ref[_i];
-        r.line.animate(a);
-      }
-      _ref1 = this.next;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        n = _ref1[_j];
-        n.sp.animate(a);
-      }
-      _ref2 = this.preRel;
-      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-        rp = _ref2[_k];
-        rp.line.animate(a);
-      }
-      _ref3 = this.pre;
-      _results = [];
-      for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-        p = _ref3[_l];
-        _results.push(p.sp.animate(a));
-      }
-      return _results;
-    };
-
-    TaskSymbol.prototype.hoverout = function() {
-      var b, n, p, r, rp, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
-      b = Raphael.animation({
-        "stroke-width": 1,
-        "fill-opacity": 0.2
-      }, 300);
-      this.sp.animate(b);
-      _ref = this.nextRel;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        r = _ref[_i];
-        r.line.animate(b);
-      }
-      _ref1 = this.next;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        n = _ref1[_j];
-        n.sp.animate(b);
-      }
-      _ref2 = this.preRel;
-      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-        rp = _ref2[_k];
-        rp.line.animate(b);
-      }
-      _ref3 = this.pre;
-      _results = [];
-      for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-        p = _ref3[_l];
-        _results.push(p.sp.animate(b));
-      }
-      return _results;
-    };
-
-    TaskSymbol.prototype.dragger = function() {
-      var _ref, _ref1;
-      _ref = [this.attr("cx"), this.attr("cy")], this.ox = _ref[0], this.oy = _ref[1];
-      if (this.type !== "text") {
-        this.animate({
-          "fill-opacity": .5
-        }, 500);
-      }
-      _ref1 = [this.attr("x"), this.attr("y")], this.pair.ox = _ref1[0], this.pair.oy = _ref1[1];
-      if (this.pair.type !== "text") {
-        return this.pair.animate({
-          "fill-opacity": .2
-        }, 500);
-      }
-    };
-
-    TaskSymbol.prototype.move = function(dx, dy) {
-      this.attr([
-        {
-          cx: this.ox + dx,
-          cy: this.oy + dy
-        }
-      ]);
-      this.pair.attr([
-        {
-          x: this.ox + dx,
-          y: this.oy + dy
-        }
-      ]);
-      return this.refresh();
-    };
-
-    TaskSymbol.prototype.up = function() {
-      if (this.type !== "text") {
-        this.animate({
-          "fill-opacity": 0.2
-        }, 500);
-      }
-      if (this.pair.type !== "text") {
-        return this.pair.animate({
-          "fill-opacity": 0.2
-        }, 500);
-      }
-    };
-
-    return TaskSymbol;
 
   })();
 
@@ -24271,11 +24303,8 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedule.info.task": function(exports, require, module) {(function() {
-  var $, Eve, JobSymbol, Raphael, Schedule, ScheduleInfo, ScheduleSymbol, Spine, TaskSymbol,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+  var $, Eve, Raphael, Schedule, Spine, Task,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   Spine = require('spine');
 
@@ -24287,250 +24316,8 @@ Released under the MIT License
 
   $ = Spine.$;
 
-  ScheduleInfo = (function(_super) {
-    __extends(ScheduleInfo, _super);
-
-    ScheduleInfo.prototype.className = 'scheduleinfo';
-
-    ScheduleInfo.prototype.elements = {
-      ".pant": "pant"
-    };
-
-    function ScheduleInfo() {
-      this.draw = __bind(this.draw, this);
-      this.render = __bind(this.render, this);
-      this.change = __bind(this.change, this);
-      ScheduleInfo.__super__.constructor.apply(this, arguments);
-      Schedule.bind("findRecord", this.draw);
-      this.active(this.change);
-    }
-
-    ScheduleInfo.prototype.change = function(params) {
-      Schedule.fetch({
-        Id: params.id
-      });
-      return this.render();
-    };
-
-    ScheduleInfo.prototype.render = function() {
-      return this.html(require('views/schedule-show-info')());
-    };
-
-    ScheduleInfo.prototype.draw = function(rs) {
-      var paper, _ref;
-      this.item = Schedule.find(rs.Id);
-      paper = Raphael(this.pant.get(0), '100%', '100%');
-      _ref = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref[0], this.height = _ref[1];
-      return this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
-    };
-
-    return ScheduleInfo;
-
-  })(Spine.Controller);
-
-  ScheduleSymbol = (function() {
-    function ScheduleSymbol(paper, width, height, item) {
-      var i, j, job, left, r, rt, rts, slider, spacing, t, task, top, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
-      this.paper = paper;
-      this.width = width;
-      this.height = height;
-      this.item = item;
-      this.color = ['#FF8C00', '#008000', '#2F4F4F', '#DA70D6', '#0000FF', '#8A2BE2', '#6495ED', '#B8860B', '#FF4500', '#AFEEEE', '#DB7093', '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#00BFFF', '#008B8B', '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#7FFF00', '#DEB887', '#98FB98', '#FFD700', '#5F9EA0', '#D2691E', '#A9A9A9', '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0', '#006400', '#BDB76B', '#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32'];
-      _ref = [
-        Raphael.animation({
-          "fill-opacity": .2
-        }, 1000), Raphael.animation({
-          "fill-opacity": .5
-        }, 1000)
-      ], this.st = _ref[0], this.ed = _ref[1];
-      slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
-      slider.attr({
-        fill: "#333",
-        "fill-opacity": 0.3,
-        "stroke-width": 3,
-        "stroke-opacity": 0.1
-      });
-      top = this.printSchedule(25, this.width - 205);
-      this.printJob(top, this.width - 205);
-      top = 40;
-      this.ts = [];
-      _ref1 = this.item.Job;
-      for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
-        job = _ref1[i];
-        if (job.Tasks.length > 0) {
-          spacing = (this.width - 200) / job.Tasks.length;
-        }
-        if (spacing < 100 && spacing > 50) {
-          r = 15;
-          spacing = 60;
-        } else if (spacing <= 50) {
-          r = 8;
-          spacing = 40;
-        } else {
-          r = 25;
-          spacing = 100;
-        }
-        if (job.Tasks.length > 0) {
-          left = (this.width - 200) / 2 - (job.Tasks.length / 2) * spacing;
-        }
-        _ref2 = job.Tasks;
-        for (j = _j = 0, _len1 = _ref2.length; _j < _len1; j = ++_j) {
-          task = _ref2[j];
-          t = new TaskSymbol(paper, left, top, task.Name, this.color[i], r);
-          t.Id = task.Id;
-          t.RelTaskId = (function() {
-            var _k, _len2, _ref3, _results;
-            _ref3 = task.RelTasks;
-            _results = [];
-            for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-              rt = _ref3[_k];
-              _results.push(rt.Id);
-            }
-            return _results;
-          })();
-          this.ts.push(t);
-          _ref3 = this.getTaskSymbol(t.RelTaskId);
-          for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-            rts = _ref3[_k];
-            rts.addNext(t);
-          }
-          left += spacing;
-        }
-        top += 120;
-      }
-    }
-
-    ScheduleSymbol.prototype.getTaskSymbol = function(Ids) {
-      var t, _i, _len, _ref, _ref1, _results;
-      _ref = this.ts;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        t = _ref[_i];
-        if (_ref1 = t.Id, __indexOf.call(Ids, _ref1) >= 0) {
-          _results.push(t);
-        }
-      }
-      return _results;
-    };
-
-    ScheduleSymbol.prototype.printSchedule = function(top, left) {
-      var att, betweenline, c, cyc, ff, gs, ss, title, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
-      ff = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      _ref = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref[0], left = _ref[1];
-      title = this.paper.text(left, top, this.item.SplitName(7));
-      title.attr({
-        fill: "#333",
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 22,
-        "fill-opacity": 1,
-        "stroke-width": 2
-      });
-      att = {
-        fill: "#333",
-        "font-family": ff,
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 14,
-        "fill-opacity": 1,
-        "stroke-width": 1
-      };
-      _ref1 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
-      cyc = this.paper.text(left, top, "调度周期：" + (this.item.GetCyc()));
-      cyc.attr(att);
-      gs = this.item.GetSecond();
-      _ref2 = [top + 30, left], top = _ref2[0], left = _ref2[1];
-      this.paper.text(left, top, "启动时间：").attr(att);
-      for (_i = 0, _len = gs.length; _i < _len; _i++) {
-        ss = gs[_i];
-        _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
-        c = this.paper.text(left + 20, top, "" + ss);
-        c.attr(att);
-      }
-      _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
-      this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(att);
-      _ref5 = [top + 30, left], top = _ref5[0], left = _ref5[1];
-      this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(att);
-      _ref6 = [top + 30, left], top = _ref6[0], left = _ref6[1];
-      betweenline = this.paper.path("M " + left + "," + top + "L " + (this.width - 30) + "," + top);
-      betweenline.attr({
-        stroke: "#A0522D",
-        "stroke-width": 2,
-        "stroke-opacity": 0.2
-      });
-      return top;
-    };
-
-    ScheduleSymbol.prototype.printJob = function(top, left) {
-      var addbtn, ff, i, job, jobcir, jobname, jtitle, _i, _len, _ref, _ref1, _ref2, _ref3;
-      ff = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      _ref = [top + 30, left], top = _ref[0], left = _ref[1];
-      jtitle = this.paper.text(left, top, "任务列表");
-      jtitle.attr({
-        fill: "#333",
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 18,
-        "fill-opacity": 1,
-        "stroke-width": 2
-      });
-      _ref1 = [top + 40, left], top = _ref1[0], left = _ref1[1];
-      _ref2 = this.item.Job;
-      for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
-        job = _ref2[i];
-        if (!(job.Id !== 0)) {
-          continue;
-        }
-        jobname = this.paper.text(left + 80, top, job.Name);
-        jobname.attr({
-          stroke: this.color[i],
-          "fill": this.color[i],
-          "font-family": ff,
-          "font-size": 16,
-          "stroke-opacity": 1,
-          "fill-opacity": 1,
-          "stroke-width": 1
-        });
-        jobcir = this.paper.circle(left + 25, top, 15);
-        jobcir.attr({
-          fill: this.color[i],
-          stroke: this.color[i],
-          "fill-opacity": 0.2,
-          "stroke-width": 1
-        });
-        _ref3 = [top + 50, left], top = _ref3[0], left = _ref3[1];
-      }
-      addbtn = this.paper.path("M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z");
-      addbtn.transform("t" + (left + 60) + "," + (top - 10) + "s2");
-      return addbtn.attr({
-        fill: "#00FF00",
-        stroke: "#00FF00",
-        "fill-opacity": 0.1,
-        "stroke-opacity": 0.2,
-        "stroke-width": 1,
-        cursor: "hand"
-      });
-    };
-
-    return ScheduleSymbol;
-
-  })();
-
-  JobSymbol = (function() {
-    function JobSymbol(paper, cx, cy, name, color) {
-      this.paper = paper;
-      this.cx = cx;
-      this.cy = cy;
-      this.name = name;
-      this.color = color;
-    }
-
-    return JobSymbol;
-
-  })();
-
-  TaskSymbol = (function() {
-    function TaskSymbol(paper, cx, cy, name, color, r) {
+  Task = (function() {
+    function Task(paper, cx, cy, name, color, r) {
       var an, st;
       this.paper = paper;
       this.cx = cx;
@@ -24594,7 +24381,7 @@ Released under the MIT License
       this.sp;
     }
 
-    TaskSymbol.prototype.addNext = function(ts) {
+    Task.prototype.addNext = function(ts) {
       var r;
       this.next.push(ts);
       r = this.paper.connection(this.sp, ts.sp, this.sp.attr('fill'), "" + (this.sp.attr('fill')) + "|2");
@@ -24603,11 +24390,11 @@ Released under the MIT License
       return ts.preRel.push(r);
     };
 
-    TaskSymbol.prototype.click = function() {
+    Task.prototype.click = function() {
       return alert(this.data('a'));
     };
 
-    TaskSymbol.prototype.hoveron = function() {
+    Task.prototype.hoveron = function() {
       var a, n, p, r, rp, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
       a = Raphael.animation({
         "stroke-width": 6,
@@ -24638,7 +24425,7 @@ Released under the MIT License
       return _results;
     };
 
-    TaskSymbol.prototype.hoverout = function() {
+    Task.prototype.hoverout = function() {
       var b, n, p, r, rp, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
       b = Raphael.animation({
         "stroke-width": 1,
@@ -24669,7 +24456,7 @@ Released under the MIT License
       return _results;
     };
 
-    TaskSymbol.prototype.dragger = function() {
+    Task.prototype.dragger = function() {
       var _ref, _ref1;
       _ref = [this.attr("cx"), this.attr("cy")], this.ox = _ref[0], this.oy = _ref[1];
       if (this.type !== "text") {
@@ -24685,7 +24472,7 @@ Released under the MIT License
       }
     };
 
-    TaskSymbol.prototype.move = function(dx, dy) {
+    Task.prototype.move = function(dx, dy) {
       this.attr([
         {
           cx: this.ox + dx,
@@ -24701,7 +24488,7 @@ Released under the MIT License
       return this.refresh();
     };
 
-    TaskSymbol.prototype.up = function() {
+    Task.prototype.up = function() {
       if (this.type !== "text") {
         this.animate({
           "fill-opacity": 0.2
@@ -24714,11 +24501,11 @@ Released under the MIT License
       }
     };
 
-    return TaskSymbol;
+    return Task;
 
   })();
 
-  module.exports = ScheduleInfo;
+  module.exports = Task;
 
 }).call(this);
 }, "controllers/schedules": function(exports, require, module) {(function() {
@@ -25028,6 +24815,8 @@ Released under the MIT License
   require("es5-shimify");
 
   require("jqueryify");
+
+  require("jquery-mousewheel");
 
   require("momentify");
 

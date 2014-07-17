@@ -10,6 +10,7 @@
         "json2ify", 
         "jqueryify", 
         "momentify",
+        "jquery-mousewheel",
         "raphael",
         "eve",
         "spine",

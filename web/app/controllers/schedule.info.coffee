@@ -4,13 +4,19 @@ Eve = require('eve')
 Schedule = require('models/schedule')
 ScheduleDetail = require('controllers/schedule.info.detail')
 Job = require('controllers/schedule.info.job')
+Task = require('controllers/schedule.info.task')
 $       = Spine.$
+wheel = require("jquery-mousewheel")($)
 
 class ScheduleInfo extends Spine.Controller
   className: 'scheduleinfo'
 
+
   elements:
     ".pant":          "pant"
+
+  events:
+    "mousewheel .pant": "mousewheel"
 
   constructor: ->
     super
@@ -23,6 +29,15 @@ class ScheduleInfo extends Spine.Controller
 
   render: =>
     @html(require('views/schedule-show-info')())
+
+
+  mousewheel: (event, delta, deltaX, deltaY)->
+    if delta > 0
+      @ssl.job.set.transform("...s1.1")
+    else
+      @ssl.job.set.transform("...s0.9")
+
+    event.stopPropagation()
     
   draw: (rs) =>
     @item = Schedule.find(rs.Id)
@@ -50,24 +65,17 @@ class ScheduleSymbol
     [@st, @ed] = [Raphael.animation({"fill-opacity": .2}, 1000),
                 Raphael.animation({"fill-opacity": .5}, 1000)]
 
-    top = 40
+    top = 80
     @ts = []
     for job,i in @item.Job
 
       spacing = (@width-200)/job.Tasks.length if job.Tasks.length > 0
-      if spacing < 100 and spacing >50 
-        r = 15
-        spacing = 60
-      else if spacing <= 50 
-        r = 8
-        spacing = 40
-      else
-        r = 25
-        spacing = 100
+      r = 25
+      spacing = 100
 
       left = (@width-200)/2-(job.Tasks.length/2) * spacing if job.Tasks.length > 0
       for task,j in job.Tasks
-        t= new TaskSymbol(paper,left,top,task.Name,@color[i],r)
+        t= new Task(paper,left,top,task.Name,@color[i],r)
         t.Id = task.Id
         t.JobId = job.Id
         t.RelTaskId = (rt.Id for rt in task.RelTasks)
@@ -79,15 +87,12 @@ class ScheduleSymbol
       top += 120
 
     slider = @paper.path("M #{@width-220},10L #{@width-220},#{@height}")
-    slider.attr({fill: "#333", "fill-opacity": 0.3, "stroke-width": 3, "stroke-opacity": 0.1})
+    slider.attr({fill: "#333", "fill-opacity": 0.3, "stroke-width": 2, "stroke-opacity": 0.1})
     
     @scheduleDetail = new ScheduleDetail(@paper,@color,@item,220)
-    @scheduleDetail.set.transform("t960,0")
-
     @job = new Job(@paper,@color,@item,220,@)
-    #s.transform("t960,#{@scheduleDetail.height}") for s in @job.list
-    @job.set.transform("t960,#{@scheduleDetail.height}")
-    @job.addButton.transform("t1020,#{@scheduleDetail.height + @job.height}s2.5")
+
+    @layout()
 
     #jobflg=@paper.circle(@width-60, 100, 15)
     #jobflg.attr({fill: "green", stroke: "green", "fill-opacity": 0.5, "stroke-width": 1, cursor: "hand"})
@@ -96,7 +101,6 @@ class ScheduleSymbol
 
     #jobflg.click =>
 
-    
   getTaskSymbol: (Ids) ->
      t for t in @ts when t.Id in Ids
 
@@ -114,86 +118,9 @@ class ScheduleSymbol
         t.sp.animate(a)
         t.sp.g.remove()
 
-class JobSymbol
-  constructor: (@paper, @cx, @cy, @name, @color) ->
-
-class TaskSymbol
-  constructor: (@paper, @cx, @cy, @name, @color, @r=20) ->
-    @pre=[]
-    @preRel=[]
-
-    @next=[]
-    @nextRel=[]
-
-    @paper.setStart()
-    @sp=@paper.circle(@cx, @cy, @r)
-    @sp.ts=@
-    @sp.hover(@hoveron,@hoverout)
-    @sp.attr({fill: @color, stroke: @color, "fill-opacity": 0.2, "stroke-width": 1, cursor: "move"})
-
-    @sp.refresh = ->
-      if @ts.nextRel then for r,i in @ts.nextRel 
-        @paper.connection(r)
-
-      if @ts.preRel then for r,i in @ts.preRel 
-        @paper.connection(r)
-
-    @sp.drag(@move, @dragger, @up)
-
-    @text = @paper.text(@cx, @cy, @name)
-    @text.toBack()
-    @text.attr({fill: "#333", stroke: "none", "font-size": 15, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
-    @sp.pair=@text
-
-    an = Raphael.animation({"fill-opacity": .2}, 200)
-    @sp.animate(an.repeat(10)) 
-
-    st = @paper.setFinish()
-    @sp
-
-  addNext: (ts) ->
-    @next.push(ts)
-    r=@paper.connection(@sp,ts.sp,@sp.attr('fill'),"#{@sp.attr('fill')}|2")
-    @nextRel.push(r)
-
-    ts.pre.push(@)
-    ts.preRel.push(r)
-
-  click: ->
-    alert(@.data('a'))
-
-  hoveron: =>
-    a = Raphael.animation({"stroke-width": 6, "fill-opacity": 0.5}, 300)
-
-    @sp.animate(a)
-    r.line.animate(a)  for r in @nextRel
-    n.sp.animate(a)    for n in @next
-    rp.line.animate(a) for rp in @preRel
-    p.sp.animate(a)    for p in @pre
-      
-  hoverout: =>
-    b = Raphael.animation({"stroke-width": 1,"fill-opacity": 0.2}, 300)
-
-    @sp.animate(b)
-    r.line.animate(b)  for r in @nextRel
-    n.sp.animate(b)    for n in @next
-    rp.line.animate(b) for rp in @preRel
-    p.sp.animate(b)    for p in @pre
-      
-  dragger: ->
-    [@ox, @oy]  = [@attr("cx"), @attr("cy")]
-    @animate({"fill-opacity": .5}, 500) if @type isnt "text"
-
-    [@pair.ox, @pair.oy] = [@attr("x"),@attr("y")]
-    @pair.animate({"fill-opacity": .2}, 500) if @pair.type isnt "text"
-
-  move: (dx, dy) ->
-    @attr([ cx:@ox + dx, cy:@oy + dy])
-    @pair.attr([x:@ox + dx, y:@oy + dy])
-    @refresh()
-
-  up: ->
-    @animate({"fill-opacity": 0.2}, 500) if @type isnt "text"
-    @pair.animate({"fill-opacity": 0.2}, 500) if @pair.type isnt "text"
+  layout: ->
+    @scheduleDetail.set.transform("t#{@width-220},10")
+    @job.set.transform("t#{@width-220},#{@scheduleDetail.height+10}")
+    @job.addButton.transform("t1020,#{@scheduleDetail.height + @job.height}s2.5")
 
 module.exports = ScheduleInfo

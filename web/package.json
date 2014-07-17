@@ -12,6 +12,7 @@
     "momentify": "latest",
     "raphael":"latest",
     "eve":"latest",
+    "jquery-mousewheel":"3.1.12",
     "moment": "latest",
     "jqueryify": "~>0.0.1"
   }

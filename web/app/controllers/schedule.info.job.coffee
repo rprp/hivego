@@ -38,7 +38,6 @@ class Job extends Spine.Controller
       s.push(jobname, jobcir, jobrect)
       s.data("Id",job.Id)
       s.data("sinfo",@sinfo)
-      #s.hover(@hoveron,@hoverout)
       s.hover(@hoveron,@hoverout)
       @list.push(s)
       [top,left]=[top+50,left]
