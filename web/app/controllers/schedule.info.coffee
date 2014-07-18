@@ -2,95 +2,51 @@ Spine = require('spineify')
 Raphael = require('raphaelify')
 Eve = require('eve')
 Schedule = require('models/schedule')
-ScheduleDetail = require('controllers/schedule.info.detail')
-Job = require('controllers/schedule.info.job')
-Task = require('controllers/schedule.info.task')
 $       = Spine.$
-wheel = require("jquery-mousewheel")($)
 
-class ScheduleInfo extends Spine.Controller
-  className: 'scheduleinfo'
+class ScheduleManager
+  constructor: (@paper, @color, @item, @width) ->
+    @font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif"
+    @fontStyle = {fill: "#333", "font-family":@font, "text-anchor": "start", stroke: "none", "font-size": 14, "fill-opacity": 1, "stroke-width": 1}
+    @height = 0
 
-  elements:
-    ".pant":          "pant"
+    @paper.setStart()
 
-  events:
-    "mousewheel .pant": "mousewheel"
-
-  constructor: ->
-    super
-    Schedule.bind("findRecord",  @draw)
-    Spine.bind("addjob", @addjob)
-    @active @change
-
-  change: (params) =>
-    Schedule.fetch({Id:params.id})
-    @render()
-
-  render: =>
-    @html(require('views/schedule-show-info')())
-
-  mousewheel: (event, delta, deltaX, deltaY)->
-    if delta > 0
-      @ssl.task.set.transform("...s1.1")
-      tt.sp.refresh() for tt in @ssl.task.ts
-    else
-      @ssl.task.set.transform("...s0.9")
-      tt.sp.refresh() for tt in @ssl.task.ts
-
-    event.stopPropagation()
+    [top,left] = [20, 10]
+    [top,left] = [top + (@item.Name.length//7) * 20, left]
+    #标题，调度名称，每行超过7个字符后要换行
+    @title = @paper.text(left, top, @item.SplitName(7)).attr(@fontStyle)
+    @title.attr("font-size", 22)
+    [top,left] = [top + 30 + (@item.Name.length//7) * 20, left]
     
-  draw: (rs) =>
-    @item = Schedule.find(rs.Id)
+    #调度周期
+    @cyc = @paper.text(left, top, "调度周期：#{@item.GetCyc()}").attr(@fontStyle)
 
-    paper = Raphael(@pant.get(0),'100%','100%')
+    #调度时间
+    gs=@item.GetSecond()
+    [top,left] = [top+30, left]
+    @startSecond = @paper.text(left, top, "启动时间：").attr(@fontStyle)
 
-    [@width, @height] = [parseFloat(@pant.css("width")), parseFloat(@pant.css("height"))]
+    @startSecondList = []
+    for ss in gs
+      [top,left] = [top+30, left]
+      @startSecondList.push(@paper.text(left+20, top, "#{ss}").attr(@fontStyle))
 
-    @ssl = new ScheduleSymbol(paper,@width,@height,@item)
+    #任务数量
+    [top,left] = [top+30, left]
+    @taskCnt = @paper.text(left, top, "任务数量：#{@item.TaskCnt}").attr(@fontStyle)
 
-  addjob: (x, y) =>
-    @append(@ssl.job.render(@width-300,@height-380))
-
-class ScheduleSymbol
-  constructor: (@paper, @width, @height, @item) ->
-
-    @color=['#FF8C00', '#008000', '#2F4F4F', '#DA70D6', '#0000FF', '#8A2BE2', '#6495ED', '#B8860B', '#FF4500', '#AFEEEE', '#DB7093',
-        '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#00BFFF', '#008B8B',
-        '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#7FFF00', '#DEB887', '#98FB98', '#FFD700', '#5F9EA0', '#D2691E', '#A9A9A9',
-        '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF',
-        '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3',
-        '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500',
-        '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0',
-         '#006400', '#BDB76B','#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32']
-
-    #[@st, @ed] = [Raphael.animation({"fill-opacity": .2}, 2000, -> @.animate(ed)),
-                #Raphael.animation({"fill-opacity": .5}, 2000, -> @.animate(st))]
-    [@st, @ed] = [Raphael.animation({"fill-opacity": .2}, 1000),
-                Raphael.animation({"fill-opacity": .5}, 1000)]
-
-    @task = new Task(@paper,@color,@item,@width,@height)
-
-    slider = @paper.path("M #{@width-220},10L #{@width-220},#{@height}")
-    slider.attr({fill: "#333", "fill-opacity": 0.3, "stroke-width": 2, "stroke-opacity": 0.1})
+    #下次执行时间
+    [top,left] = [top+30, left]
+    @nextStart = @paper.text(left, top, "下次执行：#{@item.GetNextStart()}").attr(@fontStyle)
     
-    @scheduleDetail = new ScheduleDetail(@paper,@color,@item,220)
-    @job = new Job(@paper,@color,@item,220,@)
+    #当前状态
+    #所有者
 
-    
+    [top,left] = [top+30, left]
+    @betweenline = @paper.path("M #{left},#{top}L #{@width-30},#{top}").attr({stroke: "#A0522D", "stroke-width": 2, "stroke-opacity": 0.2})
 
-    @layout()
+    @set = @paper.setFinish()
+    @height = top 
 
-    #jobflg=@paper.circle(@width-60, 100, 15)
-    #jobflg.attr({fill: "green", stroke: "green", "fill-opacity": 0.5, "stroke-width": 1, cursor: "hand"})
-    #jobflg.animate(st)
-    #jobflg.hover (-> @.attr({r: 17})), (-> @.attr({r: 15}))
-
-    #jobflg.click =>
-
-  layout: ->
-    @scheduleDetail.set.transform("t#{@width-220},10")
-    @job.set.transform("t#{@width-220},#{@scheduleDetail.height+10}")
-    @job.addButton.transform("t#{@width-60},#{@scheduleDetail.height + @job.height - 5}s1.5")
-
-module.exports = ScheduleInfo
+module.exports = ScheduleManager

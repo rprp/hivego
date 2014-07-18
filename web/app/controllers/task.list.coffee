@@ -1,10 +1,9 @@
 Spine = require('spineify')
 Raphael = require('raphaelify')
 Eve = require('eve')
-Schedule = require('models/schedule')
 $       = Spine.$
 
-class Task
+class TaskManager
   constructor: (@paper, @color, @item, @width, @height) ->
     @set = @paper.set()
     top = 80
@@ -127,4 +126,4 @@ class TaskSymbol
     @animate({"fill-opacity": 0.2}, 500) if @type isnt "text"
     @pair.animate({"fill-opacity": 0.2}, 500) if @pair.type isnt "text"
 
-module.exports = Task
+module.exports = TaskManager

@@ -3,16 +3,18 @@ Events  = Spine.Events
 Module  = Spine.Module
 Raphael = require('raphaelify')
 Eve = require('eve')
-ScheduleInfo = require('controllers/schedule.info')
 Schedule = require('models/schedule')
 $       = Spine.$
 
-class Job extends Spine.Controller
+class JobManager extends Spine.Controller
   elements:
     ".close":  "close"
+    ".jobpanel":  "jobpanel"
+    "#jobname":  "jobname"
+    "#jobdesc":  "jobdesc"
 
   events:
-    "click .close": "cl"
+    "click .close": "hideAddJob"
 
   constructor: (@paper, @color, @item, @width, @sinfo) ->
     super
@@ -24,8 +26,7 @@ class Job extends Spine.Controller
 
     @paper.setStart()
 
-    [top,left] = [0, 10]
-    [top,left]=[top+30,left]
+    [top,left] = [30, 10]
     @title = @paper.text(left, top, "作业列表").attr(@fontStyle)
 
     [top,left]=[top+40,left]
@@ -47,6 +48,7 @@ class Job extends Spine.Controller
       s.data("sinfo",@sinfo)
       s.hover(@hoveron,@hoverout)
       @list.push(s)
+      @lastJob = job
       [top,left]=[top+50,left]
 
     addbtn = @paper.rect(left,top-20,190,40,5).attr({fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.1, "stroke-width": 0, cursor: "hand"})
@@ -62,12 +64,12 @@ class Job extends Spine.Controller
   hoveron: ->
     a = Raphael.animation({"fill-opacity": 0.6}, 300)
     @.animate(a)
-    @data("sinfo")?.task.hlight(@data("Id"))
+    @data("sinfo")?.taskManager.hlight(@data("Id"))
       
   hoverout: ->
     b = Raphael.animation({"fill-opacity": 0.1}, 300)
     @.animate(b)
-    @data("sinfo")?.task.nlight(@data("Id"))
+    @data("sinfo")?.taskManager.nlight(@data("Id"))
 
   render: (x, y) =>
     @html(require('views/schedule-add-job')())
@@ -79,8 +81,8 @@ class Job extends Spine.Controller
   addjob: (e) =>
     Spine.trigger("addjob",e.screenX,e.screenY)
 
-  cl: (e) ->
+  hideAddJob: (e) ->
     @el.css("display","none")
-
+    alert("jobname=#{@jobname.val()}   jobdesc=#{@jobdesc.val()}  prejob=#{@lastJob?.Name}")
  
-module.exports = Job
+module.exports = JobManager

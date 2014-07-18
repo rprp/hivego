@@ -25106,8 +25106,177 @@ Released under the MIT License
   }
 
 }).call(this);
-}, "controllers/schedule.info": function(exports, require, module) {(function() {
-  var $, Eve, Job, Raphael, Schedule, ScheduleDetail, ScheduleInfo, ScheduleSymbol, Spine, Task, wheel,
+}, "controllers/job.list": function(exports, require, module) {(function() {
+  var $, Eve, Events, JobManager, Module, Raphael, Schedule, Spine,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Spine = require('spineify');
+
+  Events = Spine.Events;
+
+  Module = Spine.Module;
+
+  Raphael = require('raphaelify');
+
+  Eve = require('eve');
+
+  Schedule = require('models/schedule');
+
+  $ = Spine.$;
+
+  JobManager = (function(_super) {
+    __extends(JobManager, _super);
+
+    JobManager.prototype.elements = {
+      ".close": "close",
+      ".jobpanel": "jobpanel",
+      "#jobname": "jobname",
+      "#jobdesc": "jobdesc"
+    };
+
+    JobManager.prototype.events = {
+      "click .close": "hideAddJob"
+    };
+
+    function JobManager(paper, color, item, width, sinfo) {
+      var addbtn, i, icoplus, job, jobcir, jobname, jobrect, left, s, top, _i, _len, _ref, _ref1, _ref2, _ref3;
+      this.paper = paper;
+      this.color = color;
+      this.item = item;
+      this.width = width;
+      this.sinfo = sinfo;
+      this.addjob = __bind(this.addjob, this);
+      this.render = __bind(this.render, this);
+      JobManager.__super__.constructor.apply(this, arguments);
+      this.font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
+      this.fontStyle = {
+        fill: "#333",
+        "font-family": this.font,
+        "text-anchor": "start",
+        stroke: "none",
+        "font-size": 18,
+        "fill-opacity": 1,
+        "stroke-width": 1
+      };
+      this.jobFontStyle = {
+        stroke: this.color[i],
+        "fill": this.color[i],
+        "font-family": this.font,
+        "font-size": 16,
+        "stroke-opacity": 1,
+        "fill-opacity": 1,
+        "stroke-width": 1
+      };
+      icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z";
+      this.height = 0;
+      this.paper.setStart();
+      _ref = [30, 10], top = _ref[0], left = _ref[1];
+      this.title = this.paper.text(left, top, "作业列表").attr(this.fontStyle);
+      _ref1 = [top + 40, left], top = _ref1[0], left = _ref1[1];
+      this.list = [];
+      _ref2 = this.item.Job;
+      for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
+        job = _ref2[i];
+        if (!(job.Id !== 0)) {
+          continue;
+        }
+        s = this.paper.set();
+        jobname = this.paper.text(left + 80, top, job.Name).attr(this.jobFontStyle);
+        jobname.attr("stroke", this.color[i]);
+        jobname.attr("fill", this.color[i]);
+        jobcir = this.paper.circle(left + 25, top, 15);
+        jobcir.attr({
+          fill: this.color[i],
+          stroke: this.color[i],
+          "fill-opacity": 0.2,
+          "stroke-width": 1
+        });
+        jobrect = this.paper.rect(left, top - 20, 190, 40, 5);
+        jobrect.attr({
+          fill: this.color[i],
+          stroke: this.color[i],
+          "fill-opacity": 0.1,
+          "stroke-width": 0
+        });
+        s.push(jobname, jobcir, jobrect);
+        s.data("Id", job.Id);
+        s.data("sinfo", this.sinfo);
+        s.hover(this.hoveron, this.hoverout);
+        this.list.push(s);
+        this.lastJob = job;
+        _ref3 = [top + 50, left], top = _ref3[0], left = _ref3[1];
+      }
+      addbtn = this.paper.rect(left, top - 20, 190, 40, 5).attr({
+        fill: "#31708f",
+        stroke: "#31708f",
+        "fill-opacity": 0.1,
+        "stroke-width": 0,
+        cursor: "hand"
+      });
+      addbtn.hover(this.hoveron, this.hoverout);
+      addbtn.click(this.addjob);
+      this.addButton = this.paper.path(icoplus);
+      this.addButton.attr({
+        fill: "#31708f",
+        stroke: "#31708f",
+        "fill-opacity": 0.4,
+        "stroke-opacity": 0.8,
+        "stroke-dasharray": "-",
+        "stroke-width": 1,
+        cursor: "hand"
+      });
+      this.addButton.toBack();
+      this.set = this.paper.setFinish();
+      this.height = top;
+    }
+
+    JobManager.prototype.hoveron = function() {
+      var a, _ref;
+      a = Raphael.animation({
+        "fill-opacity": 0.6
+      }, 300);
+      this.animate(a);
+      return (_ref = this.data("sinfo")) != null ? _ref.taskManager.hlight(this.data("Id")) : void 0;
+    };
+
+    JobManager.prototype.hoverout = function() {
+      var b, _ref;
+      b = Raphael.animation({
+        "fill-opacity": 0.1
+      }, 300);
+      this.animate(b);
+      return (_ref = this.data("sinfo")) != null ? _ref.taskManager.nlight(this.data("Id")) : void 0;
+    };
+
+    JobManager.prototype.render = function(x, y) {
+      this.html(require('views/schedule-add-job')());
+      this.el.css("left", x);
+      this.el.css("top", y);
+      this.el.css("position", "absolute");
+      return this.el.css("display", "block");
+    };
+
+    JobManager.prototype.addjob = function(e) {
+      return Spine.trigger("addjob", e.screenX, e.screenY);
+    };
+
+    JobManager.prototype.hideAddJob = function(e) {
+      var _ref;
+      this.el.css("display", "none");
+      return alert("jobname=" + (this.jobname.val()) + "   jobdesc=" + (this.jobdesc.val()) + "  prejob=" + ((_ref = this.lastJob) != null ? _ref.Name : void 0));
+    };
+
+    return JobManager;
+
+  })(Spine.Controller);
+
+  module.exports = JobManager;
+
+}).call(this);
+}, "controllers/main.info": function(exports, require, module) {(function() {
+  var $, Eve, JobManager, Raphael, Schedule, ScheduleInfo, ScheduleManager, ScheduleSymbol, Spine, TaskManager, wheel,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -25120,11 +25289,11 @@ Released under the MIT License
 
   Schedule = require('models/schedule');
 
-  ScheduleDetail = require('controllers/schedule.info.detail');
+  ScheduleManager = require('controllers/schedule.info');
 
-  Job = require('controllers/schedule.info.job');
+  JobManager = require('controllers/job.list');
 
-  Task = require('controllers/schedule.info.task');
+  TaskManager = require('controllers/task.list');
 
   $ = Spine.$;
 
@@ -25137,10 +25306,6 @@ Released under the MIT License
 
     ScheduleInfo.prototype.elements = {
       ".pant": "pant"
-    };
-
-    ScheduleInfo.prototype.events = {
-      "mousewheel .pant": "mousewheel"
     };
 
     function ScheduleInfo() {
@@ -25168,15 +25333,15 @@ Released under the MIT License
     ScheduleInfo.prototype.mousewheel = function(event, delta, deltaX, deltaY) {
       var tt, _i, _j, _len, _len1, _ref, _ref1;
       if (delta > 0) {
-        this.ssl.task.set.transform("...s1.1");
-        _ref = this.ssl.task.ts;
+        this.ssl.taskManager.set.transform("...s1.1");
+        _ref = this.ssl.taskManager.ts;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           tt = _ref[_i];
           tt.sp.refresh();
         }
       } else {
-        this.ssl.task.set.transform("...s0.9");
-        _ref1 = this.ssl.task.ts;
+        this.ssl.taskManager.set.transform("...s0.9");
+        _ref1 = this.ssl.taskManager.ts;
         for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
           tt = _ref1[_j];
           tt.sp.refresh();
@@ -25194,7 +25359,7 @@ Released under the MIT License
     };
 
     ScheduleInfo.prototype.addjob = function(x, y) {
-      return this.append(this.ssl.job.render(this.width - 300, this.height - 380));
+      return this.append(this.ssl.jobManager.render(this.width - 300, this.height - 380));
     };
 
     return ScheduleInfo;
@@ -25216,7 +25381,7 @@ Released under the MIT License
           "fill-opacity": .5
         }, 1000)
       ], this.st = _ref[0], this.ed = _ref[1];
-      this.task = new Task(this.paper, this.color, this.item, this.width, this.height);
+      this.taskManager = new TaskManager(this.paper, this.color, this.item, this.width, this.height);
       slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
       slider.attr({
         fill: "#333",
@@ -25224,15 +25389,15 @@ Released under the MIT License
         "stroke-width": 2,
         "stroke-opacity": 0.1
       });
-      this.scheduleDetail = new ScheduleDetail(this.paper, this.color, this.item, 220);
-      this.job = new Job(this.paper, this.color, this.item, 220, this);
+      this.scheduleManager = new ScheduleManager(this.paper, this.color, this.item, 220);
+      this.jobManager = new JobManager(this.paper, this.color, this.item, 220, this);
       this.layout();
     }
 
     ScheduleSymbol.prototype.layout = function() {
-      this.scheduleDetail.set.transform("t" + (this.width - 220) + ",10");
-      this.job.set.transform("t" + (this.width - 220) + "," + (this.scheduleDetail.height + 10));
-      return this.job.addButton.transform("t" + (this.width - 60) + "," + (this.scheduleDetail.height + this.job.height - 5) + "s1.5");
+      this.scheduleManager.set.transform("t" + (this.width - 220) + ",10");
+      this.jobManager.set.transform("t" + (this.width - 220) + "," + (this.scheduleManager.height + 10));
+      return this.jobManager.addButton.transform("t" + (this.width - 60) + "," + (this.scheduleManager.height + this.jobManager.height - 5) + "s1.5");
     };
 
     return ScheduleSymbol;
@@ -25242,8 +25407,60 @@ Released under the MIT License
   module.exports = ScheduleInfo;
 
 }).call(this);
-}, "controllers/schedule.info.detail": function(exports, require, module) {(function() {
-  var $, Eve, Raphael, Schedule, ScheduleDetail, Spine;
+}, "controllers/main.list": function(exports, require, module) {(function() {
+  var $, Schedule, ScheduleItem, ScheduleList, Spine,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Spine = require('spineify');
+
+  Schedule = require('models/schedule');
+
+  ScheduleItem = require('controllers/schedule.item');
+
+  $ = Spine.$;
+
+  ScheduleList = (function(_super) {
+    __extends(ScheduleList, _super);
+
+    ScheduleList.prototype.className = 'schedulelist';
+
+    function ScheduleList() {
+      this.addAll = __bind(this.addAll, this);
+      this.addOne = __bind(this.addOne, this);
+      ScheduleList.__super__.constructor.apply(this, arguments);
+      Schedule.bind("create", this.addOne);
+      Schedule.bind("refresh", this.addAll);
+    }
+
+    ScheduleList.prototype.addOne = function(it) {
+      var view;
+      view = new ScheduleItem({
+        item: it
+      });
+      this.append(view.render());
+      view.pbmask.css("position", "absolute");
+      view.pbmask.css("z-index", "1000");
+      view.pbmask.css("width", view.sstart.css("width"));
+      view.pbmask.css("height", view.body.css("height"));
+      view.pbmask.css("background-color", "#f5f5f5");
+      return view.sname.css("color", "#f5f5f5");
+    };
+
+    ScheduleList.prototype.addAll = function() {
+      return Schedule.each(this.addOne);
+    };
+
+    return ScheduleList;
+
+  })(Spine.Controller);
+
+  module.exports = ScheduleList;
+
+}).call(this);
+}, "controllers/schedule.info": function(exports, require, module) {(function() {
+  var $, Eve, Raphael, Schedule, ScheduleManager, Spine;
 
   Spine = require('spineify');
 
@@ -25255,8 +25472,8 @@ Released under the MIT License
 
   $ = Spine.$;
 
-  ScheduleDetail = (function() {
-    function ScheduleDetail(paper, color, item, width) {
+  ScheduleManager = (function() {
+    function ScheduleManager(paper, color, item, width) {
       var gs, left, ss, top, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       this.paper = paper;
       this.color = color;
@@ -25303,181 +25520,193 @@ Released under the MIT License
       this.height = top;
     }
 
-    return ScheduleDetail;
+    return ScheduleManager;
 
   })();
 
-  module.exports = ScheduleDetail;
+  module.exports = ScheduleManager;
 
 }).call(this);
-}, "controllers/schedule.info.job": function(exports, require, module) {(function() {
-  var $, Eve, Events, Job, Module, Raphael, Schedule, ScheduleInfo, Spine,
+}, "controllers/schedule.item": function(exports, require, module) {(function() {
+  var $, Schedule, ScheduleItem, Spine,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Spine = require('spineify');
 
-  Events = Spine.Events;
-
-  Module = Spine.Module;
-
-  Raphael = require('raphaelify');
-
-  Eve = require('eve');
-
-  ScheduleInfo = require('controllers/schedule.info');
-
   Schedule = require('models/schedule');
 
   $ = Spine.$;
 
-  Job = (function(_super) {
-    __extends(Job, _super);
+  ScheduleItem = (function(_super) {
+    __extends(ScheduleItem, _super);
 
-    Job.prototype.elements = {
-      ".close": "close"
+    ScheduleItem.prototype.className = 'scheduleitem';
+
+    ScheduleItem.prototype.elements = {
+      ".panel": "panel",
+      ".panel-heading": "header",
+      ".panel-body": "body",
+      ".pbmask": "pbmask",
+      ".panel-footer": "footer",
+      ".sname": "sname",
+      ".cyc": "cyc",
+      ".sstart": "sstart",
+      ".startlist": "startlist",
+      ".jobcnt": "jobcnt",
+      ".nextstart": "nextstart",
+      ".scopy": "scopy",
+      ".sdelete": "sdelete",
+      ".slog": "slog",
+      ".srun": "srun",
+      ".addstart": "addstart"
     };
 
-    Job.prototype.events = {
-      "click .close": "cl"
+    ScheduleItem.prototype.events = {
+      "mouseenter": "mouseover",
+      "mouseleave": "mouseout",
+      "mouseenter .sstart": "sstartmouseover",
+      "mouseleave .sstart": "sstartmouseout",
+      "mouseenter .jobcnt": "jobcntmouseover",
+      "mouseleave .jobcnt": "jobcntmouseout",
+      "mouseenter .nextstart": "nextstartmouseover",
+      "mouseleave .nextstart": "nextstartmouseout",
+      "click .cyc": "showcyc",
+      "click .sname": "showschedule",
+      "click .sstart": "ck"
     };
 
-    function Job(paper, color, item, width, sinfo) {
-      var addbtn, i, icoplus, job, jobcir, jobname, jobrect, left, s, top, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
-      this.paper = paper;
-      this.color = color;
-      this.item = item;
-      this.width = width;
-      this.sinfo = sinfo;
-      this.addjob = __bind(this.addjob, this);
+    function ScheduleItem() {
       this.render = __bind(this.render, this);
-      Job.__super__.constructor.apply(this, arguments);
-      this.font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      this.fontStyle = {
-        fill: "#333",
-        "font-family": this.font,
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 18,
-        "fill-opacity": 1,
-        "stroke-width": 1
-      };
-      this.jobFontStyle = {
-        stroke: this.color[i],
-        "fill": this.color[i],
-        "font-family": this.font,
-        "font-size": 16,
-        "stroke-opacity": 1,
-        "fill-opacity": 1,
-        "stroke-width": 1
-      };
-      icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z";
-      this.height = 0;
-      this.paper.setStart();
-      _ref = [0, 10], top = _ref[0], left = _ref[1];
-      _ref1 = [top + 30, left], top = _ref1[0], left = _ref1[1];
-      this.title = this.paper.text(left, top, "作业列表").attr(this.fontStyle);
-      _ref2 = [top + 40, left], top = _ref2[0], left = _ref2[1];
-      this.list = [];
-      _ref3 = this.item.Job;
-      for (i = _i = 0, _len = _ref3.length; _i < _len; i = ++_i) {
-        job = _ref3[i];
-        if (!(job.Id !== 0)) {
-          continue;
-        }
-        s = this.paper.set();
-        jobname = this.paper.text(left + 80, top, job.Name).attr(this.jobFontStyle);
-        jobname.attr("stroke", this.color[i]);
-        jobname.attr("fill", this.color[i]);
-        jobcir = this.paper.circle(left + 25, top, 15);
-        jobcir.attr({
-          fill: this.color[i],
-          stroke: this.color[i],
-          "fill-opacity": 0.2,
-          "stroke-width": 1
-        });
-        jobrect = this.paper.rect(left, top - 20, 190, 40, 5);
-        jobrect.attr({
-          fill: this.color[i],
-          stroke: this.color[i],
-          "fill-opacity": 0.1,
-          "stroke-width": 0
-        });
-        s.push(jobname, jobcir, jobrect);
-        s.data("Id", job.Id);
-        s.data("sinfo", this.sinfo);
-        s.hover(this.hoveron, this.hoverout);
-        this.list.push(s);
-        _ref4 = [top + 50, left], top = _ref4[0], left = _ref4[1];
+      ScheduleItem.__super__.constructor.apply(this, arguments);
+      this.el.addClass('col-sm-3');
+      if (!this.item) {
+        throw "@item required";
       }
-      addbtn = this.paper.rect(left, top - 20, 190, 40, 5).attr({
-        fill: "#31708f",
-        stroke: "#31708f",
-        "fill-opacity": 0.1,
-        "stroke-width": 0,
-        cursor: "hand"
-      });
-      addbtn.hover(this.hoveron, this.hoverout);
-      addbtn.click(this.addjob);
-      this.addButton = this.paper.path(icoplus);
-      this.addButton.attr({
-        fill: "#31708f",
-        stroke: "#31708f",
-        "fill-opacity": 0.4,
-        "stroke-opacity": 0.8,
-        "stroke-dasharray": "-",
-        "stroke-width": 1,
-        cursor: "hand"
-      });
-      this.addButton.toBack();
-      this.set = this.paper.setFinish();
-      this.height = top;
+      this.item.bind("update", this.render);
+      this.item.bind("destroy", this.remove);
     }
 
-    Job.prototype.hoveron = function() {
-      var a, _ref;
-      a = Raphael.animation({
-        "fill-opacity": 0.6
-      }, 300);
-      this.animate(a);
-      return (_ref = this.data("sinfo")) != null ? _ref.task.hlight(this.data("Id")) : void 0;
+    ScheduleItem.prototype.render = function(item) {
+      if (item) {
+        this.item = item;
+      }
+      this.html(this.template(this.item));
+      return this;
     };
 
-    Job.prototype.hoverout = function() {
-      var b, _ref;
-      b = Raphael.animation({
-        "fill-opacity": 0.1
-      }, 300);
-      this.animate(b);
-      return (_ref = this.data("sinfo")) != null ? _ref.task.nlight(this.data("Id")) : void 0;
+    ScheduleItem.prototype.template = function(items) {
+      return require('views/schedule-show')(items);
     };
 
-    Job.prototype.render = function(x, y) {
-      this.html(require('views/schedule-add-job')());
-      this.el.css("left", x);
-      this.el.css("top", y);
-      this.el.css("position", "absolute");
-      return this.el.css("display", "block");
+    ScheduleItem.prototype.remove = function() {
+      return this.el.remove();
     };
 
-    Job.prototype.addjob = function(e) {
-      return Spine.trigger("addjob", e.screenX, e.screenY);
+    ScheduleItem.prototype.showcyc = function() {
+      return alert('！');
     };
 
-    Job.prototype.cl = function(e) {
-      return this.el.css("display", "none");
+    ScheduleItem.prototype.showschedule = function(e) {
+      return this.navigate('/schedules', this.item.Id);
     };
 
-    return Job;
+    ScheduleItem.prototype.ck = function(e) {
+      if (e.target.className.indexOf("glyphicon-plus") >= 0) {
+        alert(e.target.className);
+        return e.stopPropagation();
+      }
+    };
+
+    ScheduleItem.prototype.mouseover = function(e) {
+      this.panel.stop().animate({
+        boxShadow: '0 0 20px #777'
+      }, "fast");
+      return this.timout = window.setTimeout((function(_this) {
+        return function() {
+          _this.pbmask.fadeOut(400);
+          _this.sname.stop().animate({
+            color: "#333"
+          }, 800);
+          _this.header.stop().animate({
+            backgroundColor: "#E0E0E0"
+          }, "fast");
+          _this.srun.stop().animate({
+            backgroundColor: "#999"
+          }, 800);
+          _this.sdelete.stop().animate({
+            backgroundColor: "#999"
+          }, 800);
+          return _this.scopy.stop().animate({
+            backgroundColor: "#999"
+          }, 800);
+        };
+      })(this), 800);
+    };
+
+    ScheduleItem.prototype.mouseout = function(e) {
+      window.clearTimeout(this.timout);
+      this.pbmask.fadeIn(200);
+      this.sname.stop().animate({
+        color: "#f5f5f5"
+      }, "fast");
+      this.header.stop().animate({
+        backgroundColor: "#f5f5f5"
+      }, "fast");
+      this.panel.stop().animate({
+        boxShadow: ''
+      }, "fast");
+      this.srun.stop().animate({
+        backgroundColor: "#f5f5f5"
+      }, "fast");
+      this.scopy.stop().animate({
+        backgroundColor: "#f5f5f5"
+      }, "fast");
+      return this.sdelete.stop().animate({
+        backgroundColor: "#f5f5f5"
+      }, "fast");
+    };
+
+    ScheduleItem.prototype.sstartmouseover = function(e) {
+      this.sstart.css("background-color", "#E0E0E0");
+      return this.addstart.stop().animate({
+        backgroundColor: "#999"
+      }, 1);
+    };
+
+    ScheduleItem.prototype.sstartmouseout = function(e) {
+      this.sstart.css("background-color", "#f5f5f5");
+      return this.addstart.stop().animate({
+        backgroundColor: "#f5f5f5"
+      }, 10);
+    };
+
+    ScheduleItem.prototype.jobcntmouseover = function(e) {
+      return this.jobcnt.css("background-color", "#E0E0E0");
+    };
+
+    ScheduleItem.prototype.jobcntmouseout = function(e) {
+      return this.jobcnt.css("background-color", "#f5f5f5");
+    };
+
+    ScheduleItem.prototype.nextstartmouseover = function(e) {
+      return this.nextstart.css("background-color", "#E0E0E0");
+    };
+
+    ScheduleItem.prototype.nextstartmouseout = function(e) {
+      return this.nextstart.css("background-color", "#f5f5f5");
+    };
+
+    return ScheduleItem;
 
   })(Spine.Controller);
 
-  module.exports = Job;
+  module.exports = ScheduleItem;
 
 }).call(this);
-}, "controllers/schedule.info.task": function(exports, require, module) {(function() {
-  var $, Eve, Raphael, Schedule, Spine, Task, TaskSymbol,
+}, "controllers/task.list": function(exports, require, module) {(function() {
+  var $, Eve, Raphael, Spine, TaskManager, TaskSymbol,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -25487,12 +25716,10 @@ Released under the MIT License
 
   Eve = require('eve');
 
-  Schedule = require('models/schedule');
-
   $ = Spine.$;
 
-  Task = (function() {
-    function Task(paper, color, item, width, height) {
+  TaskManager = (function() {
+    function TaskManager(paper, color, item, width, height) {
       var i, j, job, left, r, rt, rts, spacing, t, task, top, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
       this.paper = paper;
       this.color = color;
@@ -25543,7 +25770,7 @@ Released under the MIT License
       }
     }
 
-    Task.prototype.getTaskSymbol = function(Ids) {
+    TaskManager.prototype.getTaskSymbol = function(Ids) {
       var t, _i, _len, _ref, _ref1, _results;
       _ref = this.ts;
       _results = [];
@@ -25556,7 +25783,7 @@ Released under the MIT License
       return _results;
     };
 
-    Task.prototype.hlight = function(Id) {
+    TaskManager.prototype.hlight = function(Id) {
       var a, t, _i, _len, _ref, _results;
       a = Raphael.animation({
         "fill-opacity": 0.7
@@ -25579,7 +25806,7 @@ Released under the MIT License
       return _results;
     };
 
-    Task.prototype.nlight = function(Id) {
+    TaskManager.prototype.nlight = function(Id) {
       var a, t, _i, _len, _ref, _results;
       a = Raphael.animation({
         "fill-opacity": 0.2
@@ -25598,7 +25825,7 @@ Released under the MIT License
       return _results;
     };
 
-    return Task;
+    return TaskManager;
 
   })();
 
@@ -25791,237 +26018,7 @@ Released under the MIT License
 
   })();
 
-  module.exports = Task;
-
-}).call(this);
-}, "controllers/schedules": function(exports, require, module) {(function() {
-  var $, Schedule, ScheduleItem, ScheduleList, Spine,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  Spine = require('spineify');
-
-  Schedule = require('models/schedule');
-
-  ScheduleItem = require('controllers/schedules.item');
-
-  $ = Spine.$;
-
-  ScheduleList = (function(_super) {
-    __extends(ScheduleList, _super);
-
-    ScheduleList.prototype.className = 'schedulelist';
-
-    function ScheduleList() {
-      this.addAll = __bind(this.addAll, this);
-      this.addOne = __bind(this.addOne, this);
-      ScheduleList.__super__.constructor.apply(this, arguments);
-      Schedule.bind("create", this.addOne);
-      Schedule.bind("refresh", this.addAll);
-    }
-
-    ScheduleList.prototype.addOne = function(it) {
-      var view;
-      view = new ScheduleItem({
-        item: it
-      });
-      this.append(view.render());
-      view.pbmask.css("position", "absolute");
-      view.pbmask.css("z-index", "1000");
-      view.pbmask.css("width", view.sstart.css("width"));
-      view.pbmask.css("height", view.body.css("height"));
-      view.pbmask.css("background-color", "#f5f5f5");
-      return view.sname.css("color", "#f5f5f5");
-    };
-
-    ScheduleList.prototype.addAll = function() {
-      return Schedule.each(this.addOne);
-    };
-
-    return ScheduleList;
-
-  })(Spine.Controller);
-
-  module.exports = ScheduleList;
-
-}).call(this);
-}, "controllers/schedules.item": function(exports, require, module) {(function() {
-  var $, Schedule, ScheduleItem, Spine,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  Spine = require('spineify');
-
-  Schedule = require('models/schedule');
-
-  $ = Spine.$;
-
-  ScheduleItem = (function(_super) {
-    __extends(ScheduleItem, _super);
-
-    ScheduleItem.prototype.className = 'scheduleitem';
-
-    ScheduleItem.prototype.elements = {
-      ".panel": "panel",
-      ".panel-heading": "header",
-      ".panel-body": "body",
-      ".pbmask": "pbmask",
-      ".panel-footer": "footer",
-      ".sname": "sname",
-      ".cyc": "cyc",
-      ".sstart": "sstart",
-      ".startlist": "startlist",
-      ".jobcnt": "jobcnt",
-      ".nextstart": "nextstart",
-      ".scopy": "scopy",
-      ".sdelete": "sdelete",
-      ".slog": "slog",
-      ".srun": "srun",
-      ".addstart": "addstart"
-    };
-
-    ScheduleItem.prototype.events = {
-      "mouseenter": "mouseover",
-      "mouseleave": "mouseout",
-      "mouseenter .sstart": "sstartmouseover",
-      "mouseleave .sstart": "sstartmouseout",
-      "mouseenter .jobcnt": "jobcntmouseover",
-      "mouseleave .jobcnt": "jobcntmouseout",
-      "mouseenter .nextstart": "nextstartmouseover",
-      "mouseleave .nextstart": "nextstartmouseout",
-      "click .cyc": "showcyc",
-      "click .sname": "showschedule",
-      "click .sstart": "ck"
-    };
-
-    function ScheduleItem() {
-      this.render = __bind(this.render, this);
-      ScheduleItem.__super__.constructor.apply(this, arguments);
-      this.el.addClass('col-sm-3');
-      if (!this.item) {
-        throw "@item required";
-      }
-      this.item.bind("update", this.render);
-      this.item.bind("destroy", this.remove);
-    }
-
-    ScheduleItem.prototype.render = function(item) {
-      if (item) {
-        this.item = item;
-      }
-      this.html(this.template(this.item));
-      return this;
-    };
-
-    ScheduleItem.prototype.template = function(items) {
-      return require('views/schedule-show')(items);
-    };
-
-    ScheduleItem.prototype.remove = function() {
-      return this.el.remove();
-    };
-
-    ScheduleItem.prototype.showcyc = function() {
-      return alert('！');
-    };
-
-    ScheduleItem.prototype.showschedule = function(e) {
-      return this.navigate('/schedules', this.item.Id);
-    };
-
-    ScheduleItem.prototype.ck = function(e) {
-      if (e.target.className.indexOf("glyphicon-plus") >= 0) {
-        alert(e.target.className);
-        return e.stopPropagation();
-      }
-    };
-
-    ScheduleItem.prototype.mouseover = function(e) {
-      this.panel.stop().animate({
-        boxShadow: '0 0 20px #777'
-      }, "fast");
-      return this.timout = window.setTimeout((function(_this) {
-        return function() {
-          _this.pbmask.fadeOut(400);
-          _this.sname.stop().animate({
-            color: "#333"
-          }, 800);
-          _this.header.stop().animate({
-            backgroundColor: "#E0E0E0"
-          }, "fast");
-          _this.srun.stop().animate({
-            backgroundColor: "#999"
-          }, 800);
-          _this.sdelete.stop().animate({
-            backgroundColor: "#999"
-          }, 800);
-          return _this.scopy.stop().animate({
-            backgroundColor: "#999"
-          }, 800);
-        };
-      })(this), 800);
-    };
-
-    ScheduleItem.prototype.mouseout = function(e) {
-      window.clearTimeout(this.timout);
-      this.pbmask.fadeIn(200);
-      this.sname.stop().animate({
-        color: "#f5f5f5"
-      }, "fast");
-      this.header.stop().animate({
-        backgroundColor: "#f5f5f5"
-      }, "fast");
-      this.panel.stop().animate({
-        boxShadow: ''
-      }, "fast");
-      this.srun.stop().animate({
-        backgroundColor: "#f5f5f5"
-      }, "fast");
-      this.scopy.stop().animate({
-        backgroundColor: "#f5f5f5"
-      }, "fast");
-      return this.sdelete.stop().animate({
-        backgroundColor: "#f5f5f5"
-      }, "fast");
-    };
-
-    ScheduleItem.prototype.sstartmouseover = function(e) {
-      this.sstart.css("background-color", "#E0E0E0");
-      return this.addstart.stop().animate({
-        backgroundColor: "#999"
-      }, 1);
-    };
-
-    ScheduleItem.prototype.sstartmouseout = function(e) {
-      this.sstart.css("background-color", "#f5f5f5");
-      return this.addstart.stop().animate({
-        backgroundColor: "#f5f5f5"
-      }, 10);
-    };
-
-    ScheduleItem.prototype.jobcntmouseover = function(e) {
-      return this.jobcnt.css("background-color", "#E0E0E0");
-    };
-
-    ScheduleItem.prototype.jobcntmouseout = function(e) {
-      return this.jobcnt.css("background-color", "#f5f5f5");
-    };
-
-    ScheduleItem.prototype.nextstartmouseover = function(e) {
-      return this.nextstart.css("background-color", "#E0E0E0");
-    };
-
-    ScheduleItem.prototype.nextstartmouseout = function(e) {
-      return this.nextstart.css("background-color", "#f5f5f5");
-    };
-
-    return ScheduleItem;
-
-  })(Spine.Controller);
-
-  module.exports = ScheduleItem;
+  module.exports = TaskManager;
 
 }).call(this);
 }, "index": function(exports, require, module) {(function() {
@@ -26037,9 +26034,9 @@ Released under the MIT License
 
   Schedule = require('models/schedule');
 
-  ScheduleList = require('controllers/schedules');
+  ScheduleList = require('controllers/main.list');
 
-  ScheduleInfo = require('controllers/schedule.info');
+  ScheduleInfo = require('controllers/main.info');
 
   Main = (function(_super) {
     __extends(Main, _super);
@@ -26121,6 +26118,32 @@ Released under the MIT License
   require("spineify/lib/route");
 
   require("spineify/lib/list");
+
+}).call(this);
+}, "models/job": function(exports, require, module) {(function() {
+  var Job, Spine,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Spine = require('spineify');
+
+  Job = (function(_super) {
+    __extends(Job, _super);
+
+    Job.configure('Schedule', 'Id', 'Name', 'TaskCnt', 'Job', 'Count', 'Cyc', 'StartMonth', 'StartSecond', 'NextStart', 'TimeOut', 'Desc', 'CreateTime', 'CreateUserId', 'ModifyTime', 'ModifyUserId');
+
+    Job.extend(Spine.Model.Ajax);
+
+    function Job() {
+      Moment.lang('zh-cn');
+      Job.__super__.constructor.apply(this, arguments);
+    }
+
+    return Job;
+
+  })(Spine.Model);
+
+  module.exports = Job;
 
 }).call(this);
 }, "models/schedule": function(exports, require, module) {(function() {
@@ -26420,7 +26443,7 @@ Released under the MIT License
   }
   (function() {
     (function() {
-      __out.push('<div class="panel panel-info fdin" style="width: 300px; height: 240px;">\n    <div class="panel-heading" style="cursor: pointer;">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">添加一个作业</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input type="text" class="form-control" placeholder="作业名称">\n        <br>\n        作业描述：\n        <textarea class="form-control" rows="4"></textarea>\n    </div>\n</div>\n');
+      __out.push('<div class="addjob panel panel-default fdin" style="width: 300px; height: 240px;">\n    <div class="panel-heading" style="cursor: pointer; background-color: #E0E0E0;">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">添加一个作业</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="jobname" type="text" class="form-control" placeholder="作业名称">\n        <br>\n        作业描述：\n        <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n    </div>\n</div>\n');
     
     }).call(this);
     

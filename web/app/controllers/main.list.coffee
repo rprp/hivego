@@ -1,6 +1,6 @@
 Spine = require('spineify')
 Schedule = require('models/schedule')
-ScheduleItem = require('controllers/schedules.item')
+ScheduleItem = require('controllers/schedule.item')
 $       = Spine.$
 
 class ScheduleList extends Spine.Controller

@@ -3,8 +3,8 @@ require('lib/setup')
 Spine    = require('spineify')
 Manager = require('spineify/lib/manager')
 Schedule = require('models/schedule')
-ScheduleList = require('controllers/schedules')
-ScheduleInfo = require('controllers/schedule.info')
+ScheduleList = require('controllers/main.list')
+ScheduleInfo = require('controllers/main.info')
 
 class Main extends Spine.Stack
   className: 'smain'
