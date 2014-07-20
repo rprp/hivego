@@ -7,9 +7,10 @@
         <h3 class="panel-title">添加一个作业</h3>
     </div>
     <div class="panel-body" style="background-color: #f5f5f5;" >
-        <input id="jobname" type="text" class="form-control" placeholder="作业名称">
+        <input id="jobname" type="text" class="form-control" placeholder="作业名称" />
         <br>
         作业描述：
         <textarea id="jobdesc" class="form-control" rows="4"></textarea>
+        <input id="prejobid" type="hidden" value="<%= @Id %>" />
     </div>
 </div>

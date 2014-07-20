@@ -106,15 +106,15 @@ func CheckErr(info string, err error) { // {{{
 } // }}}
 
 //PrintErr打印错误信息
-func PrintErr(info string, err error) {
+func PrintErr(info string, err error) { // {{{
 	if err != nil {
 		g.L.Errorln(info, err.Error())
 	}
-}
+} // }}}
 
 //Copy复制对象
 //来自github.com/jinzhu/copier
-func Copy(copy_to interface{}, copy_from interface{}) (err error) {
+func Copy(copy_to interface{}, copy_from interface{}) (err error) { // {{{
 	var (
 		is_slice    bool
 		from_typ    reflect.Type
@@ -179,28 +179,28 @@ func Copy(copy_to interface{}, copy_from interface{}) (err error) {
 			}
 		}
 
-		for i := 0; i < dest.NumField(); i++ {
-			field := to_typ.Field(i)
-			if !field.Anonymous {
-				name := field.Name
-				from_method := source.Addr().MethodByName(name)
-				to_field := dest.FieldByName(name)
+		//for i := 0; i < dest.NumField(); i++ {
+		//field := to_typ.Field(i)
+		//if !field.Anonymous {
+		//name := field.Name
+		//from_method := source.Addr().MethodByName(name)
+		//to_field := dest.FieldByName(name)
 
-				if from_method.IsValid() && to_field.IsValid() {
-					values := from_method.Call([]reflect.Value{})
-					if len(values) >= 1 {
-						to_field.Set(values[0])
-					}
-				}
-			}
-		}
+		//if from_method.IsValid() && to_field.IsValid() {
+		//values := from_method.Call([]reflect.Value{})
+		//if len(values) >= 1 {
+		//to_field.Set(values[0])
+		//}
+		//}
+		//}
+		//}
 
 		if is_slice {
 			to_elem.Set(reflect.Append(to_elem, dest))
 		}
 	}
 	return
-}
+} // }}}
 
 //打印调度信息
 func printSchedule(scds map[int64]*Schedule) { // {{{

@@ -10,7 +10,7 @@ import (
 )
 
 //调度执行信息结构
-type ExecSchedule struct {
+type ExecSchedule struct { // {{{
 	lock           sync.Mutex
 	batchId        string              //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
 	schedule       *Schedule           //调度
@@ -25,7 +25,7 @@ type ExecSchedule struct {
 	taskCnt        int64               //调度中任务数量
 	successTaskCnt int64               //执行成功任务数量
 	failTaskCnt    int64               //执行失败任务数量
-}
+} // }}}
 
 //ExecSchedule.Run()方法执行调度任务。
 //过程中会维护一个Chan *ExecTask类型变量staskChan，用来传递执行完成的Task。
@@ -141,14 +141,14 @@ func (s *ExecSchedule) Run() { // {{{
 } // }}}
 
 //Pause暂停调度执行
-func (s *ExecSchedule) Pause() {
+func (s *ExecSchedule) Pause() { // {{{
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	for _, t := range s.execTasks {
 		t.state = 2
 	}
 
-}
+} // }}}
 
 //处理下游依赖任务链
 //clearFailTask会处理失败的任务，失败的任务被当做参数传递进来后，会将这个任务从其依赖任务
@@ -203,7 +203,7 @@ func (s *ExecSchedule) Log() (err error) { // {{{
 } // }}}
 
 //作业执行信息结构
-type ExecJob struct {
+type ExecJob struct { // {{{
 	batchJobId string      //作业批次ID，批次ID + 作业ID
 	batchId    string      //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
 	job        *Job        //作业
@@ -215,7 +215,7 @@ type ExecJob struct {
 	execType   int8        //执行类型1. 自动定时调度 2.手动人工调度 3.修复执行
 	execTasks  []*ExecTask //任务执行信息
 	taskCnt    int64       //作业中任务数量
-}
+} // }}}
 
 //保存执行日志
 func (j *ExecJob) Log() (err error) { // {{{
@@ -251,7 +251,7 @@ func (j *ExecJob) Log() (err error) { // {{{
 } // }}}
 
 //任务执行信息结构
-type ExecTask struct {
+type ExecTask struct { // {{{
 	batchTaskId   string              //任务批次ID，作业批次ID + 任务ID
 	batchJobId    string              //作业批次ID，批次ID + 作业ID
 	batchId       string              //批次ID，规则scheduleId + 周期开始时间(不含周期内启动时间)
@@ -264,7 +264,7 @@ type ExecTask struct {
 	output        string              //任务输出
 	nextExecTasks map[int64]*ExecTask //下级任务执行信息
 	relExecTasks  map[int64]*ExecTask //依赖的任务
-}
+} // }}}
 
 //保存执行日志
 func (t *ExecTask) Log() (err error) { // {{{
@@ -297,10 +297,10 @@ func (t *ExecTask) Log() (err error) { // {{{
 	return err
 } // }}}
 
-type Reply struct {
+type Reply struct { // {{{
 	Err    error  //错误信息
 	Stdout string //标准输出
-}
+} // }}}
 
 //Run方法负责执行任务。
 //首先会判断是否符合执行条件，符合则执行
@@ -419,8 +419,10 @@ func NewExecScheduleById(bid string, s *Schedule) (es *ExecSchedule, err error) 
 
 	err = es.Log()
 
-	//构建调度中的作业执行结构
-	es.execJob, err = NewExecJob(bid, s.Job)
+	if s.Job != nil {
+		//构建调度中的作业执行结构
+		es.execJob, err = NewExecJob(bid, s.Job)
+	}
 
 	//生成调度中的任务列表
 	for j := es.execJob; j != nil; {
@@ -437,6 +439,7 @@ func NewExecScheduleById(bid string, s *Schedule) (es *ExecSchedule, err error) 
 
 //NewExecJob根据输入的job和batchId构建作业执行链，并返回。
 func NewExecJob(batchId string, job *Job) (execJob *ExecJob, err error) { // {{{
+
 	bjd := fmt.Sprintf("%s.%d", batchId, job.Id)
 
 	execJob = &ExecJob{

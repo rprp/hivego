@@ -3,7 +3,7 @@ Events  = Spine.Events
 Module  = Spine.Module
 Raphael = require('raphaelify')
 Eve = require('eve')
-Schedule = require('models/schedule')
+Job = require('models/job')
 $       = Spine.$
 
 class JobManager extends Spine.Controller
@@ -12,9 +12,12 @@ class JobManager extends Spine.Controller
     ".jobpanel":  "jobpanel"
     "#jobname":  "jobname"
     "#jobdesc":  "jobdesc"
+    "#prejobid":  "prejobid"
 
   events:
     "click .close": "hideAddJob"
+    "keypress #jobname": "keypress"
+    "keypress #jobdesc": "keypress"
 
   constructor: (@paper, @color, @item, @width, @sinfo) ->
     super
@@ -72,17 +75,32 @@ class JobManager extends Spine.Controller
     @data("sinfo")?.taskManager.nlight(@data("Id"))
 
   render: (x, y) =>
-    @html(require('views/schedule-add-job')())
+    @html(require('views/schedule-add-job')(@lastJob))
+    @el.css("display","block")
     @el.css("left",x)
     @el.css("top",y)
     @el.css("position","absolute")
-    @el.css("display","block")
     
   addjob: (e) =>
     Spine.trigger("addjob",e.screenX,e.screenY)
+    @jobname.focus()
+    e
+
+  keypress: (e) ->
+    if e.keyCode is 13 and e.ctrlKey
+      @hideAddJob(e)
+    else if e.keyCode is 13
+      @jobdesc.focus()
 
   hideAddJob: (e) ->
     @el.css("display","none")
-    alert("jobname=#{@jobname.val()}   jobdesc=#{@jobdesc.val()}  prejob=#{@lastJob?.Name}")
+    jb = new Job()
+    jb.Name = @jobname.val()
+    jb.Desc = @jobdesc.val()
+    jb.ScheduleId = @item.Id
+    jb.PreJobId = if @prejobid.val() then parseInt(@prejobid.val()) else 0
+    jb.Id = -1
+    jb.save() if jb.Name
+
  
 module.exports = JobManager

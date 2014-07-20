@@ -25107,7 +25107,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/job.list": function(exports, require, module) {(function() {
-  var $, Eve, Events, JobManager, Module, Raphael, Schedule, Spine,
+  var $, Eve, Events, Job, JobManager, Module, Raphael, Spine,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -25122,7 +25122,7 @@ Released under the MIT License
 
   Eve = require('eve');
 
-  Schedule = require('models/schedule');
+  Job = require('models/job');
 
   $ = Spine.$;
 
@@ -25133,11 +25133,14 @@ Released under the MIT License
       ".close": "close",
       ".jobpanel": "jobpanel",
       "#jobname": "jobname",
-      "#jobdesc": "jobdesc"
+      "#jobdesc": "jobdesc",
+      "#prejobid": "prejobid"
     };
 
     JobManager.prototype.events = {
-      "click .close": "hideAddJob"
+      "click .close": "hideAddJob",
+      "keypress #jobname": "keypress",
+      "keypress #jobdesc": "keypress"
     };
 
     function JobManager(paper, color, item, width, sinfo) {
@@ -25251,21 +25254,39 @@ Released under the MIT License
     };
 
     JobManager.prototype.render = function(x, y) {
-      this.html(require('views/schedule-add-job')());
+      this.html(require('views/schedule-add-job')(this.lastJob));
+      this.el.css("display", "block");
       this.el.css("left", x);
       this.el.css("top", y);
-      this.el.css("position", "absolute");
-      return this.el.css("display", "block");
+      return this.el.css("position", "absolute");
     };
 
     JobManager.prototype.addjob = function(e) {
-      return Spine.trigger("addjob", e.screenX, e.screenY);
+      Spine.trigger("addjob", e.screenX, e.screenY);
+      this.jobname.focus();
+      return e;
+    };
+
+    JobManager.prototype.keypress = function(e) {
+      if (e.keyCode === 13 && e.ctrlKey) {
+        return this.hideAddJob(e);
+      } else if (e.keyCode === 13) {
+        return this.jobdesc.focus();
+      }
     };
 
     JobManager.prototype.hideAddJob = function(e) {
-      var _ref;
+      var jb;
       this.el.css("display", "none");
-      return alert("jobname=" + (this.jobname.val()) + "   jobdesc=" + (this.jobdesc.val()) + "  prejob=" + ((_ref = this.lastJob) != null ? _ref.Name : void 0));
+      jb = new Job();
+      jb.Name = this.jobname.val();
+      jb.Desc = this.jobdesc.val();
+      jb.ScheduleId = this.item.Id;
+      jb.PreJobId = this.prejobid.val() ? parseInt(this.prejobid.val()) : 0;
+      jb.Id = -1;
+      if (jb.Name) {
+        return jb.save();
+      }
     };
 
     return JobManager;
@@ -25351,10 +25372,15 @@ Released under the MIT License
     };
 
     ScheduleInfo.prototype.draw = function(rs) {
-      var paper, _ref;
+      var h, paper, _ref, _ref1, _ref2;
       this.item = Schedule.find(rs.Id);
+      h = ((_ref = this.item) != null ? (_ref1 = _ref.Job) != null ? _ref1.length : void 0 : void 0) * 140;
+      if (h < 800) {
+        h = 800;
+      }
+      this.pant.css("height", h);
       paper = Raphael(this.pant.get(0), '100%', '100%');
-      _ref = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref[0], this.height = _ref[1];
+      _ref2 = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref2[0], this.height = _ref2[1];
       return this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
     };
 
@@ -26130,14 +26156,13 @@ Released under the MIT License
   Job = (function(_super) {
     __extends(Job, _super);
 
-    Job.configure('Schedule', 'Id', 'Name', 'TaskCnt', 'Job', 'Count', 'Cyc', 'StartMonth', 'StartSecond', 'NextStart', 'TimeOut', 'Desc', 'CreateTime', 'CreateUserId', 'ModifyTime', 'ModifyUserId');
+    function Job() {
+      return Job.__super__.constructor.apply(this, arguments);
+    }
+
+    Job.configure('Job', 'Id', 'ScheduleId', 'ScheduleCyc', 'Name', 'Desc', 'PreJobId', 'NextJobId', 'Tasks', 'TaskCnt', 'CreateUserId', 'CreateTime', 'ModifyUserId', 'ModifyTime');
 
     Job.extend(Spine.Model.Ajax);
-
-    function Job() {
-      Moment.lang('zh-cn');
-      Job.__super__.constructor.apply(this, arguments);
-    }
 
     return Job;
 
@@ -26443,7 +26468,11 @@ Released under the MIT License
   }
   (function() {
     (function() {
-      __out.push('<div class="addjob panel panel-default fdin" style="width: 300px; height: 240px;">\n    <div class="panel-heading" style="cursor: pointer; background-color: #E0E0E0;">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">添加一个作业</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="jobname" type="text" class="form-control" placeholder="作业名称">\n        <br>\n        作业描述：\n        <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n    </div>\n</div>\n');
+      __out.push('<div class="addjob panel panel-default fdin" style="width: 300px; height: 240px;">\n    <div class="panel-heading" style="cursor: pointer; background-color: #E0E0E0;">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">添加一个作业</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="jobname" type="text" class="form-control" placeholder="作业名称" />\n        <br>\n        作业描述：\n        <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n        <input id="prejobid" type="hidden" value="');
+    
+      __out.push(__sanitize(this.Id));
+    
+      __out.push('" />\n    </div>\n</div>\n');
     
     }).call(this);
     

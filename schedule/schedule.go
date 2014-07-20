@@ -9,18 +9,23 @@ import (
 	"time"
 )
 
-type GlobalConfigStruct struct {
+//全局变量定义
+var (
+	g *GlobalConfigStruct
+)
+
+type GlobalConfigStruct struct { // {{{
 	L           *logrus.Logger
 	HiveConn    *sql.DB
 	LogConn     *sql.DB
 	Port        string
 	ExecScdChan chan *ExecSchedule
-	Tasks       map[int64]*Task
+	Tasks       map[string]*Task
 	ExecTasks   map[int64]*ExecTask
 	Schedules   *ScheduleManager
-}
+} // }}}
 
-func DefaultGlobal() *GlobalConfigStruct {
+func DefaultGlobal() *GlobalConfigStruct { // {{{
 	sc := &GlobalConfigStruct{}
 	sc.L = logrus.New()
 	sc.L.Formatter = new(logrus.TextFormatter) // default
@@ -28,21 +33,26 @@ func DefaultGlobal() *GlobalConfigStruct {
 	sc.Port = ":3128"
 	sc.ExecScdChan = make(chan *ExecSchedule)
 	sc.ExecTasks = make(map[int64]*ExecTask)
-	sc.Tasks = make(map[int64]*Task)
+	sc.Tasks = make(map[string]*Task)
 	sc.Schedules = &ScheduleManager{Global: sc}
 	return sc
-}
-
-//全局变量定义
-var (
-	g *GlobalConfigStruct
-)
+} // }}}
 
 //ScheduleList 调度列表结构，它包含了全部的调度信息，并有两个方法来初始化和启动其中的调度。
-type ScheduleManager struct {
+type ScheduleManager struct { // {{{
 	ScheduleList []*Schedule //调度列表
 	Global       *GlobalConfigStruct
-}
+} // }}}
+
+//GetScheduleById返回当前列表中符合要求的调度对象。
+func (sl *ScheduleManager) GetScheduleById(id int64) *Schedule { // {{{
+	for _, s := range sl.ScheduleList {
+		if s.Id == id {
+			return s
+		}
+	}
+	return nil
+} // }}}
 
 //从元数据库获取Schedule列表
 //StartSchedule方法，会遍历列表中的Schedule并启动goroutine调用它的Timer方法。
@@ -62,7 +72,7 @@ func (sl *ScheduleManager) StartSchedule() { // {{{
 } // }}}
 
 //调度信息结构
-type Schedule struct { // {{{
+type Schedule struct { // {{{// {{{
 	Id           int64           //调度ID
 	Name         string          //调度名称
 	Count        int8            //调度次数
@@ -73,6 +83,7 @@ type Schedule struct { // {{{
 	TimeOut      int64           //最大执行时间
 	JobId        int64           //作业ID
 	Job          *Job            //作业
+	Jobs         []*Job          //作业
 	Desc         string          //调度说明
 	JobCnt       int64           //调度中作业数量
 	TaskCnt      int64           //调度中任务数量
@@ -80,7 +91,7 @@ type Schedule struct { // {{{
 	CreateTime   time.Time       //创人
 	ModifyUserId int64           //修改人
 	ModifyTime   time.Time       //修改时间
-}
+} // }}}
 
 //根据调度的周期及启动时间，按时将调度传至执行列表执行。
 func (s *Schedule) Timer() { // {{{
@@ -118,18 +129,22 @@ func (s *Schedule) refreshSchedule() { // {{{
 	s.JobId = ts.JobId
 	s.Desc = ts.Desc
 
-	tj := getJob(s.JobId)
-	tj.ScheduleId = s.Id
-	tj.ScheduleCyc = s.Cyc
-	tj.refreshJob()
-	s.Job = tj
+	if tj := getJob(s.JobId); tj != nil {
+		tj.ScheduleId = s.Id
+		tj.ScheduleCyc = s.Cyc
+		tj.refreshJob()
+		s.Job = tj
+		s.Jobs = make([]*Job, 0)
+		s.Jobs = append(s.Jobs, tj)
 
-	s.JobCnt = 0
-	s.TaskCnt = 0
-	for j := s.Job; j != nil; {
-		s.JobCnt++
-		s.TaskCnt += j.TaskCnt
-		j = j.NextJob
+		s.JobCnt = 0
+		s.TaskCnt = 0
+		for j := s.Job; j != nil; {
+			s.Jobs = append(s.Jobs, j)
+			s.JobCnt++
+			s.TaskCnt += j.TaskCnt
+			j = j.NextJob
+		}
 	}
 	g.L.Println("schedule refreshed", s)
 } // }}}
@@ -185,6 +200,45 @@ func (s *Schedule) Update() (err error) { // {{{
 
 	return err
 } // }}}
+
+//AddJob用来在调度中添加一个Job
+//AddJob会接收传入的Job类型的参数，并调用它的
+//Add()方法进行持久化操作。成功后把它添加到调度
+//链中，添加时若调度下无Job则将Job直接添加到调度
+//中，否则添加到调度中的任务链末端。
+func (s *Schedule) AddJob(job *Job) (err error) { // {{{
+	if err = job.Add(); err == nil {
+		if len(s.Jobs) == 0 {
+			s.JobId = job.Id
+			s.Job = job
+			if err = s.Update(); err != nil {
+				return err
+			}
+		} else {
+			j := s.Jobs[len(s.Jobs)-1]
+			j.NextJob = job
+			j.NextJobId = job.Id
+			job.PreJob = j
+			if err = j.Update(); err != nil {
+				return err
+			}
+		}
+		s.Jobs = append(s.Jobs, job)
+		s.JobCnt += 1
+	}
+	return err
+} // }}}
+
+//UpdateJob用来更新一个Job，同时更新到元数据库
+func (s *Schedule) UpdateJob(job *Job) {
+
+}
+
+//FindJob用来更新一个Job，同时更新到元数据库
+func (s *Schedule) GetJobById(Id int64) *Job {
+	//暂不实现，以后再说
+	return nil
+}
 
 //Delete方法，删除元数据库中的调度信息
 func (s *Schedule) Delete() error { // {{{
@@ -260,7 +314,7 @@ func (s *Schedule) setStart() { // {{{
 
 //启动时间排序
 //算法选择排序
-func (s *Schedule) sortStart() {
+func (s *Schedule) sortStart() { // {{{
 	var i, j, k int
 
 	for i = 0; i < len(s.StartMonth); i++ {
@@ -281,7 +335,7 @@ func (s *Schedule) sortStart() {
 
 	}
 
-}
+} // }}}
 
 //getSchedule，从元数据库获取指定的Schedule信息。
 func getSchedule(id int64) (scd *Schedule) { // {{{

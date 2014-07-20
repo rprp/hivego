@@ -1,12 +1,8 @@
 Spine = require('spineify')
 
 class Job extends Spine.Model
-  @configure 'Schedule', 'Id', 'Name', 'TaskCnt', 'Job', 'Count', 'Cyc', 'StartMonth', 'StartSecond', 'NextStart', 'TimeOut', 'Desc', 'CreateTime', 'CreateUserId', 'ModifyTime', 'ModifyUserId'
+  @configure 'Job', 'Id', 'ScheduleId', 'ScheduleCyc', 'Name', 'Desc', 'PreJobId', 'NextJobId', 'Tasks', 'TaskCnt', 'CreateUserId', 'CreateTime', 'ModifyUserId', 'ModifyTime'
 
   @extend Spine.Model.Ajax
   
-  constructor: ->
-    Moment.lang('zh-cn')
-    super
- 
 module.exports = Job

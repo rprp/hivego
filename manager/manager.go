@@ -3,6 +3,7 @@ package manager
 import (
 	"fmt"
 	"github.com/go-martini/martini"
+	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/web"
 	"github.com/rprp/hive/schedule"
@@ -47,11 +48,7 @@ func controller(m *martini.ClassicMartini) {
 		r.Get("/schedules/:id", getScheduleById)
 		r.Put("/schedules/:id", updateSchedule)
 		r.Delete("/schedules/:id", deleteSchedule)
-	})
-
-	m.Post("/hello", func(ctx *web.Context) {
-		fmt.Println(ctx.Params)
-		ctx.WriteString("Hello World!")
+		r.Post("/jobs", binding.Bind(schedule.Job{}), addJob)
 	})
 
 }
@@ -62,6 +59,7 @@ func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss
 		d := &schedule.Schedule{}
 		schedule.Copy(d, s)
 		d.Job = nil
+		d.Jobs = nil
 		sl = append(sl, d)
 	}
 	r.JSON(200, sl)
@@ -69,65 +67,65 @@ func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss
 }
 
 //调度信息结构
-type Schedule struct {
-	Id           int64           //调度ID
-	Name         string          //调度名称
-	Count        int8            //调度次数
-	Cyc          string          //调度周期
-	StartSecond  []time.Duration //周期内启动时间
-	StartMonth   []int           //周期内启动月份
-	NextStart    time.Time       //下次启动时间
-	TimeOut      int64           //最大执行时间
-	JobId        int64           //作业ID
-	Job          []Job           //作业
-	Desc         string          //调度说明
-	JobCnt       int64           //调度中作业数量
-	TaskCnt      int64           //调度中任务数量
-	CreateUserId int64           //创建人
-	CreateTime   time.Time       //创人
-	ModifyUserId int64           //修改人
-	ModifyTime   time.Time       //修改时间
+type Schedule struct { // {{{
+	Id           int64           `json: Id`           //调度ID
+	Name         string          `json: Name`         //调度名称
+	Count        int8            `json: Count`        //调度次数
+	Cyc          string          `json: Cyc`          //调度周期
+	StartSecond  []time.Duration `json: StartSecond`  //周期内启动时间
+	StartMonth   []int           `json: StartMonth`   //周期内启动月份
+	NextStart    time.Time       `json: NextStart`    //下次启动时间
+	TimeOut      int64           `json: TimeOut`      //最大执行时间
+	JobId        int64           `json: JobId`        //作业ID
+	Job          []Job           `json: Job`          //作业
+	Desc         string          `json: Desc`         //调度说明
+	JobCnt       int64           `json: JobCnt`       //调度中作业数量
+	TaskCnt      int64           `json: TaskCnt`      //调度中任务数量
+	CreateUserId int64           `json: CreateUserId` //创建人
+	CreateTime   time.Time       `json: CreateTime`   //创人
+	ModifyUserId int64           `json: ModifyUserId` //修改人
+	ModifyTime   time.Time       `json: ModifyTime`   //修改时间
 }
 
 //作业信息结构
 type Job struct {
-	Id           int64     //作业ID
-	ScheduleId   int64     //调度ID
-	ScheduleCyc  string    //调度周期
-	Name         string    //作业名称
-	Desc         string    //作业说明
-	PreJobId     int64     //上级作业ID
-	NextJobId    int64     //下级作业ID
-	Tasks        []Task    //作业中的任务
-	TaskCnt      int64     //调度中任务数量
-	CreateUserId int64     //创建人
-	CreateTime   time.Time //创人
-	ModifyUserId int64     //修改人
-	ModifyTime   time.Time //修改时间
+	Id           int64     `json: Id`           //作业ID
+	ScheduleId   int64     `json: ScheduleId`   //调度ID
+	ScheduleCyc  string    `json: ScheduleCyc`  //调度周期
+	Name         string    `json: Name`         //作业名称
+	Desc         string    `json: Desc`         //作业说明
+	PreJobId     int64     `json: PreJobId`     //上级作业ID
+	NextJobId    int64     `json: NextJobId`    //下级作业ID
+	Tasks        []*Task   `json: Tasks`        //作业中的任务
+	TaskCnt      int64     `json: TaskCnt`      //调度中任务数量
+	CreateUserId int64     `json: CreateUserId` //创建人
+	CreateTime   time.Time `json: CreateTime`   //创人
+	ModifyUserId int64     `json: ModifyUserId` //修改人
+	ModifyTime   time.Time `json: ModifyTime`   //修改时间
 }
 
 // 任务信息结构
 type Task struct {
-	Id           int64             // 任务的ID
-	Address      string            // 任务的执行地址
-	Name         string            // 任务名称
-	JobType      string            // 任务类型
-	ScheduleCyc  string            //调度周期
-	TaskCyc      string            //调度周期
-	StartSecond  time.Duration     //周期内启动时间
-	Cmd          string            // 任务执行的命令或脚本、函数名等。
-	Desc         string            //任务说明
-	TimeOut      int64             // 设定超时时间，0表示不做超时限制。单位秒
-	Param        map[string]string // 任务的参数信息
-	Attr         map[string]string // 任务的属性信息
-	JobId        int64             //所属作业ID
-	RelTasks     []Task            //依赖的任务
-	RelTaskCnt   int64             //依赖的任务数量
-	CreateUserId int64             //创建人
-	CreateTime   time.Time         //创人
-	ModifyUserId int64             //修改人
-	ModifyTime   time.Time         //修改时间
-}
+	Id           int64             `json: Id`           // 任务的ID
+	Address      string            `json: Address`      // 任务的执行地址
+	Name         string            `json: Name`         // 任务名称
+	JobType      string            `json: JobType`      // 任务类型
+	ScheduleCyc  string            `json: ScheduleCyc`  //调度周期
+	TaskCyc      string            `json: TaskCyc`      //调度周期
+	StartSecond  time.Duration     `json: StartSecond`  //周期内启动时间
+	Cmd          string            `json: Cmd`          // 任务执行的命令或脚本、函数名等。
+	Desc         string            `json: Desc`         //任务说明
+	TimeOut      int64             `json: TimeOut`      // 设定超时时间，0表示不做超时限制。单位秒
+	Param        map[string]string `json: Param`        // 任务的参数信息
+	Attr         map[string]string `json: Attr`         // 任务的属性信息
+	JobId        int64             `json: JobId`        //所属作业ID
+	RelTasks     []Task            `json: RelTasks`     //依赖的任务
+	RelTaskCnt   int64             `json: RelTaskCnt`   //依赖的任务数量
+	CreateUserId int64             `json: CreateUserId` //创建人
+	CreateTime   time.Time         `json: CreateTime`   //创人
+	ModifyUserId int64             `json: ModifyUserId` //修改人
+	ModifyTime   time.Time         `json: ModifyTime`   //修改时间
+} // }}}
 
 func getScheduleById(params martini.Params, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
 
@@ -142,7 +140,7 @@ func getScheduleById(params martini.Params, r render.Render, res http.ResponseWr
 	}
 }
 
-func getScheduleDetail(s *schedule.Schedule) Schedule {
+func getScheduleDetail(s *schedule.Schedule) Schedule { // {{{
 	d := &Schedule{}
 	d.Id = s.Id
 	d.Name = s.Name
@@ -169,7 +167,7 @@ func getScheduleDetail(s *schedule.Schedule) Schedule {
 		jb.ModifyUserId = j.ModifyUserId
 		jb.ModifyTime = j.ModifyTime
 
-		jb.Tasks = make([]Task, 0)
+		jb.Tasks = make([]*Task, 0)
 
 		for _, t := range j.Tasks {
 			tt := &Task{}
@@ -202,7 +200,7 @@ func getScheduleDetail(s *schedule.Schedule) Schedule {
 			tt.ModifyUserId = t.ModifyUserId
 			tt.ModifyTime = t.ModifyTime
 
-			jb.Tasks = append(jb.Tasks, *tt)
+			jb.Tasks = append(jb.Tasks, tt)
 
 		}
 		d.Job = append(d.Job, *jb)
@@ -219,12 +217,48 @@ func getScheduleDetail(s *schedule.Schedule) Schedule {
 
 	return *d
 
-}
+} // }}}
 
 func addSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
 	fmt.Println(ctx.Params)
 	fmt.Println(ctx.Request)
 
+}
+
+//addJob获取客户端发送的Job信息，并调用Schedule的AddJob方法将其
+//持久化并添加至Schedule中。
+//成功返回添加好的Job信息
+//错误返回err信息
+func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) {
+
+	if job.Name == "" {
+		ctx.WriteHeader(500)
+		fmt.Println("++++++++++++")
+		return
+	}
+	if s := Ss.GetScheduleById(int64(job.ScheduleId)); s != nil {
+		job.ScheduleCyc = s.Cyc
+		job.CreateUserId = 1
+		job.ModifyUserId = 1
+		if err := s.AddJob(&job); err != nil {
+			ctx.WriteHeader(500)
+			fmt.Println(err)
+			fmt.Println("-----------------------------------------")
+			ctx.WriteString("Hello World!")
+		} else {
+			j := &schedule.Job{}
+			fmt.Println("-----------------------------------------")
+			fmt.Println(job)
+			schedule.Copy(j, job)
+			j.PreJob = &schedule.Job{}
+			j.NextJob = &schedule.Job{}
+			fmt.Println(j)
+			r.JSON(200, j)
+		}
+	} else {
+		fmt.Println("=========")
+		ctx.WriteHeader(500)
+	}
 }
 
 func deleteSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) {

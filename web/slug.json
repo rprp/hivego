@@ -14,6 +14,7 @@
         "raphaelify",
         "eve",
         "spineify",
+        "spineify/lib/spine",
         "spineify/lib/local",
         "spineify/lib/ajax",
         "spineify/lib/route",

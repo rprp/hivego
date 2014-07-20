@@ -43,6 +43,9 @@ class ScheduleInfo extends Spine.Controller
   draw: (rs) =>
     @item = Schedule.find(rs.Id)
 
+    h = @item?.Job?.length*140
+    h = 800 if h < 800
+    @pant.css("height", h)
     paper = Raphael(@pant.get(0),'100%','100%')
 
     [@width, @height] = [parseFloat(@pant.css("width")), parseFloat(@pant.css("height"))]

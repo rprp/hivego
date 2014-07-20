@@ -6,7 +6,7 @@ import (
 )
 
 // 任务信息结构
-type Task struct {
+type Task struct { // {{{
 	Id           int64             // 任务的ID
 	Address      string            // 任务的执行地址
 	Name         string            // 任务名称
@@ -20,13 +20,13 @@ type Task struct {
 	Param        map[string]string // 任务的参数信息
 	Attr         map[string]string // 任务的属性信息
 	JobId        int64             //所属作业ID
-	RelTasks     map[int64]*Task   //依赖的任务
+	RelTasks     map[string]*Task  //依赖的任务
 	RelTaskCnt   int64             //依赖的任务数量
 	CreateUserId int64             //创建人
 	CreateTime   time.Time         //创人
 	ModifyUserId int64             //修改人
 	ModifyTime   time.Time         //修改时间
-}
+} // }}}
 
 //refreshTask方法用来从元数据库刷新Task的信息
 func (t *Task) refreshTask(jobid int64) { // {{{
@@ -42,12 +42,12 @@ func (t *Task) refreshTask(jobid int64) { // {{{
 	t.Param = tt.Param
 	t.JobId = jobid
 	t.Attr = tt.Attr
-	t.RelTasks = make(map[int64]*Task)
+	t.RelTasks = make(map[string]*Task)
 	t.RelTaskCnt = 0
 
 	reltask := getRelTaskId(t.Id)
 	for _, rtid := range reltask {
-		t.RelTasks[rtid] = g.Tasks[rtid]
+		t.RelTasks[string(rtid)] = g.Tasks[string(rtid)]
 		t.RelTaskCnt++
 	}
 
@@ -317,7 +317,7 @@ func getTask(id int64) (task *Task) { // {{{
 	for rows.Next() {
 		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.TaskCyc, &td, &task.Cmd)
 		//初始化relTask、param的内存
-		task.RelTasks = make(map[int64]*Task)
+		task.RelTasks = make(map[string]*Task)
 		task.Param = make(map[string]string)
 		task.Attr = make(map[string]string)
 		task.Attr, err = getTaskAttr(task.Id)
@@ -330,9 +330,9 @@ func getTask(id int64) (task *Task) { // {{{
 } // }}}
 
 //从元数据库获取Job下的Task列表。
-func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
+func getAllTasks() (tasks map[string]*Task, err error) { // {{{
 
-	tasks = make(map[int64]*Task)
+	tasks = make(map[string]*Task)
 
 	//查询全部Task列表
 	sql := `SELECT task.task_id,
@@ -353,7 +353,7 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 		var td int64
 		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.TaskCyc, &td, &task.Cmd)
 		//初始化relTask、param的内存
-		task.RelTasks = make(map[int64]*Task)
+		task.RelTasks = make(map[string]*Task)
 		task.Param = make(map[string]string)
 		task.Attr = make(map[string]string)
 		task.Attr, err = getTaskAttr(task.Id)
@@ -361,15 +361,15 @@ func getAllTasks() (tasks map[int64]*Task, err error) { // {{{
 		task.StartSecond = time.Duration(td) * time.Second
 		CheckErr("getAllTask", err)
 
-		tasks[task.Id] = task
+		tasks[string(task.Id)] = task
 	}
 	return tasks, err
 } // }}}
 
 //从元数据库获取Job下的Task列表。
-func getTasks(jobId int64) (tasks map[int64]*Task) { // {{{
+func getTasks(jobId int64) (tasks map[string]*Task) { // {{{
 
-	tasks = make(map[int64]*Task)
+	tasks = make(map[string]*Task)
 
 	//查询Job中全部Task列表
 	sql := `SELECT jt.task_id
@@ -384,8 +384,8 @@ func getTasks(jobId int64) (tasks map[int64]*Task) { // {{{
 		err = rows.Scan(&taskid)
 		CheckErr("getTasks", err)
 		if task := getTask(taskid); task.Id != 0 {
-			tasks[taskid] = task
-			g.Tasks[taskid] = task
+			tasks[string(taskid)] = task
+			g.Tasks[string(taskid)] = task
 		}
 	}
 	g.L.Debugln("get task", tasks)
@@ -393,9 +393,9 @@ func getTasks(jobId int64) (tasks map[int64]*Task) { // {{{
 } // }}}
 
 //从元数据库获取Job下的Task列表。
-func getJobTaskid() (jobtask map[int64]int64, err error) { // {{{
+func getJobTaskid() (jobtask map[string]int64, err error) { // {{{
 
-	jobtask = make(map[int64]int64)
+	jobtask = make(map[string]int64)
 
 	//查询Job中全部Task列表
 	sql := `SELECT jt.job_id,
@@ -408,7 +408,7 @@ func getJobTaskid() (jobtask map[int64]int64, err error) { // {{{
 	for rows.Next() {
 		var jobid, taskid int64
 		err = rows.Scan(&jobid, &taskid)
-		jobtask[taskid] = jobid
+		jobtask[string(taskid)] = jobid
 	}
 	return jobtask, err
 } // }}}
