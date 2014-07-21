@@ -25138,22 +25138,24 @@ Released under the MIT License
     };
 
     JobManager.prototype.events = {
-      "click .close": "hideAddJob",
+      "click .close": "postAddJob",
       "keypress #jobname": "keypress",
       "keypress #jobdesc": "keypress"
     };
 
     function JobManager(paper, color, item, width, sinfo) {
-      var addbtn, i, icoplus, job, jobcir, jobname, jobrect, left, s, top, _i, _len, _ref, _ref1, _ref2, _ref3;
+      var icoplus, left, top, _ref, _ref1;
       this.paper = paper;
       this.color = color;
       this.item = item;
       this.width = width;
       this.sinfo = sinfo;
-      this.addjob = __bind(this.addjob, this);
+      this.refreshSchedule = __bind(this.refreshSchedule, this);
+      this.showAddJob = __bind(this.showAddJob, this);
       this.render = __bind(this.render, this);
+      this.refreshJobList = __bind(this.refreshJobList, this);
       JobManager.__super__.constructor.apply(this, arguments);
-      this.font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
+      this.font = "Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', '华文细黑', Helvetica, Tahoma, Arial, STXihei, sans-serif";
       this.fontStyle = {
         fill: "#333",
         "font-family": this.font,
@@ -25164,76 +25166,79 @@ Released under the MIT License
         "stroke-width": 1
       };
       this.jobFontStyle = {
-        stroke: this.color[i],
-        "fill": this.color[i],
         "font-family": this.font,
-        "font-size": 16,
+        "font-size": 18,
         "stroke-opacity": 1,
         "fill-opacity": 1,
+        "stroke-width": 0
+      };
+      this.jobcirStyle = {
+        "fill-opacity": 0.2,
         "stroke-width": 1
+      };
+      this.jobrectStyle = {
+        "fill-opacity": 0.1,
+        "stroke-width": 0
+      };
+      this.titlerectStyle = {
+        fill: "#31708f",
+        stroke: "#31708f",
+        "fill-opacity": 0.05,
+        "stroke-width": 0,
+        cursor: "hand"
+      };
+      this.addButtonStyle = {
+        fill: "#31708f",
+        stroke: "#31708f",
+        "fill-opacity": 0.1,
+        "stroke-opacity": 0.2,
+        "stroke-dasharray": "-",
+        "stroke-width": 1,
+        cursor: "hand"
       };
       icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z";
       this.height = 0;
       this.paper.setStart();
       _ref = [30, 10], top = _ref[0], left = _ref[1];
       this.title = this.paper.text(left, top, "作业列表").attr(this.fontStyle);
-      _ref1 = [top + 40, left], top = _ref1[0], left = _ref1[1];
+      this.titlerect = this.paper.rect(left, top - 20, 190, 35, 3).attr(this.titlerectStyle);
+      this.titlerect.hover(this.hoveron, this.hoverout);
+      this.titlerect.click(this.showAddJob);
+      this.addButton = this.paper.path(icoplus);
+      this.addButton.attr(this.addButtonStyle);
+      this.addButton.toBack();
+      this.set = this.paper.setFinish();
+      _ref1 = this.refreshJobList(top + 40, left), top = _ref1[0], left = _ref1[1];
+      this.height = top;
+    }
+
+    JobManager.prototype.refreshJobList = function(top, left) {
+      var i, job, jobcir, jobname, jobrect, s, _i, _len, _ref, _ref1, _results;
       this.list = [];
-      _ref2 = this.item.Job;
-      for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
-        job = _ref2[i];
+      _ref = this.item.Job;
+      _results = [];
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        job = _ref[i];
         if (!(job.Id !== 0)) {
           continue;
         }
         s = this.paper.set();
         jobname = this.paper.text(left + 80, top, job.Name).attr(this.jobFontStyle);
-        jobname.attr("stroke", this.color[i]);
-        jobname.attr("fill", this.color[i]);
-        jobcir = this.paper.circle(left + 25, top, 15);
-        jobcir.attr({
-          fill: this.color[i],
-          stroke: this.color[i],
-          "fill-opacity": 0.2,
-          "stroke-width": 1
-        });
-        jobrect = this.paper.rect(left, top - 20, 190, 40, 5);
-        jobrect.attr({
-          fill: this.color[i],
-          stroke: this.color[i],
-          "fill-opacity": 0.1,
-          "stroke-width": 0
-        });
+        jobcir = this.paper.circle(left + 25, top, 15).attr(this.jobcirStyle);
+        jobrect = this.paper.rect(left, top - 20, 190, 40, 4).attr(this.jobrectStyle);
         s.push(jobname, jobcir, jobrect);
+        s.attr("stroke", this.color[i]);
+        s.attr("fill", this.color[i]);
         s.data("Id", job.Id);
         s.data("sinfo", this.sinfo);
         s.hover(this.hoveron, this.hoverout);
+        this.set.push(s);
         this.list.push(s);
         this.lastJob = job;
-        _ref3 = [top + 50, left], top = _ref3[0], left = _ref3[1];
+        _results.push((_ref1 = [top + 50, left], top = _ref1[0], left = _ref1[1], _ref1));
       }
-      addbtn = this.paper.rect(left, top - 20, 190, 40, 5).attr({
-        fill: "#31708f",
-        stroke: "#31708f",
-        "fill-opacity": 0.1,
-        "stroke-width": 0,
-        cursor: "hand"
-      });
-      addbtn.hover(this.hoveron, this.hoverout);
-      addbtn.click(this.addjob);
-      this.addButton = this.paper.path(icoplus);
-      this.addButton.attr({
-        fill: "#31708f",
-        stroke: "#31708f",
-        "fill-opacity": 0.4,
-        "stroke-opacity": 0.8,
-        "stroke-dasharray": "-",
-        "stroke-width": 1,
-        cursor: "hand"
-      });
-      this.addButton.toBack();
-      this.set = this.paper.setFinish();
-      this.height = top;
-    }
+      return _results;
+    };
 
     JobManager.prototype.hoveron = function() {
       var a, _ref;
@@ -25261,31 +25266,48 @@ Released under the MIT License
       return this.el.css("position", "absolute");
     };
 
-    JobManager.prototype.addjob = function(e) {
-      Spine.trigger("addjob", e.screenX, e.screenY);
+    JobManager.prototype.showAddJob = function(e) {
+      Spine.trigger("addJobRender", e.screenX, e.screenY);
       this.jobname.focus();
       return e;
     };
 
     JobManager.prototype.keypress = function(e) {
       if (e.keyCode === 13 && e.ctrlKey) {
-        return this.hideAddJob(e);
+        return this.postAddJob(e);
       } else if (e.keyCode === 13) {
         return this.jobdesc.focus();
       }
     };
 
-    JobManager.prototype.hideAddJob = function(e) {
+    JobManager.prototype.postAddJob = function(e) {
       var jb;
       this.el.css("display", "none");
       jb = new Job();
+      jb.bind("ajaxSuccess", this.refreshSchedule);
       jb.Name = this.jobname.val();
       jb.Desc = this.jobdesc.val();
       jb.ScheduleId = this.item.Id;
       jb.PreJobId = this.prejobid.val() ? parseInt(this.prejobid.val()) : 0;
       jb.Id = -1;
       if (jb.Name) {
-        return jb.save();
+        return jb.create();
+      }
+    };
+
+    JobManager.prototype.refreshSchedule = function(data, status, xhr) {
+      var s, _i, _len, _ref;
+      if (xhr === "success") {
+        _ref = this.list;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          s = _ref[_i];
+          s.pop().remove();
+          s.pop().remove();
+          s.pop().remove();
+        }
+        this.item.Job.push(data);
+        this.refreshJobList(70, 10);
+        return this.trigger("refreshJobList");
       }
     };
 
@@ -25330,13 +25352,13 @@ Released under the MIT License
     };
 
     function ScheduleInfo() {
-      this.addjob = __bind(this.addjob, this);
+      this.renderAddJob = __bind(this.renderAddJob, this);
       this.draw = __bind(this.draw, this);
       this.render = __bind(this.render, this);
       this.change = __bind(this.change, this);
       ScheduleInfo.__super__.constructor.apply(this, arguments);
       Schedule.bind("findRecord", this.draw);
-      Spine.bind("addjob", this.addjob);
+      Spine.bind("addJobRender", this.renderAddJob);
       this.active(this.change);
     }
 
@@ -25384,8 +25406,8 @@ Released under the MIT License
       return this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
     };
 
-    ScheduleInfo.prototype.addjob = function(x, y) {
-      return this.append(this.ssl.jobManager.render(this.width - 300, this.height - 380));
+    ScheduleInfo.prototype.renderAddJob = function(x, y) {
+      return this.append(this.ssl.jobManager.render(this.width - 350, this.ssl.scheduleManager.height));
     };
 
     return ScheduleInfo;
@@ -25399,6 +25421,7 @@ Released under the MIT License
       this.width = width;
       this.height = height;
       this.item = item;
+      this.layout = __bind(this.layout, this);
       this.color = ['#FF8C00', '#008000', '#2F4F4F', '#DA70D6', '#0000FF', '#8A2BE2', '#6495ED', '#B8860B', '#FF4500', '#AFEEEE', '#DB7093', '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#00BFFF', '#008B8B', '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#7FFF00', '#DEB887', '#98FB98', '#FFD700', '#5F9EA0', '#D2691E', '#A9A9A9', '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0', '#006400', '#BDB76B', '#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32'];
       _ref = [
         Raphael.animation({
@@ -25417,13 +25440,14 @@ Released under the MIT License
       });
       this.scheduleManager = new ScheduleManager(this.paper, this.color, this.item, 220);
       this.jobManager = new JobManager(this.paper, this.color, this.item, 220, this);
+      this.jobManager.bind("refreshJobList", this.layout);
       this.layout();
     }
 
     ScheduleSymbol.prototype.layout = function() {
       this.scheduleManager.set.transform("t" + (this.width - 220) + ",10");
       this.jobManager.set.transform("t" + (this.width - 220) + "," + (this.scheduleManager.height + 10));
-      return this.jobManager.addButton.transform("t" + (this.width - 60) + "," + (this.scheduleManager.height + this.jobManager.height - 5) + "s1.5");
+      return this.jobManager.addButton.transform("t" + (this.width - 60) + "," + (this.scheduleManager.height + 20) + "s1.2");
     };
 
     return ScheduleSymbol;

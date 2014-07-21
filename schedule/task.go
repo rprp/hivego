@@ -241,10 +241,10 @@ func (t *Task) SetNewId() (err error) { // {{{
 } // }}}
 
 // 任务依赖结构
-type RelTask struct {
+type RelTask struct { // {{{
 	taskId    int64 //任务ID
 	reltaskId int64 //依赖任务ID
-}
+} // }}}
 
 //从元数据库获取任务参数信息
 func getTaskParam(id int64) (taskParam map[string]string, err error) { // {{{

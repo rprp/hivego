@@ -20,7 +20,7 @@ class ScheduleInfo extends Spine.Controller
   constructor: ->
     super
     Schedule.bind("findRecord",  @draw)
-    Spine.bind("addjob", @addjob)
+    Spine.bind("addJobRender", @renderAddJob)
     @active @change
 
   change: (params) =>
@@ -52,8 +52,8 @@ class ScheduleInfo extends Spine.Controller
 
     @ssl = new ScheduleSymbol(paper,@width,@height,@item)
 
-  addjob: (x, y) =>
-    @append(@ssl.jobManager.render(@width-300,@height-380))
+  renderAddJob: (x, y) =>
+    @append(@ssl.jobManager.render(@width-350,@ssl.scheduleManager.height))
 
 class ScheduleSymbol
   constructor: (@paper, @width, @height, @item) ->
@@ -79,6 +79,7 @@ class ScheduleSymbol
     
     @scheduleManager = new ScheduleManager(@paper,@color,@item,220)
     @jobManager = new JobManager(@paper,@color,@item,220,@)
+    @jobManager.bind("refreshJobList",@layout)
 
     @layout()
 
@@ -89,9 +90,9 @@ class ScheduleSymbol
 
     #jobflg.click =>
 
-  layout: ->
+  layout: =>
     @scheduleManager.set.transform("t#{@width-220},10")
     @jobManager.set.transform("t#{@width-220},#{@scheduleManager.height+10}")
-    @jobManager.addButton.transform("t#{@width-60},#{@scheduleManager.height + @jobManager.height - 5}s1.5")
+    @jobManager.addButton.transform("t#{@width-60},#{@scheduleManager.height + 20}s1.2")
 
 module.exports = ScheduleInfo
