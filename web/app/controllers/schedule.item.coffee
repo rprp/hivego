@@ -57,7 +57,6 @@ class ScheduleItem extends Spine.Controller
     require('views/schedule-show')(items)
 
   remove: ->
-    @el.remove()
 
   showcyc: ->
     alert('！')

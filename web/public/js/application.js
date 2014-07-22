@@ -25107,7 +25107,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/job.list": function(exports, require, module) {(function() {
-  var $, Eve, Events, Job, JobManager, Module, Raphael, Spine,
+  var $, Eve, Events, Job, JobManager, Module, Raphael, Schedule, Spine,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -25117,6 +25117,8 @@ Released under the MIT License
   Events = Spine.Events;
 
   Module = Spine.Module;
+
+  Schedule = require('models/schedule');
 
   Raphael = require('raphaelify');
 
@@ -25144,17 +25146,23 @@ Released under the MIT License
     };
 
     function JobManager(paper, color, item, width, sinfo) {
-      var icoplus, left, top, _ref, _ref1;
+      var left, top, _ref, _ref1;
       this.paper = paper;
       this.color = color;
       this.item = item;
       this.width = width;
       this.sinfo = sinfo;
-      this.refreshSchedule = __bind(this.refreshSchedule, this);
+      this.delJobAndRefresh = __bind(this.delJobAndRefresh, this);
+      this.addJobAndRefresh = __bind(this.addJobAndRefresh, this);
       this.showAddJob = __bind(this.showAddJob, this);
       this.render = __bind(this.render, this);
       this.refreshJobList = __bind(this.refreshJobList, this);
       JobManager.__super__.constructor.apply(this, arguments);
+      if (this.item.Jobs) {
+        Job.fetch({
+          url: "/schedules/" + this.item.Id + "/jobs"
+        });
+      }
       this.font = "Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', '华文细黑', Helvetica, Tahoma, Arial, STXihei, sans-serif";
       this.fontStyle = {
         fill: "#333",
@@ -25174,7 +25182,8 @@ Released under the MIT License
       };
       this.jobcirStyle = {
         "fill-opacity": 0.2,
-        "stroke-width": 1
+        "stroke-width": 1,
+        cursor: "hand"
       };
       this.jobrectStyle = {
         "fill-opacity": 0.1,
@@ -25196,7 +25205,7 @@ Released under the MIT License
         "stroke-width": 1,
         cursor: "hand"
       };
-      icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z";
+      this.icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z";
       this.height = 0;
       this.paper.setStart();
       _ref = [30, 10], top = _ref[0], left = _ref[1];
@@ -25204,7 +25213,7 @@ Released under the MIT License
       this.titlerect = this.paper.rect(left, top - 20, 190, 35, 3).attr(this.titlerectStyle);
       this.titlerect.hover(this.hoveron, this.hoverout);
       this.titlerect.click(this.showAddJob);
-      this.addButton = this.paper.path(icoplus);
+      this.addButton = this.paper.path(this.icoplus);
       this.addButton.attr(this.addButtonStyle);
       this.addButton.toBack();
       this.set = this.paper.setFinish();
@@ -25213,9 +25222,12 @@ Released under the MIT License
     }
 
     JobManager.prototype.refreshJobList = function(top, left) {
-      var i, job, jobcir, jobname, jobrect, s, _i, _len, _ref, _ref1, _results;
+      var i, job, jobcir, jobname, jobrect, s, s1, subButton, _i, _len, _ref, _ref1, _results;
       this.list = [];
-      _ref = this.item.Job;
+      if (!this.item.Jobs) {
+        return [top, left];
+      }
+      _ref = this.item.Jobs;
       _results = [];
       for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
         job = _ref[i];
@@ -25223,15 +25235,32 @@ Released under the MIT License
           continue;
         }
         s = this.paper.set();
+        s1 = this.paper.set();
         jobname = this.paper.text(left + 80, top, job.Name).attr(this.jobFontStyle);
-        jobcir = this.paper.circle(left + 25, top, 15).attr(this.jobcirStyle);
         jobrect = this.paper.rect(left, top - 20, 190, 40, 4).attr(this.jobrectStyle);
+        jobcir = this.paper.circle(left + 25, top, 15).attr(this.jobcirStyle);
+        if (job.TaskCnt === 0 && job.NextJobId === 0) {
+          subButton = this.paper.rect(left + 150, top - 5, 25, 8, 4).attr(this.jobrectStyle);
+          subButton.attr(this.jobrectStyle);
+          subButton.attr("cursor", "hand");
+          subButton.attr("fill-opacity", 0.01);
+          subButton.data("Id", job.Id);
+          subButton.data("Sid", this.item.Id);
+          subButton.data("item", this.item);
+          subButton.data("job", job);
+          subButton.data("this", this);
+          subButton.click(this.delJob);
+          s.push(subButton);
+          s1.push(subButton);
+        }
         s.push(jobname, jobcir, jobrect);
         s.attr("stroke", this.color[i]);
         s.attr("fill", this.color[i]);
         s.data("Id", job.Id);
         s.data("sinfo", this.sinfo);
-        s.hover(this.hoveron, this.hoverout);
+        s1.push(jobcir);
+        s.hover(this.hoveron, this.hoverout, s1, s1);
+        s.hover(this.hlightTasks, this.nlightTasks);
         this.set.push(s);
         this.list.push(s);
         this.lastJob = job;
@@ -25240,22 +25269,30 @@ Released under the MIT License
       return _results;
     };
 
-    JobManager.prototype.hoveron = function() {
-      var a, _ref;
-      a = Raphael.animation({
-        "fill-opacity": 0.6
-      }, 300);
-      this.animate(a);
+    JobManager.prototype.hlightTasks = function() {
+      var _ref;
       return (_ref = this.data("sinfo")) != null ? _ref.taskManager.hlight(this.data("Id")) : void 0;
     };
 
+    JobManager.prototype.hoveron = function() {
+      var a;
+      a = Raphael.animation({
+        "fill-opacity": 0.8
+      }, 200);
+      return this.animate(a);
+    };
+
+    JobManager.prototype.nlightTasks = function() {
+      var _ref;
+      return (_ref = this.data("sinfo")) != null ? _ref.taskManager.nlight(this.data("Id")) : void 0;
+    };
+
     JobManager.prototype.hoverout = function() {
-      var b, _ref;
+      var b;
       b = Raphael.animation({
         "fill-opacity": 0.1
-      }, 300);
-      this.animate(b);
-      return (_ref = this.data("sinfo")) != null ? _ref.taskManager.nlight(this.data("Id")) : void 0;
+      }, 200);
+      return this.animate(b);
     };
 
     JobManager.prototype.render = function(x, y) {
@@ -25280,24 +25317,41 @@ Released under the MIT License
       }
     };
 
+    JobManager.prototype.delJob = function(e) {
+      var jb, ts;
+      jb = Job.find(this.data("Id"));
+      ts = this.data("this");
+      jb.bind("change", ts != null ? ts.delJobAndRefresh : void 0);
+      return jb.destroy({
+        url: "/schedules/" + (this.data("Sid")) + "/jobs/" + (this.data("Id"))
+      });
+    };
+
     JobManager.prototype.postAddJob = function(e) {
       var jb;
       this.el.css("display", "none");
       jb = new Job();
-      jb.bind("ajaxSuccess", this.refreshSchedule);
+      jb.bind("ajaxSuccess", this.addJobAndRefresh);
       jb.Name = this.jobname.val();
       jb.Desc = this.jobdesc.val();
       jb.ScheduleId = this.item.Id;
       jb.PreJobId = this.prejobid.val() ? parseInt(this.prejobid.val()) : 0;
       jb.Id = -1;
       if (jb.Name) {
-        return jb.create();
+        return jb.create({
+          url: "/schedules/" + this.item.Id + "/jobs"
+        });
       }
     };
 
-    JobManager.prototype.refreshSchedule = function(data, status, xhr) {
-      var s, _i, _len, _ref;
+    JobManager.prototype.addJobAndRefresh = function(data, status, xhr) {
+      var id, s, _i, _len, _ref;
       if (xhr === "success") {
+        id = this.item.Id;
+        Schedule.fetch({
+          Id: id
+        });
+        this.item = Schedule.find(id);
         _ref = this.list;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           s = _ref[_i];
@@ -25305,10 +25359,27 @@ Released under the MIT License
           s.pop().remove();
           s.pop().remove();
         }
-        this.item.Job.push(data);
         this.refreshJobList(70, 10);
         return this.trigger("refreshJobList");
       }
+    };
+
+    JobManager.prototype.delJobAndRefresh = function(data, status, xhr) {
+      var id, s, _i, _len, _ref;
+      id = this.item.Id;
+      Schedule.fetch({
+        Id: id
+      });
+      this.item = Schedule.find(id);
+      _ref = this.list;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        s = _ref[_i];
+        s.pop().remove();
+        s.pop().remove();
+        s.pop().remove();
+      }
+      this.refreshJobList(70, 10);
+      return this.trigger("refreshJobList");
     };
 
     return JobManager;
@@ -25396,8 +25467,8 @@ Released under the MIT License
     ScheduleInfo.prototype.draw = function(rs) {
       var h, paper, _ref, _ref1, _ref2;
       this.item = Schedule.find(rs.Id);
-      h = ((_ref = this.item) != null ? (_ref1 = _ref.Job) != null ? _ref1.length : void 0 : void 0) * 140;
-      if (h < 800) {
+      h = ((_ref = this.item) != null ? (_ref1 = _ref.Jobs) != null ? _ref1.length : void 0 : void 0) * 140;
+      if ((h != null) || h < 800) {
         h = 800;
       }
       this.pant.css("height", h);
@@ -25650,9 +25721,7 @@ Released under the MIT License
       return require('views/schedule-show')(items);
     };
 
-    ScheduleItem.prototype.remove = function() {
-      return this.el.remove();
-    };
+    ScheduleItem.prototype.remove = function() {};
 
     ScheduleItem.prototype.showcyc = function() {
       return alert('！');
@@ -25770,7 +25839,7 @@ Released under the MIT License
 
   TaskManager = (function() {
     function TaskManager(paper, color, item, width, height) {
-      var i, j, job, left, r, rt, rts, spacing, t, task, top, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+      var i, j, job, k, left, r, rts, spacing, t, task, tasks, top, v, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
       this.paper = paper;
       this.color = color;
       this.item = item;
@@ -25779,44 +25848,55 @@ Released under the MIT License
       this.set = this.paper.set();
       top = 80;
       this.ts = [];
-      _ref = this.item.Job;
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        job = _ref[i];
-        if (job.Tasks.length > 0) {
-          spacing = (this.width - 200) / job.Tasks.length;
-        }
-        r = 25;
-        spacing = 100;
-        if (job.Tasks.length > 0) {
-          left = (this.width - 200) / 2 - (job.Tasks.length / 2) * spacing;
-        }
-        _ref1 = job.Tasks;
-        for (j = _j = 0, _len1 = _ref1.length; _j < _len1; j = ++_j) {
-          task = _ref1[j];
-          t = new TaskSymbol(paper, left, top, task.Name, this.color[i], r);
-          t.Id = task.Id;
-          t.JobId = job.Id;
-          t.RelTaskId = (function() {
-            var _k, _len2, _ref2, _results;
-            _ref2 = task.RelTasks;
+      if (this.item.Jobs) {
+        _ref = this.item.Jobs;
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          job = _ref[i];
+          tasks = (function() {
+            var _ref1, _results;
+            _ref1 = job.Tasks;
             _results = [];
-            for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-              rt = _ref2[_k];
-              _results.push(rt.Id);
+            for (k in _ref1) {
+              v = _ref1[k];
+              _results.push(v);
             }
             return _results;
           })();
-          this.ts.push(t);
-          this.set.push(t.sp);
-          this.set.push(t.text);
-          _ref2 = this.getTaskSymbol(t.RelTaskId);
-          for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-            rts = _ref2[_k];
-            rts.addNext(t);
+          if (tasks.length > 0) {
+            spacing = (this.width - 200) / tasks.length;
           }
-          left += spacing;
+          r = 25;
+          spacing = 100;
+          if (tasks.length > 0) {
+            left = (this.width - 200) / 2 - (tasks.length / 2) * spacing;
+          }
+          for (j = _j = 0, _len1 = tasks.length; _j < _len1; j = ++_j) {
+            task = tasks[j];
+            t = new TaskSymbol(paper, left, top, task.Name, this.color[i], r);
+            t.Id = task.Id;
+            t.JobId = job.Id;
+            t.RelTaskId = (function() {
+              var _ref1, _results;
+              _ref1 = task.RelTasks;
+              _results = [];
+              for (k in _ref1) {
+                v = _ref1[k];
+                _results.push(v.Id);
+              }
+              return _results;
+            })();
+            this.ts.push(t);
+            this.set.push(t.sp);
+            this.set.push(t.text);
+            _ref1 = this.getTaskSymbol(t.RelTaskId);
+            for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
+              rts = _ref1[_k];
+              rts.addNext(t);
+            }
+            left += spacing;
+          }
+          top += 120;
         }
-        top += 120;
       }
     }
 
@@ -26196,7 +26276,7 @@ Released under the MIT License
 
 }).call(this);
 }, "models/schedule": function(exports, require, module) {(function() {
-  var Moment, Schedule, Spine,
+  var Job, Moment, Schedule, Spine,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -26206,10 +26286,12 @@ Released under the MIT License
 
   Spine = require('spineify');
 
+  Job = require('models/job');
+
   Schedule = (function(_super) {
     __extends(Schedule, _super);
 
-    Schedule.configure('Schedule', 'Id', 'Name', 'TaskCnt', 'Job', 'Count', 'Cyc', 'StartMonth', 'StartSecond', 'NextStart', 'TimeOut', 'Desc', 'CreateTime', 'CreateUserId', 'ModifyTime', 'ModifyUserId');
+    Schedule.configure('Schedule', 'Id', 'Name', 'TaskCnt', "Job", "JobCnt", "Jobs", "JobId", 'Count', 'Cyc', 'StartMonth', 'StartSecond', 'NextStart', 'TimeOut', 'Desc', 'CreateTime', 'CreateUserId', 'ModifyTime', 'ModifyUserId');
 
     Schedule.extend(Spine.Model.Ajax);
 

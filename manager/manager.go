@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
@@ -9,6 +10,7 @@ import (
 	"github.com/rprp/hive/schedule"
 	"log"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"time"
 )
@@ -42,13 +44,17 @@ func controller(m *martini.ClassicMartini) {
 		r.HTML(200, "index", nil)
 	})
 
-	m.Group("", func(r martini.Router) {
-		r.Get("/schedules", getSchedules)
-		r.Post("/schedules", addSchedule)
-		r.Get("/schedules/:id", getScheduleById)
-		r.Put("/schedules/:id", updateSchedule)
-		r.Delete("/schedules/:id", deleteSchedule)
-		r.Post("/jobs", binding.Bind(schedule.Job{}), addJob)
+	m.Group("/schedules", func(r martini.Router) {
+		r.Get("", getSchedules)
+		r.Post("", addSchedule)
+		r.Get("/:id", getScheduleById)
+		r.Put("/:id", updateSchedule)
+		r.Delete("/:id", deleteSchedule)
+
+		r.Get("/:sid/jobs", getJobsForSchedule)
+		r.Post("/:sid/jobs", binding.Bind(schedule.Job{}), addJob)
+		r.Delete("/:sid/jobs/:id", deleteJob)
+
 	})
 
 }
@@ -133,7 +139,15 @@ func getScheduleById(params martini.Params, r render.Render, res http.ResponseWr
 		id, _ := strconv.Atoi(i)
 		for _, s := range Ss.ScheduleList {
 			if s.Id == int64(id) {
-				r.JSON(200, getScheduleDetail(s))
+				//s1 := &schedule.Schedule{}
+				//schedule.Copy(s1, s)
+				//result, _ := json.Marshal(s1)
+				//fmt.Println(string(result))
+				fmt.Println("++++++++++++++++++")
+				fmt.Println(s)
+				fmt.Println("++++++++++++++++++")
+				r.JSON(200, s)
+				//r.JSON(200, getScheduleDetail(s))
 				return
 			}
 		}
@@ -225,15 +239,52 @@ func addSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.Schedul
 
 }
 
+func deleteJob(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager) {
+
+	sid, sidok := params["sid"]
+	id, idok := params["id"]
+
+	if !sidok || !idok {
+		ctx.WriteHeader(500)
+		return
+	}
+
+	ssid, _ := strconv.Atoi(sid)
+	iid, _ := strconv.Atoi(id)
+
+	if s := Ss.GetScheduleById(int64(ssid)); s != nil {
+		if err := s.DeleteJob(int64(iid)); err != nil {
+			ctx.WriteHeader(500)
+			fmt.Println(err)
+			fmt.Println("-----------------------------------------")
+			ctx.WriteString("error:")
+		} else {
+			ctx.WriteHeader(204)
+			ctx.WriteString("success")
+			fmt.Println("-----------------ok------------------------")
+		}
+
+	}
+
+}
+
 //addJob获取客户端发送的Job信息，并调用Schedule的AddJob方法将其
 //持久化并添加至Schedule中。
 //成功返回添加好的Job信息
 //错误返回err信息
 func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) {
 
+	defer func() {
+		if err := recover(); err != nil {
+			var buf bytes.Buffer
+			buf.Write(debug.Stack())
+			fmt.Println("err=", err, " stack=", buf.String())
+			return
+		}
+	}()
+
 	if job.Name == "" {
 		ctx.WriteHeader(500)
-		fmt.Println("++++++++++++")
 		return
 	}
 	if s := Ss.GetScheduleById(int64(job.ScheduleId)); s != nil {
@@ -243,12 +294,9 @@ func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job
 		if err := s.AddJob(&job); err != nil {
 			ctx.WriteHeader(500)
 			fmt.Println(err)
-			fmt.Println("-----------------------------------------")
-			ctx.WriteString("Hello World!")
 		} else {
 			j := &schedule.Job{}
 			fmt.Println("-----------------------------------------")
-			fmt.Println(job)
 			schedule.Copy(j, job)
 			j.PreJob = &schedule.Job{}
 			j.NextJob = &schedule.Job{}
@@ -256,9 +304,23 @@ func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job
 			r.JSON(200, j)
 		}
 	} else {
-		fmt.Println("=========")
 		ctx.WriteHeader(500)
 	}
+}
+
+func getJobsForSchedule(ctx *web.Context, params martini.Params, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
+
+	sid, sidok := params["sid"]
+	if !sidok {
+		ctx.WriteHeader(500)
+		return
+	}
+
+	ssid, _ := strconv.Atoi(sid)
+	if s := Ss.GetScheduleById(int64(ssid)); s != nil {
+		r.JSON(200, s.Jobs)
+	}
+	return
 }
 
 func deleteSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) {

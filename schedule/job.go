@@ -13,9 +13,9 @@ type Job struct { // {{{
 	Name         string           //作业名称
 	Desc         string           //作业说明
 	PreJobId     int64            //上级作业ID
-	PreJob       *Job             //上级作业
+	PreJob       *Job             `json:"-"` //上级作业
 	NextJobId    int64            //下级作业ID
-	NextJob      *Job             //下级作业
+	NextJob      *Job             `json:"-"` //下级作业
 	Tasks        map[string]*Task //作业中的任务
 	TaskCnt      int64            //调度中任务数量
 	CreateUserId int64            //创建人
@@ -138,7 +138,6 @@ func (j *Job) DeleteTask(taskid int64) (err error) { // {{{
 
 //修改作业信息至元数据库
 func (j *Job) Update() (err error) { // {{{
-
 	sql := `UPDATE scd_job
 		SET job_name=?, 
 			job_desc=?,
@@ -153,13 +152,8 @@ func (j *Job) Update() (err error) { // {{{
 
 //删除作业信息至元数据库
 func (j *Job) Delete() (err error) { // {{{
-
-	sql := `DELETE scd_job_task WHERE job_id=?`
+	sql := `DELETE FROM scd_job WHERE job_id=?`
 	_, err = g.HiveConn.Exec(sql, &j.Id)
-
-	sql = `DELETE scd_job WHERE job_id=?`
-	_, err = g.HiveConn.Exec(sql, &j.Id)
-
 	return err
 } // }}}
 

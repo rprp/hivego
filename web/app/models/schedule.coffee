@@ -1,8 +1,9 @@
 Moment = require('momentifycn')
 Spine = require('spineify')
+Job = require('models/job')
 
 class Schedule extends Spine.Model
-  @configure 'Schedule', 'Id', 'Name', 'TaskCnt', 'Job', 'Count', 'Cyc', 'StartMonth', 'StartSecond', 'NextStart', 'TimeOut', 'Desc', 'CreateTime', 'CreateUserId', 'ModifyTime', 'ModifyUserId'
+  @configure 'Schedule', 'Id', 'Name', 'TaskCnt', "Job", "JobCnt", "Jobs", "JobId", 'Count', 'Cyc', 'StartMonth', 'StartSecond', 'NextStart', 'TimeOut', 'Desc', 'CreateTime', 'CreateUserId', 'ModifyTime', 'ModifyUserId'
 
   @extend Spine.Model.Ajax
   

@@ -1,6 +1,7 @@
 Spine = require('spineify')
 Events  = Spine.Events
 Module  = Spine.Module
+Schedule = require('models/schedule')
 Raphael = require('raphaelify')
 Eve = require('eve')
 Job = require('models/job')
@@ -21,16 +22,18 @@ class JobManager extends Spine.Controller
 
   constructor: (@paper, @color, @item, @width, @sinfo) -># {{{
     super
+    Job.fetch({url:"/schedules/#{@item.Id}/jobs"}) if @item.Jobs
 
     @font = "Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', '华文细黑', Helvetica, Tahoma, Arial, STXihei, sans-serif"
     @fontStyle = {fill: "#333", "font-family":@font, "text-anchor": "start", stroke: "none", "font-size": 18, "fill-opacity": 1, "stroke-width": 1}
     @jobFontStyle = {"font-family":@font , "font-size": 18, "stroke-opacity":1, "fill-opacity": 1, "stroke-width": 0}
-    @jobcirStyle = {"fill-opacity": 0.2, "stroke-width": 1}
+    @jobcirStyle = {"fill-opacity": 0.2, "stroke-width": 1, cursor: "hand"}
     @jobrectStyle = {"fill-opacity": 0.1, "stroke-width": 0}
     @titlerectStyle = {fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.05, "stroke-width": 0, cursor: "hand"}
     @addButtonStyle = {fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.1, "stroke-opacity":0.2, "stroke-dasharray" : "-","stroke-width": 1, cursor: "hand"}
 
-    icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z"
+    @icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z"
+
     @height = 0
 
     @paper.setStart()
@@ -42,7 +45,7 @@ class JobManager extends Spine.Controller
     @titlerect.hover(@hoveron,@hoverout)
     @titlerect.click(@showAddJob)
 
-    @addButton = @paper.path(icoplus)
+    @addButton = @paper.path(@icoplus)
     @addButton.attr(@addButtonStyle)
     @addButton.toBack()
 
@@ -54,18 +57,39 @@ class JobManager extends Spine.Controller
 
   refreshJobList:(top,left) =># {{{
     @list = []
-    for job,i in @item.Job when job.Id isnt 0
+    return [top,left] unless @item.Jobs 
+    for job,i in @item.Jobs when job.Id isnt 0
       s = @paper.set()
+      s1 = @paper.set()
       jobname = @paper.text(left+80, top, job.Name).attr(@jobFontStyle)
-      jobcir = @paper.circle(left+25,top,15).attr(@jobcirStyle)
       jobrect = @paper.rect(left,top-20,190,40,4).attr(@jobrectStyle)
+      jobcir = @paper.circle(left+25,top,15).attr(@jobcirStyle)
+
+
+      if job.TaskCnt is 0 and job.NextJobId is 0
+        subButton = @paper.rect(left+150,top-5,25,8,4).attr(@jobrectStyle)
+        subButton.attr(@jobrectStyle)
+        subButton.attr("cursor","hand")
+        subButton.attr("fill-opacity",0.01)
+        subButton.data("Id",job.Id)
+        subButton.data("Sid",@item.Id)
+        subButton.data("item",@item)
+        subButton.data("job",job)
+        subButton.data("this",@)
+        subButton.click(@delJob)
+        s.push(subButton)
+        s1.push(subButton)
 
       s.push(jobname, jobcir, jobrect)
       s.attr("stroke", @color[i])
       s.attr("fill", @color[i])
       s.data("Id",job.Id)
       s.data("sinfo",@sinfo)
-      s.hover(@hoveron,@hoverout)
+
+
+      s1.push(jobcir)
+      s.hover(@hoveron,@hoverout,s1,s1)
+      s.hover(@hlightTasks,@nlightTasks)
 
       @set.push(s)
       @list.push(s)
@@ -73,15 +97,19 @@ class JobManager extends Spine.Controller
 
       [top,left]=[top+50,left]# }}}
 
-  hoveron: -># {{{
-    a = Raphael.animation({"fill-opacity": 0.6}, 300)
-    @.animate(a)
+  hlightTasks: -># {{{
     @data("sinfo")?.taskManager.hlight(@data("Id"))# }}}
       
-  hoverout: -># {{{
-    b = Raphael.animation({"fill-opacity": 0.1}, 300)
-    @.animate(b)
+  hoveron: -># {{{
+    a = Raphael.animation({"fill-opacity": 0.8}, 200)
+    @.animate(a)
+      
+  nlightTasks: -># {{{
     @data("sinfo")?.taskManager.nlight(@data("Id"))# }}}
+
+  hoverout: -># {{{
+    b = Raphael.animation({"fill-opacity": 0.1}, 200)
+    @.animate(b)
 
   render: (x, y) =># {{{
     @html(require('views/schedule-add-job')(@lastJob))
@@ -101,25 +129,44 @@ class JobManager extends Spine.Controller
     else if e.keyCode is 13
       @jobdesc.focus()# }}}
 
+  delJob: (e) ->
+    jb = Job.find(@.data("Id"))
+    ts = @.data("this")
+    jb.bind("change",ts?.delJobAndRefresh)
+    jb.destroy({url:"/schedules/#{@.data("Sid")}/jobs/#{@.data("Id")}"})
+
   postAddJob: (e) -># {{{
     @el.css("display","none")
     jb = new Job()
-    jb.bind("ajaxSuccess",@refreshSchedule)
+    jb.bind("ajaxSuccess",@addJobAndRefresh)
     jb.Name = @jobname.val()
     jb.Desc = @jobdesc.val()
     jb.ScheduleId = @item.Id
     jb.PreJobId = if @prejobid.val() then parseInt(@prejobid.val()) else 0
     jb.Id = -1
-    jb.create() if jb.Name# }}}
+    jb.create({url:"/schedules/#{@item.Id}/jobs"}) if jb.Name# }}}
 
-  refreshSchedule: (data, status, xhr) =># {{{
+  addJobAndRefresh: (data, status, xhr) =># {{{
     if xhr is "success"
+      id = @item.Id
+      Schedule.fetch({Id:id})
+      @item = Schedule.find(id)
       for s in @list
         s.pop().remove()
         s.pop().remove()
         s.pop().remove()
-      @item.Job.push(data)
       @refreshJobList(70, 10)
       @trigger("refreshJobList")# }}}
+ 
+  delJobAndRefresh: (data, status, xhr) =># {{{
+    id = @item.Id
+    Schedule.fetch({Id:id})
+    @item = Schedule.find(id)
+    for s in @list
+      s.pop().remove()
+      s.pop().remove()
+      s.pop().remove()
+    @refreshJobList(70, 10)
+    @trigger("refreshJobList")# }}}
  
 module.exports = JobManager

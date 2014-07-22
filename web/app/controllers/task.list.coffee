@@ -8,26 +8,28 @@ class TaskManager
     @set = @paper.set()
     top = 80
     @ts = []
-    for job,i in @item.Job
+    
+    if @item.Jobs
+      for job,i in @item.Jobs
+        tasks = (v for k,v of job.Tasks)
+        spacing = (@width-200)/tasks.length if tasks.length > 0
+        r = 25
+        spacing = 100
+  
+        left = (@width-200)/2-(tasks.length/2) * spacing if tasks.length > 0
+        for task,j in tasks
+          t= new TaskSymbol(paper,left,top,task.Name,@color[i],r)
+          t.Id = task.Id
+          t.JobId = job.Id
+          t.RelTaskId = (v.Id for k,v of task.RelTasks)
+          @ts.push(t)
+          @set.push(t.sp)
+          @set.push(t.text)
+  
+          rts.addNext(t) for rts in @getTaskSymbol(t.RelTaskId)
+          left += spacing
 
-      spacing = (@width-200)/job.Tasks.length if job.Tasks.length > 0
-      r = 25
-      spacing = 100
-
-      left = (@width-200)/2-(job.Tasks.length/2) * spacing if job.Tasks.length > 0
-      for task,j in job.Tasks
-        t= new TaskSymbol(paper,left,top,task.Name,@color[i],r)
-        t.Id = task.Id
-        t.JobId = job.Id
-        t.RelTaskId = (rt.Id for rt in task.RelTasks)
-        @ts.push(t)
-        @set.push(t.sp)
-        @set.push(t.text)
-
-        rts.addNext(t) for rts in @getTaskSymbol(t.RelTaskId)
-        left += spacing
-
-      top += 120
+        top += 120
 
   getTaskSymbol: (Ids) ->
      t for t in @ts when t.Id in Ids

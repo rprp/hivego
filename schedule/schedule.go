@@ -4,6 +4,7 @@ package schedule
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"time"
@@ -135,7 +136,6 @@ func (s *Schedule) refreshSchedule() { // {{{
 		tj.refreshJob()
 		s.Job = tj
 		s.Jobs = make([]*Job, 0)
-		s.Jobs = append(s.Jobs, tj)
 
 		s.JobCnt = 0
 		s.TaskCnt = 0
@@ -229,14 +229,51 @@ func (s *Schedule) AddJob(job *Job) (err error) { // {{{
 	return err
 } // }}}
 
+//DeleteJob删除调度中的一个Job，它会接收传入的Job Id，并查看是否
+//调度中最后一个Job，是，检查Job下有无Task，无，则执行删除操作，完成
+//后，将该Job的前一个Job的nextJob指针置0，更新调度信息。
+//出错或不符条件则返回err
+func (s *Schedule) DeleteJob(id int64) (err error) {
+	if j := s.GetJobById(id); j != nil && j.TaskCnt == 0 && j.NextJobId == 0 {
+		if pj := s.GetJobById(j.PreJobId); pj != nil {
+			pj.NextJob = nil
+			pj.NextJobId = 0
+			if err = pj.Update(); err != nil {
+				return err
+			}
+		}
+
+		if len(s.Jobs) == 1 {
+			s.Jobs = make([]*Job, 0)
+			s.Job = nil
+			s.JobId = 0
+			if err = s.Update(); err != nil {
+				return err
+			}
+		} else {
+			s.Jobs = s.Jobs[0 : len(s.Jobs)-1]
+		}
+
+		s.JobCnt--
+		err = j.Delete()
+	} else {
+		err = errors.New(fmt.Sprintf("not found job by id %d", id))
+	}
+	return err
+}
+
 //UpdateJob用来更新一个Job，同时更新到元数据库
 func (s *Schedule) UpdateJob(job *Job) {
 
 }
 
-//FindJob用来更新一个Job，同时更新到元数据库
+//GetJobById遍历Jobs列表，返回调度中指定Id的Job，若没找到返回nil
 func (s *Schedule) GetJobById(Id int64) *Job {
-	//暂不实现，以后再说
+	for _, j := range s.Jobs {
+		if j.Id == Id {
+			return j
+		}
+	}
 	return nil
 }
 
