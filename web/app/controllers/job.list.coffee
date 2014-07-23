@@ -24,6 +24,8 @@ class JobManager extends Spine.Controller
     super
     Job.fetch({url:"/schedules/#{@item.Id}/jobs"}) if @item.Jobs
 
+    @isRefresh = true
+
     @font = "Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', '华文细黑', Helvetica, Tahoma, Arial, STXihei, sans-serif"
     @fontStyle = {fill: "#333", "font-family":@font, "text-anchor": "start", stroke: "none", "font-size": 18, "fill-opacity": 1, "stroke-width": 1}
     @jobFontStyle = {"font-family":@font , "font-size": 18, "stroke-opacity":1, "fill-opacity": 1, "stroke-width": 0}
@@ -56,8 +58,16 @@ class JobManager extends Spine.Controller
     @height = top# }}}
 
   refreshJobList:(top,left) =># {{{
+    return [top,left] unless @item.Jobs
+    return [top,left] unless @isRefresh
+    if @list
+      for s in @list
+        s.pop().remove()
+        s.pop().remove()
+        s.pop().remove()
+        s.pop()?.remove()
+
     @list = []
-    return [top,left] unless @item.Jobs 
     for job,i in @item.Jobs when job.Id isnt 0
       s = @paper.set()
       s1 = @paper.set()
@@ -95,6 +105,7 @@ class JobManager extends Spine.Controller
       @list.push(s)
       @lastJob = job
 
+      @isRefresh = false
       [top,left]=[top+50,left]# }}}
 
   hlightTasks: -># {{{
@@ -151,22 +162,14 @@ class JobManager extends Spine.Controller
       id = @item.Id
       Schedule.fetch({Id:id})
       @item = Schedule.find(id)
-      for s in @list
-        s.pop().remove()
-        s.pop().remove()
-        s.pop().remove()
-      @refreshJobList(70, 10)
-      @trigger("refreshJobList")# }}}
+      @isRefresh = true
+    # }}}
  
   delJobAndRefresh: (data, status, xhr) =># {{{
     id = @item.Id
     Schedule.fetch({Id:id})
     @item = Schedule.find(id)
-    for s in @list
-      s.pop().remove()
-      s.pop().remove()
-      s.pop().remove()
-    @refreshJobList(70, 10)
-    @trigger("refreshJobList")# }}}
+    @isRefresh = true
+    # }}}
  
 module.exports = JobManager

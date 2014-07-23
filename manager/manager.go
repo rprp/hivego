@@ -139,15 +139,7 @@ func getScheduleById(params martini.Params, r render.Render, res http.ResponseWr
 		id, _ := strconv.Atoi(i)
 		for _, s := range Ss.ScheduleList {
 			if s.Id == int64(id) {
-				//s1 := &schedule.Schedule{}
-				//schedule.Copy(s1, s)
-				//result, _ := json.Marshal(s1)
-				//fmt.Println(string(result))
-				fmt.Println("++++++++++++++++++")
-				fmt.Println(s)
-				fmt.Println("++++++++++++++++++")
 				r.JSON(200, s)
-				//r.JSON(200, getScheduleDetail(s))
 				return
 			}
 		}
@@ -295,13 +287,7 @@ func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job
 			ctx.WriteHeader(500)
 			fmt.Println(err)
 		} else {
-			j := &schedule.Job{}
-			fmt.Println("-----------------------------------------")
-			schedule.Copy(j, job)
-			j.PreJob = &schedule.Job{}
-			j.NextJob = &schedule.Job{}
-			fmt.Println(j)
-			r.JSON(200, j)
+			r.JSON(200, job)
 		}
 	} else {
 		ctx.WriteHeader(500)

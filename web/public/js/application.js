@@ -25163,6 +25163,7 @@ Released under the MIT License
           url: "/schedules/" + this.item.Id + "/jobs"
         });
       }
+      this.isRefresh = true;
       this.font = "Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', '华文细黑', Helvetica, Tahoma, Arial, STXihei, sans-serif";
       this.fontStyle = {
         fill: "#333",
@@ -25222,15 +25223,30 @@ Released under the MIT License
     }
 
     JobManager.prototype.refreshJobList = function(top, left) {
-      var i, job, jobcir, jobname, jobrect, s, s1, subButton, _i, _len, _ref, _ref1, _results;
-      this.list = [];
+      var i, job, jobcir, jobname, jobrect, s, s1, subButton, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _results;
       if (!this.item.Jobs) {
         return [top, left];
       }
-      _ref = this.item.Jobs;
+      if (!this.isRefresh) {
+        return [top, left];
+      }
+      if (this.list) {
+        _ref = this.list;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          s = _ref[_i];
+          s.pop().remove();
+          s.pop().remove();
+          s.pop().remove();
+          if ((_ref1 = s.pop()) != null) {
+            _ref1.remove();
+          }
+        }
+      }
+      this.list = [];
+      _ref2 = this.item.Jobs;
       _results = [];
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        job = _ref[i];
+      for (i = _j = 0, _len1 = _ref2.length; _j < _len1; i = ++_j) {
+        job = _ref2[i];
         if (!(job.Id !== 0)) {
           continue;
         }
@@ -25264,7 +25280,8 @@ Released under the MIT License
         this.set.push(s);
         this.list.push(s);
         this.lastJob = job;
-        _results.push((_ref1 = [top + 50, left], top = _ref1[0], left = _ref1[1], _ref1));
+        this.isRefresh = false;
+        _results.push((_ref3 = [top + 50, left], top = _ref3[0], left = _ref3[1], _ref3));
       }
       return _results;
     };
@@ -25345,41 +25362,25 @@ Released under the MIT License
     };
 
     JobManager.prototype.addJobAndRefresh = function(data, status, xhr) {
-      var id, s, _i, _len, _ref;
+      var id;
       if (xhr === "success") {
         id = this.item.Id;
         Schedule.fetch({
           Id: id
         });
         this.item = Schedule.find(id);
-        _ref = this.list;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          s = _ref[_i];
-          s.pop().remove();
-          s.pop().remove();
-          s.pop().remove();
-        }
-        this.refreshJobList(70, 10);
-        return this.trigger("refreshJobList");
+        return this.isRefresh = true;
       }
     };
 
     JobManager.prototype.delJobAndRefresh = function(data, status, xhr) {
-      var id, s, _i, _len, _ref;
+      var id;
       id = this.item.Id;
       Schedule.fetch({
         Id: id
       });
       this.item = Schedule.find(id);
-      _ref = this.list;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        s = _ref[_i];
-        s.pop().remove();
-        s.pop().remove();
-        s.pop().remove();
-      }
-      this.refreshJobList(70, 10);
-      return this.trigger("refreshJobList");
+      return this.isRefresh = true;
     };
 
     return JobManager;
@@ -25468,13 +25469,22 @@ Released under the MIT License
       var h, paper, _ref, _ref1, _ref2;
       this.item = Schedule.find(rs.Id);
       h = ((_ref = this.item) != null ? (_ref1 = _ref.Jobs) != null ? _ref1.length : void 0 : void 0) * 140;
-      if ((h != null) || h < 800) {
+      if (h == null) {
+        h = 800;
+      }
+      if (h < 800) {
         h = 800;
       }
       this.pant.css("height", h);
-      paper = Raphael(this.pant.get(0), '100%', '100%');
       _ref2 = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref2[0], this.height = _ref2[1];
-      return this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
+      if (this.ssl) {
+        this.ssl.jobManager.refreshJobList(70, 10);
+        this.ssl.layout();
+      } else {
+        paper = Raphael(this.pant.get(0), '100%', '100%');
+        this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
+      }
+      return this.ssl;
     };
 
     ScheduleInfo.prototype.renderAddJob = function(x, y) {
@@ -25493,6 +25503,7 @@ Released under the MIT License
       this.height = height;
       this.item = item;
       this.layout = __bind(this.layout, this);
+      this.newJobManager = __bind(this.newJobManager, this);
       this.color = ['#FF8C00', '#008000', '#2F4F4F', '#DA70D6', '#0000FF', '#8A2BE2', '#6495ED', '#B8860B', '#FF4500', '#AFEEEE', '#DB7093', '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#00BFFF', '#008B8B', '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#7FFF00', '#DEB887', '#98FB98', '#FFD700', '#5F9EA0', '#D2691E', '#A9A9A9', '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0', '#006400', '#BDB76B', '#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32'];
       _ref = [
         Raphael.animation({
@@ -25510,10 +25521,15 @@ Released under the MIT License
         "stroke-opacity": 0.1
       });
       this.scheduleManager = new ScheduleManager(this.paper, this.color, this.item, 220);
-      this.jobManager = new JobManager(this.paper, this.color, this.item, 220, this);
-      this.jobManager.bind("refreshJobList", this.layout);
+      this.newJobManager();
       this.layout();
     }
+
+    ScheduleSymbol.prototype.newJobManager = function() {
+      this.jobManager = new JobManager(this.paper, this.color, this.item, 220, this);
+      this.jobManager.bind("rfJobList", this.layout);
+      return this.layout();
+    };
 
     ScheduleSymbol.prototype.layout = function() {
       this.scheduleManager.set.transform("t" + (this.width - 220) + ",10");
