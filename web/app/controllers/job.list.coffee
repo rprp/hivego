@@ -10,13 +10,13 @@ $       = Spine.$
 class JobManager extends Spine.Controller
   elements:
     ".close":  "close"
-    ".jobpanel":  "jobpanel"
     "#jobname":  "jobname"
     "#jobdesc":  "jobdesc"
     "#prejobid":  "prejobid"
+    "#jobid":  "jobid"
 
   events:
-    "click .close": "postAddJob"
+    "click .close": "postJob"
     "keypress #jobname": "keypress"
     "keypress #jobdesc": "keypress"
 
@@ -45,7 +45,7 @@ class JobManager extends Spine.Controller
 
     @titlerect = @paper.rect(left,top-20,190,35,3).attr(@titlerectStyle)
     @titlerect.hover(@hoveron,@hoverout)
-    @titlerect.click(@showAddJob)
+    @titlerect.click(@showJob,@)
 
     @addButton = @paper.path(@icoplus)
     @addButton.attr(@addButtonStyle)
@@ -74,7 +74,7 @@ class JobManager extends Spine.Controller
       jobname = @paper.text(left+80, top, job.Name).attr(@jobFontStyle)
       jobrect = @paper.rect(left,top-20,190,40,4).attr(@jobrectStyle)
       jobcir = @paper.circle(left+25,top,15).attr(@jobcirStyle)
-
+      jobcir.click(@editJob,job)
 
       if job.TaskCnt is 0 and job.NextJobId is 0
         subButton = @paper.rect(left+150,top-5,25,8,4).attr(@jobrectStyle)
@@ -122,21 +122,30 @@ class JobManager extends Spine.Controller
     b = Raphael.animation({"fill-opacity": 0.1}, 200)
     @.animate(b)
 
-  render: (x, y) =># {{{
-    @html(require('views/schedule-add-job')(@lastJob))
+  render: (x, y, job) =># {{{
+    @html(require('views/schedule-add-job')(job))
     @el.css("display","block")
-    @el.css("left",x)
-    @el.css("top",y)
+    @el.css("left",x-300)
+    @el.css("top",y-120)
     @el.css("position","absolute")# }}}
     
-  showAddJob: (e) =># {{{
-    Spine.trigger("addJobRender",e.screenX,e.screenY)
+  editJob: (e) -># {{{
+    e = e||window.event
+    @.opt = "edit"
+    Spine.trigger("addJobRender", e.clientX, e.clientY, @)
+    e# }}}
+
+  showJob: (e) -># {{{
+    e = e||window.event
+    @.lastJob = new Job() unless @.lastJob
+    @.lastJob.opt = "add"
+    Spine.trigger("addJobRender",e.clientX,e.clientY,@.lastJob)
     @jobname.focus()
     e# }}}
 
   keypress: (e) -># {{{
     if e.keyCode is 13 and e.ctrlKey
-      @postAddJob(e)
+      @postJob(e)
     else if e.keyCode is 13
       @jobdesc.focus()# }}}
 
@@ -146,16 +155,24 @@ class JobManager extends Spine.Controller
     jb.bind("change",ts?.delJobAndRefresh)
     jb.destroy({url:"/schedules/#{@.data("Sid")}/jobs/#{@.data("Id")}"})
 
-  postAddJob: (e) -># {{{
+  postJob: (e) -># {{{
     @el.css("display","none")
-    jb = new Job()
-    jb.bind("ajaxSuccess",@addJobAndRefresh)
-    jb.Name = @jobname.val()
-    jb.Desc = @jobdesc.val()
-    jb.ScheduleId = @item.Id
-    jb.PreJobId = if @prejobid.val() then parseInt(@prejobid.val()) else 0
-    jb.Id = -1
-    jb.create({url:"/schedules/#{@item.Id}/jobs"}) if jb.Name# }}}
+    if @jobid.val()
+      jb = Job.find(@jobid.val())
+      jb.bind("ajaxSuccess",@addJobAndRefresh)
+      jb.Name = @jobname.val()
+      jb.Desc = @jobdesc.val()
+      jb.save({url:"/schedules/#{@item.Id}/jobs/#{jb.Id}"})
+    else
+      jb = new Job()
+      jb.bind("ajaxSuccess",@addJobAndRefresh)
+      jb.ScheduleId = @item.Id
+      jb.PreJobId = if @prejobid.val() then parseInt(@prejobid.val()) else 0
+      jb.Id = -1
+      jb.Name = @jobname.val()
+      jb.Desc = @jobdesc.val()
+      jb.create({url:"/schedules/#{@item.Id}/jobs"}) if jb.Name
+  # }}}
 
   addJobAndRefresh: (data, status, xhr) =># {{{
     if xhr is "success"

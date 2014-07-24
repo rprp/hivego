@@ -262,9 +262,21 @@ func (s *Schedule) DeleteJob(id int64) (err error) {
 	return err
 }
 
-//UpdateJob用来更新一个Job，同时更新到元数据库
-func (s *Schedule) UpdateJob(job *Job) {
+//UpdateJob用来在调度中添加一个Job
+//UpdateJob会接收传入的Job类型的参数，修改调度中对应的Job信息，完成后
+//调用Job自身的Update方法进行持久化操作。
+func (s *Schedule) UpdateJob(job *Job) (err error) {
+	if j := s.GetJobById(job.Id); j != nil {
+		j.Name = job.Name
+		j.Desc = job.Desc
+		j.ModifyTime = time.Now()
+		j.ModifyUserId = job.ModifyUserId
 
+		if err = j.Update(); err == nil {
+			return err
+		}
+	}
+	return err
 }
 
 //GetJobById遍历Jobs列表，返回调度中指定Id的Job，若没找到返回nil

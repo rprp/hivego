@@ -25133,14 +25133,14 @@ Released under the MIT License
 
     JobManager.prototype.elements = {
       ".close": "close",
-      ".jobpanel": "jobpanel",
       "#jobname": "jobname",
       "#jobdesc": "jobdesc",
-      "#prejobid": "prejobid"
+      "#prejobid": "prejobid",
+      "#jobid": "jobid"
     };
 
     JobManager.prototype.events = {
-      "click .close": "postAddJob",
+      "click .close": "postJob",
       "keypress #jobname": "keypress",
       "keypress #jobdesc": "keypress"
     };
@@ -25154,7 +25154,6 @@ Released under the MIT License
       this.sinfo = sinfo;
       this.delJobAndRefresh = __bind(this.delJobAndRefresh, this);
       this.addJobAndRefresh = __bind(this.addJobAndRefresh, this);
-      this.showAddJob = __bind(this.showAddJob, this);
       this.render = __bind(this.render, this);
       this.refreshJobList = __bind(this.refreshJobList, this);
       JobManager.__super__.constructor.apply(this, arguments);
@@ -25213,7 +25212,7 @@ Released under the MIT License
       this.title = this.paper.text(left, top, "作业列表").attr(this.fontStyle);
       this.titlerect = this.paper.rect(left, top - 20, 190, 35, 3).attr(this.titlerectStyle);
       this.titlerect.hover(this.hoveron, this.hoverout);
-      this.titlerect.click(this.showAddJob);
+      this.titlerect.click(this.showJob, this);
       this.addButton = this.paper.path(this.icoplus);
       this.addButton.attr(this.addButtonStyle);
       this.addButton.toBack();
@@ -25255,6 +25254,7 @@ Released under the MIT License
         jobname = this.paper.text(left + 80, top, job.Name).attr(this.jobFontStyle);
         jobrect = this.paper.rect(left, top - 20, 190, 40, 4).attr(this.jobrectStyle);
         jobcir = this.paper.circle(left + 25, top, 15).attr(this.jobcirStyle);
+        jobcir.click(this.editJob, job);
         if (job.TaskCnt === 0 && job.NextJobId === 0) {
           subButton = this.paper.rect(left + 150, top - 5, 25, 8, 4).attr(this.jobrectStyle);
           subButton.attr(this.jobrectStyle);
@@ -25312,23 +25312,35 @@ Released under the MIT License
       return this.animate(b);
     };
 
-    JobManager.prototype.render = function(x, y) {
-      this.html(require('views/schedule-add-job')(this.lastJob));
+    JobManager.prototype.render = function(x, y, job) {
+      this.html(require('views/schedule-add-job')(job));
       this.el.css("display", "block");
-      this.el.css("left", x);
-      this.el.css("top", y);
+      this.el.css("left", x - 300);
+      this.el.css("top", y - 120);
       return this.el.css("position", "absolute");
     };
 
-    JobManager.prototype.showAddJob = function(e) {
-      Spine.trigger("addJobRender", e.screenX, e.screenY);
+    JobManager.prototype.editJob = function(e) {
+      e = e || window.event;
+      this.opt = "edit";
+      Spine.trigger("addJobRender", e.clientX, e.clientY, this);
+      return e;
+    };
+
+    JobManager.prototype.showJob = function(e) {
+      e = e || window.event;
+      if (!this.lastJob) {
+        this.lastJob = new Job();
+      }
+      this.lastJob.opt = "add";
+      Spine.trigger("addJobRender", e.clientX, e.clientY, this.lastJob);
       this.jobname.focus();
       return e;
     };
 
     JobManager.prototype.keypress = function(e) {
       if (e.keyCode === 13 && e.ctrlKey) {
-        return this.postAddJob(e);
+        return this.postJob(e);
       } else if (e.keyCode === 13) {
         return this.jobdesc.focus();
       }
@@ -25344,20 +25356,30 @@ Released under the MIT License
       });
     };
 
-    JobManager.prototype.postAddJob = function(e) {
+    JobManager.prototype.postJob = function(e) {
       var jb;
       this.el.css("display", "none");
-      jb = new Job();
-      jb.bind("ajaxSuccess", this.addJobAndRefresh);
-      jb.Name = this.jobname.val();
-      jb.Desc = this.jobdesc.val();
-      jb.ScheduleId = this.item.Id;
-      jb.PreJobId = this.prejobid.val() ? parseInt(this.prejobid.val()) : 0;
-      jb.Id = -1;
-      if (jb.Name) {
-        return jb.create({
-          url: "/schedules/" + this.item.Id + "/jobs"
+      if (this.jobid.val()) {
+        jb = Job.find(this.jobid.val());
+        jb.bind("ajaxSuccess", this.addJobAndRefresh);
+        jb.Name = this.jobname.val();
+        jb.Desc = this.jobdesc.val();
+        return jb.save({
+          url: "/schedules/" + this.item.Id + "/jobs/" + jb.Id
         });
+      } else {
+        jb = new Job();
+        jb.bind("ajaxSuccess", this.addJobAndRefresh);
+        jb.ScheduleId = this.item.Id;
+        jb.PreJobId = this.prejobid.val() ? parseInt(this.prejobid.val()) : 0;
+        jb.Id = -1;
+        jb.Name = this.jobname.val();
+        jb.Desc = this.jobdesc.val();
+        if (jb.Name) {
+          return jb.create({
+            url: "/schedules/" + this.item.Id + "/jobs"
+          });
+        }
       }
     };
 
@@ -25424,13 +25446,13 @@ Released under the MIT License
     };
 
     function ScheduleInfo() {
-      this.renderAddJob = __bind(this.renderAddJob, this);
+      this.renderJob = __bind(this.renderJob, this);
       this.draw = __bind(this.draw, this);
       this.render = __bind(this.render, this);
       this.change = __bind(this.change, this);
       ScheduleInfo.__super__.constructor.apply(this, arguments);
       Schedule.bind("findRecord", this.draw);
-      Spine.bind("addJobRender", this.renderAddJob);
+      Spine.bind("addJobRender", this.renderJob);
       this.active(this.change);
     }
 
@@ -25469,7 +25491,7 @@ Released under the MIT License
       var h, paper, _ref, _ref1, _ref2;
       this.item = Schedule.find(rs.Id);
       h = ((_ref = this.item) != null ? (_ref1 = _ref.Jobs) != null ? _ref1.length : void 0 : void 0) * 140;
-      if (h == null) {
+      if (!h) {
         h = 800;
       }
       if (h < 800) {
@@ -25487,8 +25509,8 @@ Released under the MIT License
       return this.ssl;
     };
 
-    ScheduleInfo.prototype.renderAddJob = function(x, y) {
-      return this.append(this.ssl.jobManager.render(this.width - 350, this.ssl.scheduleManager.height));
+    ScheduleInfo.prototype.renderJob = function(x, y, job) {
+      return this.append(this.ssl.jobManager.render(x, y, job));
     };
 
     return ScheduleInfo;
@@ -25617,6 +25639,13 @@ Released under the MIT License
       this.item = item;
       this.width = width;
       this.font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
+      this.titlerectStyle = {
+        fill: "#31708f",
+        stroke: "#31708f",
+        "fill-opacity": 0.05,
+        "stroke-width": 0,
+        cursor: "hand"
+      };
       this.fontStyle = {
         fill: "#333",
         "font-family": this.font,
@@ -25653,9 +25682,27 @@ Released under the MIT License
         "stroke-width": 2,
         "stroke-opacity": 0.2
       });
+      this.titlerect = this.paper.rect(left, 0, 190, top - 10, 3).attr(this.titlerectStyle);
+      this.titlerect.hover(this.hoveron, this.hoverout);
       this.set = this.paper.setFinish();
       this.height = top;
     }
+
+    ScheduleManager.prototype.hoveron = function() {
+      var a;
+      a = Raphael.animation({
+        "fill-opacity": 0.4
+      }, 200);
+      return this.animate(a);
+    };
+
+    ScheduleManager.prototype.hoverout = function() {
+      var b;
+      b = Raphael.animation({
+        "fill-opacity": 0.1
+      }, 200);
+      return this.animate(b);
+    };
 
     return ScheduleManager;
 
@@ -26590,11 +26637,33 @@ Released under the MIT License
   }
   (function() {
     (function() {
-      __out.push('<div class="addjob panel panel-default fdin" style="width: 300px; height: 240px;">\n    <div class="panel-heading" style="cursor: pointer; background-color: #E0E0E0;">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">添加一个作业</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="jobname" type="text" class="form-control" placeholder="作业名称" />\n        <br>\n        作业描述：\n        <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n        <input id="prejobid" type="hidden" value="');
+      __out.push('<div class="popover left" style="display: block; width: 300px; height: 240px;">\n      <div class="arrow"></div>\n        ');
     
-      __out.push(__sanitize(this.Id));
+      if (this.opt === "add") {
+        __out.push('\n          <h3 class="popover-title">添加一个作业\n        ');
+      } else {
+        __out.push('\n          <h3 class="popover-title">修改一个作业\n        ');
+      }
     
-      __out.push('" />\n    </div>\n</div>\n');
+      __out.push('\n          <button type="button" class="close pull-right">\n              <span aria-hidden="true">&times;</span>\n              <span class="sr-only">Close</span>\n          </button></h3>\n        ');
+    
+      if (this.opt === "add") {
+        __out.push('\n          <div class="popover-content">\n              <input id="jobname" type="text" class="form-control" placeholder="作业名称" />\n            <br>\n            作业描述：\n            <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n\n            <input id="prejobid" type="hidden" value="');
+        __out.push(__sanitize(this.Id));
+        __out.push('" />\n        ');
+      } else {
+        __out.push('\n          <div class="popover-content">\n              <input id="jobname" type="text" class="form-control" placeholder="作业名称" value="');
+        __out.push(__sanitize(this.Name));
+        __out.push('" />\n            <br>\n            作业描述：\n            <textarea id="jobdesc" class="form-control" rows="4">');
+        __out.push(__sanitize(this.Desc));
+        __out.push('</textarea>\n            <input id="prejobid" type="hidden" value="');
+        __out.push(__sanitize(this.PreId));
+        __out.push('" />\n            <input id="jobid" type="hidden" value="');
+        __out.push(__sanitize(this.Id));
+        __out.push('" />\n        ');
+      }
+    
+      __out.push('\n      </div>\n</div>\n');
     
     }).call(this);
     

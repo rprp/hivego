@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
@@ -10,7 +9,6 @@ import (
 	"github.com/rprp/hive/schedule"
 	"log"
 	"net/http"
-	"runtime/debug"
 	"strconv"
 	"time"
 )
@@ -53,13 +51,14 @@ func controller(m *martini.ClassicMartini) {
 
 		r.Get("/:sid/jobs", getJobsForSchedule)
 		r.Post("/:sid/jobs", binding.Bind(schedule.Job{}), addJob)
+		r.Put("/:sid/jobs/:id", binding.Bind(schedule.Job{}), updateJob)
 		r.Delete("/:sid/jobs/:id", deleteJob)
 
 	})
 
 }
 
-func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
+func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
 	sl := make([]*schedule.Schedule, 0)
 	for _, s := range Ss.ScheduleList {
 		d := &schedule.Schedule{}
@@ -70,7 +69,7 @@ func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss
 	}
 	r.JSON(200, sl)
 
-}
+} // }}}
 
 //调度信息结构
 type Schedule struct { // {{{
@@ -133,7 +132,7 @@ type Task struct {
 	ModifyTime   time.Time         `json: ModifyTime`   //修改时间
 } // }}}
 
-func getScheduleById(params martini.Params, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
+func getScheduleById(params martini.Params, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
 
 	if i, ok := params["id"]; ok {
 		id, _ := strconv.Atoi(i)
@@ -144,7 +143,7 @@ func getScheduleById(params martini.Params, r render.Render, res http.ResponseWr
 			}
 		}
 	}
-}
+} // }}}
 
 func getScheduleDetail(s *schedule.Schedule) Schedule { // {{{
 	d := &Schedule{}
@@ -225,13 +224,13 @@ func getScheduleDetail(s *schedule.Schedule) Schedule { // {{{
 
 } // }}}
 
-func addSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
+func addSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
 	fmt.Println(ctx.Params)
 	fmt.Println(ctx.Request)
 
-}
+} // }}}
 
-func deleteJob(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager) {
+func deleteJob(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager) { // {{{
 
 	sid, sidok := params["sid"]
 	id, idok := params["id"]
@@ -258,23 +257,13 @@ func deleteJob(params martini.Params, ctx *web.Context, r render.Render, Ss *sch
 
 	}
 
-}
+} // }}}
 
 //addJob获取客户端发送的Job信息，并调用Schedule的AddJob方法将其
 //持久化并添加至Schedule中。
 //成功返回添加好的Job信息
 //错误返回err信息
-func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) {
-
-	defer func() {
-		if err := recover(); err != nil {
-			var buf bytes.Buffer
-			buf.Write(debug.Stack())
-			fmt.Println("err=", err, " stack=", buf.String())
-			return
-		}
-	}()
-
+func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) { // {{{
 	if job.Name == "" {
 		ctx.WriteHeader(500)
 		return
@@ -292,9 +281,30 @@ func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job
 	} else {
 		ctx.WriteHeader(500)
 	}
+} // }}}
+
+//updateJob获取客户端发送的Job信息，并调用Schedule的UpdateJob方法将其
+//持久化并更新至Schedule中。
+//成功返回更新后的Job信息
+func updateJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) {
+	if job.Name == "" {
+		ctx.WriteHeader(500)
+		return
+	}
+	if s := Ss.GetScheduleById(int64(job.ScheduleId)); s != nil {
+		if err := s.UpdateJob(&job); err != nil {
+			ctx.WriteHeader(500)
+			fmt.Println(err)
+		} else {
+			r.JSON(200, job)
+		}
+	} else {
+		ctx.WriteHeader(500)
+	}
+
 }
 
-func getJobsForSchedule(ctx *web.Context, params martini.Params, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
+func getJobsForSchedule(ctx *web.Context, params martini.Params, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
 
 	sid, sidok := params["sid"]
 	if !sidok {
@@ -307,19 +317,19 @@ func getJobsForSchedule(ctx *web.Context, params martini.Params, r render.Render
 		r.JSON(200, s.Jobs)
 	}
 	return
-}
+} // }}}
 
-func deleteSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) {
+func deleteSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
 	for _, s := range Ss.ScheduleList {
 		res.Write([]byte(s.String()))
 	}
 
-}
+} // }}}
 
-func updateSchedule(params martini.Params, ctx *web.Context, res http.ResponseWriter) {
+func updateSchedule(params martini.Params, ctx *web.Context, res http.ResponseWriter) { // {{{
 	fmt.Println(params)
 
-}
+} // }}}
 
 func Logger() martini.Handler { // {{{
 	return func(res http.ResponseWriter, req *http.Request, ctx martini.Context, log *log.Logger) {

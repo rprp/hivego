@@ -20,7 +20,7 @@ class ScheduleInfo extends Spine.Controller
   constructor: ->
     super
     Schedule.bind("findRecord",  @draw)
-    Spine.bind("addJobRender", @renderAddJob)
+    Spine.bind("addJobRender", @renderJob)
     @active @change
 
   change: (params) =>
@@ -44,7 +44,7 @@ class ScheduleInfo extends Spine.Controller
     @item = Schedule.find(rs.Id)
 
     h = @item?.Jobs?.length*140
-    h = 800 unless h? 
+    h = 800 unless h
     h = 800 if h < 800
     @pant.css("height", h)
 
@@ -58,8 +58,8 @@ class ScheduleInfo extends Spine.Controller
       @ssl = new ScheduleSymbol(paper,@width,@height,@item) 
     @ssl
 
-  renderAddJob: (x, y) =>
-    @append(@ssl.jobManager.render(@width-350,@ssl.scheduleManager.height))
+  renderJob: (x, y, job) =>
+    @append(@ssl.jobManager.render(x, y, job))
 
 class ScheduleSymbol
   constructor: (@paper, @width, @height, @item) ->

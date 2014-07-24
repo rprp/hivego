@@ -7,6 +7,7 @@ $       = Spine.$
 class ScheduleManager
   constructor: (@paper, @color, @item, @width) ->
     @font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif"
+    @titlerectStyle = {fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.05, "stroke-width": 0, cursor: "hand"}
     @fontStyle = {fill: "#333", "font-family":@font, "text-anchor": "start", stroke: "none", "font-size": 14, "fill-opacity": 1, "stroke-width": 1}
     @height = 0
 
@@ -46,7 +47,19 @@ class ScheduleManager
     [top,left] = [top+30, left]
     @betweenline = @paper.path("M #{left},#{top}L #{@width-30},#{top}").attr({stroke: "#A0522D", "stroke-width": 2, "stroke-opacity": 0.2})
 
+    @titlerect = @paper.rect(left,0,190,top-10,3).attr(@titlerectStyle)
+    @titlerect.hover(@hoveron,@hoverout)
+    #@titlerect.click(@showJob,@)
+
     @set = @paper.setFinish()
     @height = top 
+
+  hoveron: ->
+    a = Raphael.animation({"fill-opacity": 0.4}, 200)
+    @.animate(a)
+      
+  hoverout: ->
+    b = Raphael.animation({"fill-opacity": 0.1}, 200)
+    @.animate(b)
 
 module.exports = ScheduleManager
