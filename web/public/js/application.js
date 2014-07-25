@@ -25196,16 +25196,6 @@ Released under the MIT License
         "stroke-width": 0,
         cursor: "hand"
       };
-      this.addButtonStyle = {
-        fill: "#31708f",
-        stroke: "#31708f",
-        "fill-opacity": 0.1,
-        "stroke-opacity": 0.2,
-        "stroke-dasharray": "-",
-        "stroke-width": 1,
-        cursor: "hand"
-      };
-      this.icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z";
       this.height = 0;
       this.paper.setStart();
       _ref = [30, 10], top = _ref[0], left = _ref[1];
@@ -25213,9 +25203,6 @@ Released under the MIT License
       this.titlerect = this.paper.rect(left, top - 20, 190, 35, 3).attr(this.titlerectStyle);
       this.titlerect.hover(this.hoveron, this.hoverout);
       this.titlerect.click(this.showJob, this);
-      this.addButton = this.paper.path(this.icoplus);
-      this.addButton.attr(this.addButtonStyle);
-      this.addButton.toBack();
       this.set = this.paper.setFinish();
       _ref1 = this.refreshJobList(top + 40, left), top = _ref1[0], left = _ref1[1];
       this.height = top;
@@ -25256,7 +25243,7 @@ Released under the MIT License
         jobcir = this.paper.circle(left + 25, top, 15).attr(this.jobcirStyle);
         jobcir.click(this.editJob, job);
         if (job.TaskCnt === 0 && job.NextJobId === 0) {
-          subButton = this.paper.rect(left + 150, top - 5, 25, 8, 4).attr(this.jobrectStyle);
+          subButton = this.paper.rect(left + 150, top - 4, 30, 7, 4).attr(this.jobrectStyle);
           subButton.attr(this.jobrectStyle);
           subButton.attr("cursor", "hand");
           subButton.attr("fill-opacity", 0.01);
@@ -25339,9 +25326,11 @@ Released under the MIT License
     };
 
     JobManager.prototype.keypress = function(e) {
-      if (e.keyCode === 13 && e.ctrlKey) {
+      var _ref, _ref1;
+      e = e || window.event;
+      if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
         return this.postJob(e);
-      } else if (e.keyCode === 13) {
+      } else if ((_ref1 = e.keyCode) === 13 || _ref1 === 10) {
         return this.jobdesc.focus();
       }
     };
@@ -25447,12 +25436,14 @@ Released under the MIT License
 
     function ScheduleInfo() {
       this.renderJob = __bind(this.renderJob, this);
+      this.renderSchedule = __bind(this.renderSchedule, this);
       this.draw = __bind(this.draw, this);
       this.render = __bind(this.render, this);
       this.change = __bind(this.change, this);
       ScheduleInfo.__super__.constructor.apply(this, arguments);
       Schedule.bind("findRecord", this.draw);
       Spine.bind("addJobRender", this.renderJob);
+      Spine.bind("editScheduleRender", this.renderSchedule);
       this.active(this.change);
     }
 
@@ -25500,6 +25491,7 @@ Released under the MIT License
       this.pant.css("height", h);
       _ref2 = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref2[0], this.height = _ref2[1];
       if (this.ssl) {
+        this.ssl.scheduleManager.refreshSchedule(20, 10);
         this.ssl.jobManager.refreshJobList(70, 10);
         this.ssl.layout();
       } else {
@@ -25507,6 +25499,10 @@ Released under the MIT License
         this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
       }
       return this.ssl;
+    };
+
+    ScheduleInfo.prototype.renderSchedule = function(x, y, schedule) {
+      return this.append(this.ssl.scheduleManager.render(x, y, schedule));
     };
 
     ScheduleInfo.prototype.renderJob = function(x, y, job) {
@@ -25555,8 +25551,7 @@ Released under the MIT License
 
     ScheduleSymbol.prototype.layout = function() {
       this.scheduleManager.set.transform("t" + (this.width - 220) + ",10");
-      this.jobManager.set.transform("t" + (this.width - 220) + "," + (this.scheduleManager.height + 10));
-      return this.jobManager.addButton.transform("t" + (this.width - 60) + "," + (this.scheduleManager.height + 20) + "s1.2");
+      return this.jobManager.set.transform("t" + (this.width - 220) + "," + (this.scheduleManager.height + 10));
     };
 
     return ScheduleSymbol;
@@ -25602,9 +25597,7 @@ Released under the MIT License
       view.pbmask.css("position", "absolute");
       view.pbmask.css("z-index", "1000");
       view.pbmask.css("width", view.sstart.css("width"));
-      view.pbmask.css("height", view.body.css("height"));
-      view.pbmask.css("background-color", "#f5f5f5");
-      return view.sname.css("color", "#f5f5f5");
+      return view.pbmask.css("height", view.body.css("height"));
     };
 
     ScheduleList.prototype.addAll = function() {
@@ -25619,7 +25612,10 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedule.info": function(exports, require, module) {(function() {
-  var $, Eve, Raphael, Schedule, ScheduleManager, Spine;
+  var $, Eve, Raphael, Schedule, ScheduleManager, Spine,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Spine = require('spineify');
 
@@ -25631,17 +25627,58 @@ Released under the MIT License
 
   $ = Spine.$;
 
-  ScheduleManager = (function() {
+  ScheduleManager = (function(_super) {
+    __extends(ScheduleManager, _super);
+
+    ScheduleManager.prototype.elements = {
+      ".close": "close",
+      ".addScheduleHead": "scheduleHead"
+    };
+
+    ScheduleManager.prototype.events = {
+      "click .close": "postSchedule",
+      "mousedown .addScheduleHead": "setMoveFlg",
+      "mouseup .addScheduleHead": "clearMoveFlg",
+      "mousemove .addScheduleHead": "movePanel"
+    };
+
+    ScheduleManager.prototype.setMoveFlg = function(e) {
+      this.isMove = true;
+      this.preLeft = e.clientX;
+      return this.preTop = e.clientY;
+    };
+
+    ScheduleManager.prototype.clearMoveFlg = function(e) {
+      return this.isMove = false;
+    };
+
+    ScheduleManager.prototype.movePanel = function(e) {
+      var dx, dy;
+      if (!this.isMove) {
+        return;
+      }
+      e = e || window.event;
+      dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
+      dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
+      this.el.css("left", dx);
+      this.el.css("top", dy);
+      this.preLeft = e.clientX;
+      return this.preTop = e.clientY;
+    };
+
     function ScheduleManager(paper, color, item, width) {
-      var gs, left, ss, top, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       this.paper = paper;
       this.color = color;
       this.item = item;
       this.width = width;
+      this.render = __bind(this.render, this);
+      this.refreshSchedule = __bind(this.refreshSchedule, this);
+      ScheduleManager.__super__.constructor.apply(this, arguments);
+      this.isMove = false;
       this.font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
       this.titlerectStyle = {
-        fill: "#31708f",
-        stroke: "#31708f",
+        fill: "#98FB98",
+        stroke: "#98FB98",
         "fill-opacity": 0.05,
         "stroke-width": 0,
         cursor: "hand"
@@ -25656,27 +25693,35 @@ Released under the MIT License
         "stroke-width": 1
       };
       this.height = 0;
+      this.isRefresh = true;
+      this.refreshSchedule(20, 10);
+    }
+
+    ScheduleManager.prototype.refreshSchedule = function(top, left) {
+      var gs, ss, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+      if (!this.isRefresh) {
+        return [top, left];
+      }
       this.paper.setStart();
-      _ref = [20, 10], top = _ref[0], left = _ref[1];
-      _ref1 = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
+      _ref = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref[0], left = _ref[1];
       this.title = this.paper.text(left, top, this.item.SplitName(7)).attr(this.fontStyle);
       this.title.attr("font-size", 22);
-      _ref2 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref2[0], left = _ref2[1];
+      _ref1 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
       this.cyc = this.paper.text(left, top, "调度周期：" + (this.item.GetCyc())).attr(this.fontStyle);
       gs = this.item.GetSecond();
-      _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
+      _ref2 = [top + 30, left], top = _ref2[0], left = _ref2[1];
       this.startSecond = this.paper.text(left, top, "启动时间：").attr(this.fontStyle);
       this.startSecondList = [];
       for (_i = 0, _len = gs.length; _i < _len; _i++) {
         ss = gs[_i];
-        _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
+        _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
         this.startSecondList.push(this.paper.text(left + 20, top, "" + ss).attr(this.fontStyle));
       }
-      _ref5 = [top + 30, left], top = _ref5[0], left = _ref5[1];
+      _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
       this.taskCnt = this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(this.fontStyle);
-      _ref6 = [top + 30, left], top = _ref6[0], left = _ref6[1];
+      _ref5 = [top + 30, left], top = _ref5[0], left = _ref5[1];
       this.nextStart = this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(this.fontStyle);
-      _ref7 = [top + 30, left], top = _ref7[0], left = _ref7[1];
+      _ref6 = [top + 30, left], top = _ref6[0], left = _ref6[1];
       this.betweenline = this.paper.path("M " + left + "," + top + "L " + (this.width - 30) + "," + top).attr({
         stroke: "#A0522D",
         "stroke-width": 2,
@@ -25684,9 +25729,11 @@ Released under the MIT License
       });
       this.titlerect = this.paper.rect(left, 0, 190, top - 10, 3).attr(this.titlerectStyle);
       this.titlerect.hover(this.hoveron, this.hoverout);
+      this.titlerect.click(this.showSchedule, this);
       this.set = this.paper.setFinish();
-      this.height = top;
-    }
+      this.isRefresh = false;
+      return this.height = top;
+    };
 
     ScheduleManager.prototype.hoveron = function() {
       var a;
@@ -25704,9 +25751,27 @@ Released under the MIT License
       return this.animate(b);
     };
 
+    ScheduleManager.prototype.render = function(x, y, schedule) {
+      this.html(require('views/schedule')(schedule));
+      this.el.css("display", "block");
+      this.el.css("position", "absolute");
+      this.el.css("left", x - 400);
+      return this.el.css("top", y - 50);
+    };
+
+    ScheduleManager.prototype.showSchedule = function(e) {
+      e = e || window.event;
+      Spine.trigger("editScheduleRender", e.clientX, e.clientY, this.item);
+      return e;
+    };
+
+    ScheduleManager.prototype.postSchedule = function() {
+      return this.el.css("display", "none");
+    };
+
     return ScheduleManager;
 
-  })();
+  })(Spine.Controller);
 
   module.exports = ScheduleManager;
 
@@ -25805,23 +25870,37 @@ Released under the MIT License
       this.panel.stop().animate({
         boxShadow: '0 0 20px #777'
       }, "fast");
+      this.cyc.stop().animate({
+        opacity: 1
+      }, 200);
       return this.timout = window.setTimeout((function(_this) {
         return function() {
           _this.pbmask.fadeOut(400);
+          _this.body.stop().animate({
+            opacity: 1
+          }, 800);
+          _this.footer.stop().animate({
+            opacity: 1
+          }, 800);
           _this.sname.stop().animate({
-            color: "#333"
+            color: "#333",
+            opacity: 1
           }, 800);
           _this.header.stop().animate({
-            backgroundColor: "#E0E0E0"
+            backgroundColor: "#E0E0E0",
+            opactiy: 1
           }, "fast");
           _this.srun.stop().animate({
-            backgroundColor: "#999"
+            backgroundColor: "#999",
+            opactiy: 1
           }, 800);
           _this.sdelete.stop().animate({
-            backgroundColor: "#999"
+            backgroundColor: "#999",
+            opactiy: 1
           }, 800);
           return _this.scopy.stop().animate({
-            backgroundColor: "#999"
+            backgroundColor: "#999",
+            opactiy: 1
           }, 800);
         };
       })(this), 800);
@@ -25830,23 +25909,32 @@ Released under the MIT License
     ScheduleItem.prototype.mouseout = function(e) {
       window.clearTimeout(this.timout);
       this.pbmask.fadeIn(200);
+      this.cyc.stop().animate({
+        opacity: 0.1
+      }, 200);
+      this.body.stop().animate({
+        opacity: 0
+      }, 800);
+      this.footer.stop().animate({
+        opacity: 0
+      }, 800);
       this.sname.stop().animate({
-        color: "#f5f5f5"
+        color: "transparent"
       }, "fast");
       this.header.stop().animate({
-        backgroundColor: "#f5f5f5"
+        backgroundColor: "transparent"
       }, "fast");
       this.panel.stop().animate({
         boxShadow: ''
       }, "fast");
       this.srun.stop().animate({
-        backgroundColor: "#f5f5f5"
+        backgroundColor: "transparent"
       }, "fast");
       this.scopy.stop().animate({
-        backgroundColor: "#f5f5f5"
+        backgroundColor: "transparent"
       }, "fast");
       return this.sdelete.stop().animate({
-        backgroundColor: "#f5f5f5"
+        backgroundColor: "transparent"
       }, "fast");
     };
 
@@ -25858,9 +25946,9 @@ Released under the MIT License
     };
 
     ScheduleItem.prototype.sstartmouseout = function(e) {
-      this.sstart.css("background-color", "#f5f5f5");
+      this.sstart.css("background-color", "transparent");
       return this.addstart.stop().animate({
-        backgroundColor: "#f5f5f5"
+        backgroundColor: "transparent"
       }, 10);
     };
 
@@ -25869,7 +25957,7 @@ Released under the MIT License
     };
 
     ScheduleItem.prototype.jobcntmouseout = function(e) {
-      return this.jobcnt.css("background-color", "#f5f5f5");
+      return this.jobcnt.css("background-color", "transparent");
     };
 
     ScheduleItem.prototype.nextstartmouseover = function(e) {
@@ -25877,7 +25965,7 @@ Released under the MIT License
     };
 
     ScheduleItem.prototype.nextstartmouseout = function(e) {
-      return this.nextstart.css("background-color", "#f5f5f5");
+      return this.nextstart.css("background-color", "transparent");
     };
 
     return ScheduleItem;
@@ -26637,22 +26725,22 @@ Released under the MIT License
   }
   (function() {
     (function() {
-      __out.push('<div class="popover left" style="display: block; width: 300px; height: 240px;">\n      <div class="arrow"></div>\n        ');
+      __out.push('<div class="popover left fdin" style="display: block; width: 300px;">\n      <div class="arrow"></div>\n        ');
     
       if (this.opt === "add") {
-        __out.push('\n          <h3 class="popover-title">添加一个作业\n        ');
+        __out.push('\n          <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">添加一个作业\n        ');
       } else {
-        __out.push('\n          <h3 class="popover-title">修改一个作业\n        ');
+        __out.push('\n          <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">修改一个作业\n        ');
       }
     
-      __out.push('\n          <button type="button" class="close pull-right">\n              <span aria-hidden="true">&times;</span>\n              <span class="sr-only">Close</span>\n          </button></h3>\n        ');
+      __out.push('\n          <button type="button" class="close pull-right">\n              <span aria-hidden="true">&times;</span>\n              <span class="sr-only">Close</span>\n          </button></h3>\n          <div class="popover-content" style="background-color: #f5f5f5;" >\n        ');
     
       if (this.opt === "add") {
-        __out.push('\n          <div class="popover-content">\n              <input id="jobname" type="text" class="form-control" placeholder="作业名称" />\n            <br>\n            作业描述：\n            <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n\n            <input id="prejobid" type="hidden" value="');
+        __out.push('\n              <input id="jobname" type="text" class="form-control" placeholder="作业名称" />\n            <br>\n            作业描述：\n            <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n\n            <input id="prejobid" type="hidden" value="');
         __out.push(__sanitize(this.Id));
-        __out.push('" />\n        ');
+        __out.push('" />\n            <br>\n        ');
       } else {
-        __out.push('\n          <div class="popover-content">\n              <input id="jobname" type="text" class="form-control" placeholder="作业名称" value="');
+        __out.push('\n              <input id="jobname" type="text" class="form-control" placeholder="作业名称" value="');
         __out.push(__sanitize(this.Name));
         __out.push('" />\n            <br>\n            作业描述：\n            <textarea id="jobdesc" class="form-control" rows="4">');
         __out.push(__sanitize(this.Desc));
@@ -26660,10 +26748,10 @@ Released under the MIT License
         __out.push(__sanitize(this.PreId));
         __out.push('" />\n            <input id="jobid" type="hidden" value="');
         __out.push(__sanitize(this.Id));
-        __out.push('" />\n        ');
+        __out.push('" />\n            <br>\n        ');
       }
     
-      __out.push('\n      </div>\n</div>\n');
+      __out.push('\n            <span class="pull-right label label-info">Ctrl + Enter</span>\n            <br>\n      </div>\n</div>\n');
     
     }).call(this);
     
@@ -26710,7 +26798,7 @@ module.exports = content;}, "views/schedule-show-info": function(exports, requir
   }
   (function() {
     (function() {
-      __out.push('<div class="panel panel-default fdin">\n    <!--\n    <nav class="navbar navbar-default navbar-static-top" role="navigation">\n        <button type="button" class="navbar-btn pull-left btn btn-default">\n            <span class="glyphicon glyphicon-arrow-left"></span>\n            Prev\n        </button>\n        <button type="button" class="navbar-btn pull-right btn btn-default">\n            Next\n            <span class="glyphicon glyphicon-arrow-right"></span>\n        </button>\n    </nav>\n    --!>\n    <div class="pant">\n    </div>\n</div>\n');
+      __out.push('<div class="panel panel-default fdin" style="background:transparent; border: 0;">\n    <div class="pant">\n    </div>\n</div>\n');
     
     }).call(this);
     
@@ -26773,7 +26861,7 @@ module.exports = content;}, "views/schedule-show": function(exports, require, mo
     
       gnext = this.GetNextStart();
     
-      __out.push('\n\n<div class="panel panel-default fdin">\n    <div class="panel-heading">\n        <!-- 标题 -->\n        <div class="panel-title title">\n            <span class="sname h4" style="cursor: pointer;">\n                ');
+      __out.push('\n\n<div class="panel panel-default fdin" style="background:transparent; border: 0;">\n    <div class="panel-heading" style="background:transparent; border: 0;">\n        <!-- 标题 -->\n        <div class="panel-title title"  style="background:transparent; border: 0;">\n            <span class="sname h4" style="cursor: pointer; opacity: 0; ">\n                ');
     
       if (this.Name.length > 7) {
         __out.push('\n                    ');
@@ -26789,22 +26877,22 @@ module.exports = content;}, "views/schedule-show": function(exports, require, mo
     
       __out.push(__sanitize(gstyle));
     
-      __out.push(' cyc" style="cursor: pointer;">');
+      __out.push(' cyc" style="cursor: pointer; opacity: 0.1">');
     
       __out.push(__sanitize(gcyc));
     
-      __out.push('</span>\n        </div>\n    </div>\n        \n\t<div class="pbmask">\n        <h1>');
+      __out.push('</span>\n        </div>\n    </div>\n        \n\t<div class="pbmask" style="background:transparent; border: 0;">\n        <h1>');
     
       __out.push(__sanitize(this.Name));
     
-      __out.push('</h1>\n    </div>\n\t<div class="panel-body row container-fluid">\n        <div class="sstart col-sm-12">\n            \n            <!-- 启动时间 -->\n            ');
+      __out.push('</h1>\n    </div>\n\n\t<div class="panel-body row container-fluid" style="background:transparent; border: 0; opacity: 0; ">\n        <div class="sstart col-sm-12" style="background:transparent; border: 0;">\n            \n            <!-- 启动时间 -->\n            ');
     
       if (gs.length > 1) {
         __out.push('\n                <span href="#" id="drops');
         __out.push(__sanitize(this.Id));
         __out.push('" role="button" class="dropdown-toggle" data-toggle="dropdown" style="cursor: pointer;">\n                    <h5>\n                        <span class="glyphicon glyphicon-dashboard"></span>&nbsp;\n                        ');
         __out.push(__sanitize(gs[0]));
-        __out.push('\n                        <span class="caret"></span>\n\n                        <span class="addstart pull-right label label-white" style="cursor: pointer;">\n                            <span class="glyphicon glyphicon-plus" style="color: #f5f5f5;"></span>\n                        </span>\n                    </h5>\n                </span>\n                <ul class="dropdown-menu" role="menu" aria-labelledby="drops');
+        __out.push('\n                        <span class="caret"></span>\n\n                        <span class="addstart pull-right label label-default" style="cursor: pointer;">\n                            <span class="glyphicon glyphicon-plus" style="color: #f5f5f5;"></span>\n                        </span>\n                    </h5>\n                </span>\n                <ul class="dropdown-menu" role="menu" aria-labelledby="drops');
         __out.push(__sanitize(this.Id));
         __out.push('">\n                ');
         for (_i = 0, _len = gs.length; _i < _len; _i++) {
@@ -26819,18 +26907,65 @@ module.exports = content;}, "views/schedule-show": function(exports, require, mo
         __out.push(__sanitize(this.Id));
         __out.push('" >\n                    <h5>\n                        <span class="glyphicon glyphicon-dashboard"></span>&nbsp;\n                        ');
         __out.push(__sanitize(gs[0]));
-        __out.push('\n                        <span class="addstart pull-right label label-white" style="cursor: pointer;">\n                            <span class="glyphicon glyphicon-plus" style="color: #f5f5f5;"></span>\n                        </span>\n                    </h5>\n                </span>\n            ');
+        __out.push('\n                        <span class="addstart pull-right label label-default" style="cursor: pointer;">\n                            <span class="glyphicon glyphicon-plus" style="color: #f5f5f5;"></span>\n                        </span>\n                    </h5>\n                </span>\n            ');
       }
     
-      __out.push('\n        </div>\n        <div class="jobcnt col-sm-12" >\n            <h5>任务数量：<span class="badge">');
+      __out.push('\n        </div>\n        <div class="jobcnt col-sm-12" style="background:transparent; border: 0;">\n            <h5 style="background:transparent; border: 0;">任务数量：<span class="badge">');
     
       __out.push(__sanitize(this.TaskCnt));
     
-      __out.push('</span></h5>\n        </div>\n        <div class="nextstart col-sm-12">\n            <h5>下次执行：');
+      __out.push('</span></h5>\n        </div>\n        <div class="nextstart col-sm-12" style="background:transparent; border: 0;">\n            <h5>下次执行：');
     
       __out.push(__sanitize(gnext));
     
-      __out.push('</h5>\n        </div>\n\n\t</div>\n\t<div class="panel-footer" style="padding: 5px 15px 24px;">\n      <div>\n            <span class="slog pull-right label label-default" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-time" style="color: #f5f5f5;"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="sdelete pull-right label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-trash" style="color: #f5f5f5;"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="scopy pull-right label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-edit" style="color: #f5f5f5;"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="srun pull-left label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-play" style="color: #f5f5f5;"></span>\n            </span>\n      </div>\n\n\t</div>\n</div>\n');
+      __out.push('</h5>\n        </div>\n\n\t</div>\n    <div class="panel-footer" style="padding: 5px 15px 24px; background:transparent; border: 0; opacity: 0;">\n      <div>\n            <span class="slog pull-right label label-default" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-time"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="sdelete pull-right label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-trash"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="scopy pull-right label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-edit"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="srun pull-left label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-play"></span>\n            </span>\n      </div>\n\n\t</div>\n</div>\n');
+    
+    }).call(this);
+    
+  }).call(__obj);
+  __obj.safe = __objSafe, __obj.escape = __escape;
+  return __out.join('');
+};
+module.exports = content;}, "views/schedule": function(exports, require, module) {var content = function(__obj) {
+  if (!__obj) __obj = {};
+  var __out = [], __capture = function(callback) {
+    var out = __out, result;
+    __out = [];
+    callback.call(this);
+    result = __out.join('');
+    __out = out;
+    return __safe(result);
+  }, __sanitize = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else if (typeof value !== 'undefined' && value != null) {
+      return __escape(value);
+    } else {
+      return '';
+    }
+  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
+  __safe = __obj.safe = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else {
+      if (!(typeof value !== 'undefined' && value != null)) value = '';
+      var result = new String(value);
+      result.ecoSafe = true;
+      return result;
+    }
+  };
+  if (!__escape) {
+    __escape = __obj.escape = function(value) {
+      return ('' + value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+  }
+  (function() {
+    (function() {
+      __out.push('<div class="addSchedule row panel panel-default fdin" style="width: 450px; ">\n    <div class="addScheduleHead panel-heading" style="cursor: move; background-color: #E0E0E0;">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">修改调度信息</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="jobname" type="text" class="form-control" placeholder="调度名称" />\n        <br>\n            <span class="label label-default">Second</span>&nbsp;\n            <span class="label label-default">Minutes</span>&nbsp;\n            <span class="label label-success">Hour</span>&nbsp;\n            <span class="label label-default">Day</span>&nbsp;\n            <span class="label label-default">Month</span>&nbsp;\n            <span class="label label-default">Year</span>\n        <br>\n        <br>\n        启动时间：\n        <br>\n        <ul class="list-group">\n            <li class="list-group-item">Cras justo odio</li>\n            <li class="list-group-item">Dapibus ac facilisis in</li>\n            <li class="list-group-item">Morbi leo risus</li>\n            <li class="list-group-item">Porta ac consectetur ac</li>\n            <li class="list-group-item">Vestibulum at eros</li>\n        </ul> \n        调度描述：\n        <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n\n        <br>\n        <span class="pull-right label label-info">Ctrl + Enter</span>\n        <br>\n    </div>\n</div>\n');
     
     }).call(this);
     

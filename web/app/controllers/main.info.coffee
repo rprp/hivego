@@ -21,6 +21,7 @@ class ScheduleInfo extends Spine.Controller
     super
     Schedule.bind("findRecord",  @draw)
     Spine.bind("addJobRender", @renderJob)
+    Spine.bind("editScheduleRender", @renderSchedule)
     @active @change
 
   change: (params) =>
@@ -37,7 +38,6 @@ class ScheduleInfo extends Spine.Controller
     else
       @ssl.taskManager.set.transform("...s0.9")
       tt.sp.refresh() for tt in @ssl.taskManager.ts
-
     event.stopPropagation()
     
   draw: (rs) =>
@@ -51,12 +51,16 @@ class ScheduleInfo extends Spine.Controller
     [@width, @height] = [parseFloat(@pant.css("width")), parseFloat(@pant.css("height"))]
 
     if @ssl
+      @ssl.scheduleManager.refreshSchedule(20,10)
       @ssl.jobManager.refreshJobList(70,10)
       @ssl.layout()
     else
       paper = Raphael(@pant.get(0),'100%','100%')
       @ssl = new ScheduleSymbol(paper,@width,@height,@item) 
     @ssl
+
+  renderSchedule: (x, y, schedule) =>
+    @append(@ssl.scheduleManager.render(x, y, schedule))
 
   renderJob: (x, y, job) =>
     @append(@ssl.jobManager.render(x, y, job))
@@ -88,13 +92,6 @@ class ScheduleSymbol
 
     @layout()
 
-    #jobflg=@paper.circle(@width-60, 100, 15)
-    #jobflg.attr({fill: "green", stroke: "green", "fill-opacity": 0.5, "stroke-width": 1, cursor: "hand"})
-    #jobflg.animate(st)
-    #jobflg.hover (-> @.attr({r: 17})), (-> @.attr({r: 15}))
-
-    #jobflg.click =>
-
   newJobManager: =>
     @jobManager = new JobManager(@paper,@color,@item,220,@)
     @jobManager.bind("rfJobList",@layout)
@@ -103,6 +100,5 @@ class ScheduleSymbol
   layout: =>
     @scheduleManager.set.transform("t#{@width-220},10")
     @jobManager.set.transform("t#{@width-220},#{@scheduleManager.height+10}")
-    @jobManager.addButton.transform("t#{@width-60},#{@scheduleManager.height + 20}s1.2")
 
 module.exports = ScheduleInfo

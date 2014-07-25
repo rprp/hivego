@@ -1,30 +1,33 @@
-<div class="popover left" style="display: block; width: 300px; height: 240px;">
+<div class="popover left fdin" style="display: block; width: 300px;">
       <div class="arrow"></div>
         <% if @opt is "add": %>
-          <h3 class="popover-title">添加一个作业
+          <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">添加一个作业
         <% else: %>
-          <h3 class="popover-title">修改一个作业
+          <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">修改一个作业
         <% end %>
           <button type="button" class="close pull-right">
               <span aria-hidden="true">&times;</span>
               <span class="sr-only">Close</span>
           </button></h3>
+          <div class="popover-content" style="background-color: #f5f5f5;" >
         <% if @opt is "add": %>
-          <div class="popover-content">
               <input id="jobname" type="text" class="form-control" placeholder="作业名称" />
             <br>
             作业描述：
             <textarea id="jobdesc" class="form-control" rows="4"></textarea>
 
             <input id="prejobid" type="hidden" value="<%= @Id %>" />
+            <br>
         <% else: %>
-          <div class="popover-content">
               <input id="jobname" type="text" class="form-control" placeholder="作业名称" value="<%= @Name %>" />
             <br>
             作业描述：
             <textarea id="jobdesc" class="form-control" rows="4"><%= @Desc %></textarea>
             <input id="prejobid" type="hidden" value="<%= @PreId %>" />
             <input id="jobid" type="hidden" value="<%= @Id %>" />
+            <br>
         <% end %>
+            <span class="pull-right label label-info">Ctrl + Enter</span>
+            <br>
       </div>
 </div>

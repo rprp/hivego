@@ -32,9 +32,7 @@ class JobManager extends Spine.Controller
     @jobcirStyle = {"fill-opacity": 0.2, "stroke-width": 1, cursor: "hand"}
     @jobrectStyle = {"fill-opacity": 0.1, "stroke-width": 0}
     @titlerectStyle = {fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.05, "stroke-width": 0, cursor: "hand"}
-    @addButtonStyle = {fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.1, "stroke-opacity":0.2, "stroke-dasharray" : "-","stroke-width": 1, cursor: "hand"}
 
-    @icoplus = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z"
 
     @height = 0
 
@@ -42,14 +40,9 @@ class JobManager extends Spine.Controller
 
     [top,left] = [30, 10]
     @title = @paper.text(left, top, "作业列表").attr(@fontStyle)
-
     @titlerect = @paper.rect(left,top-20,190,35,3).attr(@titlerectStyle)
     @titlerect.hover(@hoveron,@hoverout)
     @titlerect.click(@showJob,@)
-
-    @addButton = @paper.path(@icoplus)
-    @addButton.attr(@addButtonStyle)
-    @addButton.toBack()
 
     @set = @paper.setFinish()
     
@@ -77,7 +70,7 @@ class JobManager extends Spine.Controller
       jobcir.click(@editJob,job)
 
       if job.TaskCnt is 0 and job.NextJobId is 0
-        subButton = @paper.rect(left+150,top-5,25,8,4).attr(@jobrectStyle)
+        subButton = @paper.rect(left+150,top-4,30,7,4).attr(@jobrectStyle)
         subButton.attr(@jobrectStyle)
         subButton.attr("cursor","hand")
         subButton.attr("fill-opacity",0.01)
@@ -114,6 +107,7 @@ class JobManager extends Spine.Controller
   hoveron: -># {{{
     a = Raphael.animation({"fill-opacity": 0.8}, 200)
     @.animate(a)
+    # }}}
       
   nlightTasks: -># {{{
     @data("sinfo")?.taskManager.nlight(@data("Id"))# }}}
@@ -121,6 +115,7 @@ class JobManager extends Spine.Controller
   hoverout: -># {{{
     b = Raphael.animation({"fill-opacity": 0.1}, 200)
     @.animate(b)
+    # }}}
 
   render: (x, y, job) =># {{{
     @html(require('views/schedule-add-job')(job))
@@ -144,9 +139,10 @@ class JobManager extends Spine.Controller
     e# }}}
 
   keypress: (e) -># {{{
-    if e.keyCode is 13 and e.ctrlKey
+    e = e||window.event
+    if e.ctrlKey and e.keyCode in [13,10]
       @postJob(e)
-    else if e.keyCode is 13
+    else if e.keyCode in [13,10]
       @jobdesc.focus()# }}}
 
   delJob: (e) ->
