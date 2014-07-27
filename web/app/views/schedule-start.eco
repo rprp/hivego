@@ -1,0 +1,7 @@
+<li class="list-group-item" >
+    <span class="startSecond glyphicon glyphicon-dashboard" style="display:none; cursor: pointer; "></span>
+    <input type="text" class="startSecondInput form-control"
+    placeholder="如： <%= @ %>"
+    style="display:block;" value=""/>
+    <span class="delStart pull-right glyphicon glyphicon-minus" style="display:none; cursor: pointer;"></span>
+</li>

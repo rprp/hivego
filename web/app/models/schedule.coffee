@@ -25,6 +25,17 @@ class Schedule extends Spine.Model
       when "y" then "label-danger"
       else "无"
 
+  SetCyc: (cyc) ->
+    switch cyc
+      when "Second" then @Cyc = "ss"
+      when  "Minute" then @Cyc = "mi"
+      when "Hour" then @Cyc = "h"
+      when "Day" then @Cyc = "d"
+      when "Week" then @Cyc = "w"
+      when "Month" then @Cyc = "m"
+      when "Year" then @Cyc = "y"
+      else "无"
+
   GetCyc: ->
     switch @Cyc
       when "ss" then "Second"
@@ -44,6 +55,42 @@ class Schedule extends Spine.Model
       if i>0 and i%%len is 0
         sname += "\n"
     sname
+
+  ParseSecond: (sd) ->
+    ss = 0
+    sc = ""
+    secd = 1000 * 1000 * 1000
+    mi = 60 * second
+    h = 60 * mi
+    d = 24 * h
+
+
+    clst = ["年","月","周","日","点","分","秒"]
+    switch @Cyc
+      when "mi" then sc="分"
+      when "h" then sc="点"
+      when "d" then sc="日"
+      when "w" then sc="周"
+      when "m" then sc="月"
+      when "y" then sc="年"
+      else ""
+
+    if sc is sd[1]
+
+    
+
+
+
+  GetDefaultSecond: ->
+    switch @Cyc
+      when "mi" then sc="每分"
+      when "h" then sc="每小时0分"
+      when "d" then sc="每日0点0分"
+      when "w" then sc="每周1 0点0分"
+      when "m" then sc="每月1日0点0分"
+      when "y" then sc="每年1月1日0点0分"
+      else ""
+    sc="#{sc}1秒"
 
   GetSecond: ->
     for t,i in @StartSecond

@@ -8,40 +8,27 @@ class ScheduleManager extends Spine.Controller
   elements:
     ".close":  "close"
     ".addScheduleHead":  "scheduleHead"
+    ".cyclbl": "cycGroup"
+    ".startList":"startList"
+    ".startSecond":"startSecond"
+    ".startSecondInput":"startSecondInput"
 
   events:
     "click .close": "postSchedule"
+    "click .cyclbl": "setCyc"
+    "click .addStart": "addStart"
+    "click .delStart": "delStart"
+    "click .startSecond":"editStartSecond"
+    "keypress .startSecondInput":"setStartSecond"
+
+    "mouseenter .list-group-item":  "showDelStart"
+    "mouseleave .list-group-item":  "hideDelStart"
+
     "mousedown .addScheduleHead": "setMoveFlg"
     "mouseup .addScheduleHead": "clearMoveFlg"
     "mousemove .addScheduleHead": "movePanel"
 
-  setMoveFlg: (e) ->
-    @isMove = true
-    @preLeft = e.clientX
-    @preTop = e.clientY
-
-  clearMoveFlg: (e) ->
-    @isMove = false
-
-  movePanel: (e) ->
-    return unless @isMove
-    e = e||window.event
-
-    dx = (e.clientX - @preLeft) + parseInt(@el.css("left"))
-    dy = (e.clientY - @preTop) + parseInt(@el.css("top"))
-    @el.css("left", dx)
-    @el.css("top", dy)
-
-    @preLeft = e.clientX
-    @preTop = e.clientY
-
-
-
-
-
-
-
-  constructor: (@paper, @color, @item, @width) ->
+  constructor: (@paper, @color, @item, @width) -># {{{
     super
     @isMove = false
     @font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif"
@@ -51,10 +38,9 @@ class ScheduleManager extends Spine.Controller
 
     @isRefresh = true
 
-    @refreshSchedule(20, 10)
+    @refreshSchedule(20, 10)# }}}
 
-
-  refreshSchedule: (top, left) =>
+  refreshSchedule: (top, left) =># {{{
     return [top,left] unless @isRefresh
     @paper.setStart()
 
@@ -98,31 +84,99 @@ class ScheduleManager extends Spine.Controller
     @set = @paper.setFinish()
 
     @isRefresh = false
-    @height = top
+    @height = top# }}}
 
-  hoveron: ->
+  showDelStart: (e) ->
+    $(e.target).children(".delStart").css("display","")
+
+  hideDelStart: (e) ->
+    $(e.target).children(".delStart").css("display","none")
+
+  delStart: (e) ->
+    $(e.target).parent("li").remove()
+
+  addStart: ->
+    @startList.append(require('views/schedule-start')(@item.GetDefaultSecond()))
+    $(".startSecondInput").focus()
+
+  setStartSecond: (e) ->
+    e = e||window.event
+    if e.keyCode in [13,10]
+      $(e.target).css("display","none")
+      $(e.target).siblings().not(".delStart").css("display","")
+      $(e.target).siblings().not(".delStart").text(" #{$(e.target).val()}")
+
+  editStartSecond: (e) ->
+    $(e.target).siblings().not(".delStart").css("display","")
+    $(e.target).siblings().focus()
+    $(e.target).css("display","none")
+
+  setCyc: (e) -># {{{
+    @cycGroup.removeClass("label-success")
+    @cycGroup.addClass("label-default")
+    $(e.target).removeClass("label-default")
+    $(e.target).addClass("label-success")
+    @item.SetCyc($(e.target).text())
+# }}}
+
+  setMoveFlg: (e) -># {{{
+    @isMove = true
+    @preLeft = e.clientX
+    @preTop = e.clientY
+    @el.css("opacity", 0.4)
+# }}}
+
+  clearMoveFlg: (e) -># {{{
+    @isMove = false
+    @el.css("opacity", 1)
+# }}}
+
+  movePanel: (e) -># {{{
+    return unless @isMove
+    e = e||window.event
+
+    dx = (e.clientX - @preLeft) + parseInt(@el.css("left"))
+    dy = (e.clientY - @preTop) + parseInt(@el.css("top"))
+    @el.css("left", dx)
+    @el.css("top", dy)
+    @el.css("opacity", 0.4)
+
+    @preLeft = e.clientX
+    @preTop = e.clientY
+# }}}
+
+  hoveron: -># {{{
     a = Raphael.animation({"fill-opacity": 0.4}, 200)
     @.animate(a)
-      
-  hoverout: ->
+      # }}}
+
+  hoverout: -># {{{
     b = Raphael.animation({"fill-opacity": 0.1}, 200)
     @.animate(b)
+# }}}
 
   render: (x, y, schedule) =># {{{
     @html(require('views/schedule')(schedule))
+
+    cs = c for c in @cycGroup when c.textContent is @item.GetCyc()
+    $(cs).removeClass("label-default")
+    $(cs).addClass("label-success")
+
     @el.css("display","block")
-    @el.css("position","absolute")# }}}
+    @el.css("position","absolute")
     @el.css("left", x-400)
     @el.css("top", y-50)
+
+    # }}}
 
   showSchedule: (e) -># {{{
     e = e||window.event
     Spine.trigger("editScheduleRender",e.clientX,e.clientY,@.item)
     e
     # }}}
-    #
-  postSchedule: ->
+    
+  postSchedule: -># {{{
     @el.css("display","none")
-
+# }}}
 
 module.exports = ScheduleManager

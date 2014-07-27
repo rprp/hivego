@@ -1,3 +1,7 @@
+<% gs=@GetSecond()       %>
+<% gstyle=@GetCycStyle() %>
+<% gcyc=@GetCyc()        %>
+<% gnext=@GetNextStart() %>
 <div class="addSchedule row panel panel-default fdin" style="width: 450px; ">
     <div class="addScheduleHead panel-heading" style="cursor: move; background-color: #E0E0E0;">
         <button type="button" class="close pull-right">
@@ -7,27 +11,36 @@
         <h3 class="panel-title">修改调度信息</h3>
     </div>
     <div class="panel-body" style="background-color: #f5f5f5;" >
-        <input id="jobname" type="text" class="form-control" placeholder="调度名称" />
+        <input id="scheduleName" type="text" class="form-control" placeholder="调度名称" value="<%= @Name %>"/>
         <br>
-            <span class="label label-default">Second</span>&nbsp;
-            <span class="label label-default">Minutes</span>&nbsp;
-            <span class="label label-success">Hour</span>&nbsp;
-            <span class="label label-default">Day</span>&nbsp;
-            <span class="label label-default">Month</span>&nbsp;
-            <span class="label label-default">Year</span>
+            <span class="cyclbl label label-default" style="cursor: pointer;" >Second</span>&nbsp;
+            <span class="cyclbl label label-default" style="cursor: pointer;" >Minute</span>&nbsp;
+            <span class="cyclbl label label-default" style="cursor: pointer;" >Hour</span>&nbsp;
+            <span class="cyclbl label label-default" style="cursor: pointer;" >Day</span>&nbsp;
+            <span class="cyclbl label label-default" style="cursor: pointer;" >Month</span>&nbsp;
+            <span class="cyclbl label label-default" style="cursor: pointer;" >Year</span>
         <br>
         <br>
         启动时间：
         <br>
-        <ul class="list-group">
-            <li class="list-group-item">Cras justo odio</li>
-            <li class="list-group-item">Dapibus ac facilisis in</li>
-            <li class="list-group-item">Morbi leo risus</li>
-            <li class="list-group-item">Porta ac consectetur ac</li>
-            <li class="list-group-item">Vestibulum at eros</li>
+        <ul class="startList list-group">
+            <% for ssd,i in gs when ssd isnt "未设置": %>
+                <li class="list-group-item" >
+                    <span class="startSecond glyphicon glyphicon-dashboard"  style="cursor: pointer;">&nbsp;<%= ssd %>&nbsp; </span>
+                    <input type="text" class="startSecondInput form-control" 
+                        style="display:none;" value="<%= ssd %>"/>
+                    <span class="delStart pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>
+                </li>
+            <% end %>
         </ul> 
+        <div>
+            <span class="pull-right" style="cursor: pointer;">
+                 <span class="addStart glyphicon glyphicon-plus" ></span>
+             </span> 
+         </div> 
+        <br>
         调度描述：
-        <textarea id="jobdesc" class="form-control" rows="4"></textarea>
+        <textarea id="scheduleDesc" class="form-control" rows="4" value="<%= @Desc %>"></textarea>
 
         <br>
         <span class="pull-right label label-info">Ctrl + Enter</span>

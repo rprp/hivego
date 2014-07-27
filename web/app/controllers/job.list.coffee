@@ -1,6 +1,7 @@
 Spine = require('spineify')
 Events  = Spine.Events
 Module  = Spine.Module
+Style = require('controllers/style')
 Schedule = require('models/schedule')
 Raphael = require('raphaelify')
 Eve = require('eve')
@@ -26,21 +27,13 @@ class JobManager extends Spine.Controller
 
     @isRefresh = true
 
-    @font = "Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', '华文细黑', Helvetica, Tahoma, Arial, STXihei, sans-serif"
-    @fontStyle = {fill: "#333", "font-family":@font, "text-anchor": "start", stroke: "none", "font-size": 18, "fill-opacity": 1, "stroke-width": 1}
-    @jobFontStyle = {"font-family":@font , "font-size": 18, "stroke-opacity":1, "fill-opacity": 1, "stroke-width": 0}
-    @jobcirStyle = {"fill-opacity": 0.2, "stroke-width": 1, cursor: "hand"}
-    @jobrectStyle = {"fill-opacity": 0.1, "stroke-width": 0}
-    @titlerectStyle = {fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.05, "stroke-width": 0, cursor: "hand"}
-
-
     @height = 0
 
     @paper.setStart()
 
     [top,left] = [30, 10]
-    @title = @paper.text(left, top, "作业列表").attr(@fontStyle)
-    @titlerect = @paper.rect(left,top-20,190,35,3).attr(@titlerectStyle)
+    @title = @paper.text(left, top, "作业列表").attr(Style.fontStyle)
+    @titlerect = @paper.rect(left,top-20,190,35,3).attr(Style.titlerectStyle)
     @titlerect.hover(@hoveron,@hoverout)
     @titlerect.click(@showJob,@)
 
@@ -64,14 +57,14 @@ class JobManager extends Spine.Controller
     for job,i in @item.Jobs when job.Id isnt 0
       s = @paper.set()
       s1 = @paper.set()
-      jobname = @paper.text(left+80, top, job.Name).attr(@jobFontStyle)
-      jobrect = @paper.rect(left,top-20,190,40,4).attr(@jobrectStyle)
-      jobcir = @paper.circle(left+25,top,15).attr(@jobcirStyle)
+      jobname = @paper.text(left+80, top, job.Name).attr(Style.jobFontStyle)
+      jobrect = @paper.rect(left,top-20,190,40,4).attr(Style.jobrectStyle)
+      jobcir = @paper.circle(left+25,top,15).attr(Style.jobcirStyle)
       jobcir.click(@editJob,job)
 
       if job.TaskCnt is 0 and job.NextJobId is 0
-        subButton = @paper.rect(left+150,top-4,30,7,4).attr(@jobrectStyle)
-        subButton.attr(@jobrectStyle)
+        subButton = @paper.rect(left+150,top-4,30,7,4).attr(Style.jobrectStyle)
+        subButton.attr(Style.jobrectStyle)
         subButton.attr("cursor","hand")
         subButton.attr("fill-opacity",0.01)
         subButton.data("Id",job.Id)

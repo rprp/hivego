@@ -19,7 +19,7 @@ func StartManager(sl *schedule.ScheduleManager) {
 	m.Use(martini.Static("web/public"))
 	m.Use(web.ContextWithCookieSecret(""))
 	m.Use(render.Renderer(render.Options{
-		Directory:       "templates",                // Specify what path to load the templates from.
+		Directory:       "web/templates",            // Specify what path to load the templates from.
 		Extensions:      []string{".tmpl", ".html"}, // Specify extensions to load for templates.
 		Delims:          render.Delims{"{[{", "}]}"},
 		Charset:         "UTF-8",     // Sets encoding for json and html content-types. Default is "UTF-8".

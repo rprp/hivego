@@ -25107,7 +25107,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/job.list": function(exports, require, module) {(function() {
-  var $, Eve, Events, Job, JobManager, Module, Raphael, Schedule, Spine,
+  var $, Eve, Events, Job, JobManager, Module, Raphael, Schedule, Spine, Style,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -25117,6 +25117,8 @@ Released under the MIT License
   Events = Spine.Events;
 
   Module = Spine.Module;
+
+  Style = require('controllers/style');
 
   Schedule = require('models/schedule');
 
@@ -25163,44 +25165,11 @@ Released under the MIT License
         });
       }
       this.isRefresh = true;
-      this.font = "Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', '华文细黑', Helvetica, Tahoma, Arial, STXihei, sans-serif";
-      this.fontStyle = {
-        fill: "#333",
-        "font-family": this.font,
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 18,
-        "fill-opacity": 1,
-        "stroke-width": 1
-      };
-      this.jobFontStyle = {
-        "font-family": this.font,
-        "font-size": 18,
-        "stroke-opacity": 1,
-        "fill-opacity": 1,
-        "stroke-width": 0
-      };
-      this.jobcirStyle = {
-        "fill-opacity": 0.2,
-        "stroke-width": 1,
-        cursor: "hand"
-      };
-      this.jobrectStyle = {
-        "fill-opacity": 0.1,
-        "stroke-width": 0
-      };
-      this.titlerectStyle = {
-        fill: "#31708f",
-        stroke: "#31708f",
-        "fill-opacity": 0.05,
-        "stroke-width": 0,
-        cursor: "hand"
-      };
       this.height = 0;
       this.paper.setStart();
       _ref = [30, 10], top = _ref[0], left = _ref[1];
-      this.title = this.paper.text(left, top, "作业列表").attr(this.fontStyle);
-      this.titlerect = this.paper.rect(left, top - 20, 190, 35, 3).attr(this.titlerectStyle);
+      this.title = this.paper.text(left, top, "作业列表").attr(Style.fontStyle);
+      this.titlerect = this.paper.rect(left, top - 20, 190, 35, 3).attr(Style.titlerectStyle);
       this.titlerect.hover(this.hoveron, this.hoverout);
       this.titlerect.click(this.showJob, this);
       this.set = this.paper.setFinish();
@@ -25238,13 +25207,13 @@ Released under the MIT License
         }
         s = this.paper.set();
         s1 = this.paper.set();
-        jobname = this.paper.text(left + 80, top, job.Name).attr(this.jobFontStyle);
-        jobrect = this.paper.rect(left, top - 20, 190, 40, 4).attr(this.jobrectStyle);
-        jobcir = this.paper.circle(left + 25, top, 15).attr(this.jobcirStyle);
+        jobname = this.paper.text(left + 80, top, job.Name).attr(Style.jobFontStyle);
+        jobrect = this.paper.rect(left, top - 20, 190, 40, 4).attr(Style.jobrectStyle);
+        jobcir = this.paper.circle(left + 25, top, 15).attr(Style.jobcirStyle);
         jobcir.click(this.editJob, job);
         if (job.TaskCnt === 0 && job.NextJobId === 0) {
-          subButton = this.paper.rect(left + 150, top - 4, 30, 7, 4).attr(this.jobrectStyle);
-          subButton.attr(this.jobrectStyle);
+          subButton = this.paper.rect(left + 150, top - 4, 30, 7, 4).attr(Style.jobrectStyle);
+          subButton.attr(Style.jobrectStyle);
           subButton.attr("cursor", "hand");
           subButton.attr("fill-opacity", 0.01);
           subButton.data("Id", job.Id);
@@ -25402,7 +25371,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/main.info": function(exports, require, module) {(function() {
-  var $, Eve, JobManager, Raphael, Schedule, ScheduleInfo, ScheduleManager, ScheduleSymbol, Spine, TaskManager, wheel,
+  var $, Eve, JobManager, Raphael, Schedule, ScheduleInfo, ScheduleManager, ScheduleSymbol, Spine, Style, TaskManager, wheel,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -25414,6 +25383,8 @@ Released under the MIT License
   Eve = require('eve');
 
   Schedule = require('models/schedule');
+
+  Style = require('controllers/style');
 
   ScheduleManager = require('controllers/schedule.info');
 
@@ -25522,22 +25493,11 @@ Released under the MIT License
       this.item = item;
       this.layout = __bind(this.layout, this);
       this.newJobManager = __bind(this.newJobManager, this);
-      this.color = ['#FF8C00', '#008000', '#2F4F4F', '#DA70D6', '#0000FF', '#8A2BE2', '#6495ED', '#B8860B', '#FF4500', '#AFEEEE', '#DB7093', '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#00BFFF', '#008B8B', '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#7FFF00', '#DEB887', '#98FB98', '#FFD700', '#5F9EA0', '#D2691E', '#A9A9A9', '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0', '#006400', '#BDB76B', '#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32'];
-      _ref = [
-        Raphael.animation({
-          "fill-opacity": .2
-        }, 1000), Raphael.animation({
-          "fill-opacity": .5
-        }, 1000)
-      ], this.st = _ref[0], this.ed = _ref[1];
+      this.color = Style.color;
+      _ref = [Style.sopt, Style.eopt], this.st = _ref[0], this.ed = _ref[1];
       this.taskManager = new TaskManager(this.paper, this.color, this.item, this.width, this.height);
       slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
-      slider.attr({
-        fill: "#333",
-        "fill-opacity": 0.3,
-        "stroke-width": 2,
-        "stroke-opacity": 0.1
-      });
+      slider.attr(Style.slider);
       this.scheduleManager = new ScheduleManager(this.paper, this.color, this.item, 220);
       this.newJobManager();
       this.layout();
@@ -25632,38 +25592,25 @@ Released under the MIT License
 
     ScheduleManager.prototype.elements = {
       ".close": "close",
-      ".addScheduleHead": "scheduleHead"
+      ".addScheduleHead": "scheduleHead",
+      ".cyclbl": "cycGroup",
+      ".startList": "startList",
+      ".startSecond": "startSecond",
+      ".startSecondInput": "startSecondInput"
     };
 
     ScheduleManager.prototype.events = {
       "click .close": "postSchedule",
+      "click .cyclbl": "setCyc",
+      "click .addStart": "addStart",
+      "click .delStart": "delStart",
+      "click .startSecond": "editStartSecond",
+      "keypress .startSecondInput": "setStartSecond",
+      "mouseenter .list-group-item": "showDelStart",
+      "mouseleave .list-group-item": "hideDelStart",
       "mousedown .addScheduleHead": "setMoveFlg",
       "mouseup .addScheduleHead": "clearMoveFlg",
       "mousemove .addScheduleHead": "movePanel"
-    };
-
-    ScheduleManager.prototype.setMoveFlg = function(e) {
-      this.isMove = true;
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
-    };
-
-    ScheduleManager.prototype.clearMoveFlg = function(e) {
-      return this.isMove = false;
-    };
-
-    ScheduleManager.prototype.movePanel = function(e) {
-      var dx, dy;
-      if (!this.isMove) {
-        return;
-      }
-      e = e || window.event;
-      dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
-      dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
-      this.el.css("left", dx);
-      this.el.css("top", dy);
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
     };
 
     function ScheduleManager(paper, color, item, width) {
@@ -25735,6 +25682,74 @@ Released under the MIT License
       return this.height = top;
     };
 
+    ScheduleManager.prototype.showDelStart = function(e) {
+      return $(e.target).children(".delStart").css("display", "");
+    };
+
+    ScheduleManager.prototype.hideDelStart = function(e) {
+      return $(e.target).children(".delStart").css("display", "none");
+    };
+
+    ScheduleManager.prototype.delStart = function(e) {
+      return $(e.target).parent("li").remove();
+    };
+
+    ScheduleManager.prototype.addStart = function() {
+      this.startList.append(require('views/schedule-start')(this.item.GetDefaultSecond()));
+      return $(".startSecondInput").focus();
+    };
+
+    ScheduleManager.prototype.setStartSecond = function(e) {
+      var _ref;
+      e = e || window.event;
+      if ((_ref = e.keyCode) === 13 || _ref === 10) {
+        $(e.target).css("display", "none");
+        $(e.target).siblings().not(".delStart").css("display", "");
+        return $(e.target).siblings().not(".delStart").text(" " + ($(e.target).val()));
+      }
+    };
+
+    ScheduleManager.prototype.editStartSecond = function(e) {
+      $(e.target).siblings().not(".delStart").css("display", "");
+      $(e.target).siblings().focus();
+      return $(e.target).css("display", "none");
+    };
+
+    ScheduleManager.prototype.setCyc = function(e) {
+      this.cycGroup.removeClass("label-success");
+      this.cycGroup.addClass("label-default");
+      $(e.target).removeClass("label-default");
+      $(e.target).addClass("label-success");
+      return this.item.SetCyc($(e.target).text());
+    };
+
+    ScheduleManager.prototype.setMoveFlg = function(e) {
+      this.isMove = true;
+      this.preLeft = e.clientX;
+      this.preTop = e.clientY;
+      return this.el.css("opacity", 0.4);
+    };
+
+    ScheduleManager.prototype.clearMoveFlg = function(e) {
+      this.isMove = false;
+      return this.el.css("opacity", 1);
+    };
+
+    ScheduleManager.prototype.movePanel = function(e) {
+      var dx, dy;
+      if (!this.isMove) {
+        return;
+      }
+      e = e || window.event;
+      dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
+      dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
+      this.el.css("left", dx);
+      this.el.css("top", dy);
+      this.el.css("opacity", 0.4);
+      this.preLeft = e.clientX;
+      return this.preTop = e.clientY;
+    };
+
     ScheduleManager.prototype.hoveron = function() {
       var a;
       a = Raphael.animation({
@@ -25752,7 +25767,17 @@ Released under the MIT License
     };
 
     ScheduleManager.prototype.render = function(x, y, schedule) {
+      var c, cs, _i, _len, _ref;
       this.html(require('views/schedule')(schedule));
+      _ref = this.cycGroup;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        c = _ref[_i];
+        if (c.textContent === this.item.GetCyc()) {
+          cs = c;
+        }
+      }
+      $(cs).removeClass("label-default");
+      $(cs).addClass("label-success");
       this.el.css("display", "block");
       this.el.css("position", "absolute");
       this.el.css("left", x - 400);
@@ -25973,6 +25998,97 @@ Released under the MIT License
   })(Spine.Controller);
 
   module.exports = ScheduleItem;
+
+}).call(this);
+}, "controllers/style": function(exports, require, module) {(function() {
+  var $, Eve, Raphael, Spine, Style;
+
+  Spine = require('spineify');
+
+  Raphael = require('raphaelify');
+
+  Eve = require('eve');
+
+  $ = Spine.$;
+
+  Style = (function() {
+    var _ref, _ref1;
+
+    function Style() {}
+
+    Style.color = ['#FF8C00', '#008000', '#2F4F4F', '#DA70D6', '#0000FF', '#8A2BE2', '#6495ED', '#B8860B', '#FF4500', '#AFEEEE', '#DB7093', '#CD853F', '#FFC0CB', '#B0E0E6', '#BC8F8F', '#4169E1', '#8B4513', '#00FFFF', '#00BFFF', '#008B8B', '#ADFF2F', '#4B0082', '#F0E68C', '#7CFC00', '#7FFF00', '#DEB887', '#98FB98', '#FFD700', '#5F9EA0', '#D2691E', '#A9A9A9', '#8B008B', '#556B2F', '#9932CC', '#8FBC8B', '#483D8B', '#00CED1', '#9400D3', '#FF69B4', '#228B22', '#1E90FF', '#FF00FF', '#FFB6C1', '#FFA07A', '#20B2AA', '#87CEFA', '#00FF00', '#B0C4DE', '#FF00FF', '#32CD32', '#0000CD', '#66CDAA', '#BA55D3', '#9370DB', '#3CB371', '#7B68EE', '#00FA9A', '#48D1CC', '#C71585', '#191970', '#000080', '#808000', '#6B8E23', '#FFA500', '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0', '#006400', '#BDB76B', '#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32'];
+
+    _ref = [
+      Raphael.animation({
+        "fill-opacity": .2
+      }, 1000), Raphael.animation({
+        "fill-opacity": .5
+      }, 1000)
+    ], Style.sopt = _ref[0], Style.eopt = _ref[1];
+
+    _ref1 = [
+      Raphael.animation({
+        "fill-opacity": .2
+      }, 2000, function() {
+        return this.animate(this.ceopt);
+      }), Raphael.animation({
+        "fill-opacity": .5
+      }, 2000, function() {
+        return this.animate(this.csopt);
+      })
+    ], Style.csopt = _ref1[0], Style.ceopt = _ref1[1];
+
+    Style.slider = {
+      fill: "#333",
+      "fill-opacity": 0.3,
+      "stroke-width": 2,
+      "stroke-opacity": 0.1
+    };
+
+    Style.font = "Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', '华文细黑', Helvetica, Tahoma, Arial, STXihei, sans-serif";
+
+    Style.fontStyle = {
+      fill: "#333",
+      "font-family": Style.font,
+      "text-anchor": "start",
+      stroke: "none",
+      "font-size": 18,
+      "fill-opacity": 1,
+      "stroke-width": 1
+    };
+
+    Style.jobFontStyle = {
+      "font-family": Style.font,
+      "font-size": 18,
+      "stroke-opacity": 1,
+      "fill-opacity": 1,
+      "stroke-width": 0
+    };
+
+    Style.jobcirStyle = {
+      "fill-opacity": 0.2,
+      "stroke-width": 1,
+      cursor: "hand"
+    };
+
+    Style.jobrectStyle = {
+      "fill-opacity": 0.1,
+      "stroke-width": 0
+    };
+
+    Style.titlerectStyle = {
+      fill: "#31708f",
+      stroke: "#31708f",
+      "fill-opacity": 0.05,
+      "stroke-width": 0,
+      cursor: "hand"
+    };
+
+    return Style;
+
+  })();
+
+  module.exports = Style;
 
 }).call(this);
 }, "controllers/task.list": function(exports, require, module) {(function() {
@@ -26477,6 +26593,27 @@ Released under the MIT License
       }
     };
 
+    Schedule.prototype.SetCyc = function(cyc) {
+      switch (cyc) {
+        case "Second":
+          return this.Cyc = "ss";
+        case "Minute":
+          return this.Cyc = "mi";
+        case "Hour":
+          return this.Cyc = "h";
+        case "Day":
+          return this.Cyc = "d";
+        case "Week":
+          return this.Cyc = "w";
+        case "Month":
+          return this.Cyc = "m";
+        case "Year":
+          return this.Cyc = "y";
+        default:
+          return "无";
+      }
+    };
+
     Schedule.prototype.GetCyc = function() {
       switch (this.Cyc) {
         case "ss":
@@ -26510,6 +26647,65 @@ Released under the MIT License
         }
       }
       return sname;
+    };
+
+    Schedule.prototype.ParseSecond = function(sd) {
+      var clst, sc, ss;
+      ss = 0;
+      sc = "";
+      clst = ["年", "月", "周", "日", "点", "分", "秒"];
+      switch (this.Cyc) {
+        case "mi":
+          sc = "分";
+          break;
+        case "h":
+          sc = "点";
+          break;
+        case "d":
+          sc = "日";
+          break;
+        case "w":
+          sc = "周";
+          break;
+        case "m":
+          sc = "月";
+          break;
+        case "y":
+          sc = "年";
+          break;
+        default:
+          "";
+      }
+      if (sc !== sd[1]) {
+
+      }
+    };
+
+    Schedule.prototype.GetDefaultSecond = function() {
+      var sc;
+      switch (this.Cyc) {
+        case "mi":
+          sc = "每分";
+          break;
+        case "h":
+          sc = "每小时0分";
+          break;
+        case "d":
+          sc = "每日0点0分";
+          break;
+        case "w":
+          sc = "每周1 0点0分";
+          break;
+        case "m":
+          sc = "每月1日0点0分";
+          break;
+        case "y":
+          sc = "每年1月1日0点0分";
+          break;
+        default:
+          "";
+      }
+      return sc = "" + sc + "1秒";
     };
 
     Schedule.prototype.GetSecond = function() {
@@ -26926,6 +27122,57 @@ module.exports = content;}, "views/schedule-show": function(exports, require, mo
   __obj.safe = __objSafe, __obj.escape = __escape;
   return __out.join('');
 };
+module.exports = content;}, "views/schedule-start": function(exports, require, module) {var content = function(__obj) {
+  if (!__obj) __obj = {};
+  var __out = [], __capture = function(callback) {
+    var out = __out, result;
+    __out = [];
+    callback.call(this);
+    result = __out.join('');
+    __out = out;
+    return __safe(result);
+  }, __sanitize = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else if (typeof value !== 'undefined' && value != null) {
+      return __escape(value);
+    } else {
+      return '';
+    }
+  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
+  __safe = __obj.safe = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else {
+      if (!(typeof value !== 'undefined' && value != null)) value = '';
+      var result = new String(value);
+      result.ecoSafe = true;
+      return result;
+    }
+  };
+  if (!__escape) {
+    __escape = __obj.escape = function(value) {
+      return ('' + value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+  }
+  (function() {
+    (function() {
+      __out.push('<li class="list-group-item" >\n    <span class="startSecond glyphicon glyphicon-dashboard" style="display:none; cursor: pointer; "></span>\n    <input type="text" class="startSecondInput form-control"\n    placeholder="如： ');
+    
+      __out.push(__sanitize(this));
+    
+      __out.push('"\n    style="display:block;" value=""/>\n    <span class="delStart pull-right glyphicon glyphicon-minus" style="display:none; cursor: pointer;"></span>\n</li>\n');
+    
+    }).call(this);
+    
+  }).call(__obj);
+  __obj.safe = __objSafe, __obj.escape = __escape;
+  return __out.join('');
+};
 module.exports = content;}, "views/schedule": function(exports, require, module) {var content = function(__obj) {
   if (!__obj) __obj = {};
   var __out = [], __capture = function(callback) {
@@ -26965,7 +27212,45 @@ module.exports = content;}, "views/schedule": function(exports, require, module)
   }
   (function() {
     (function() {
-      __out.push('<div class="addSchedule row panel panel-default fdin" style="width: 450px; ">\n    <div class="addScheduleHead panel-heading" style="cursor: move; background-color: #E0E0E0;">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">修改调度信息</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="jobname" type="text" class="form-control" placeholder="调度名称" />\n        <br>\n            <span class="label label-default">Second</span>&nbsp;\n            <span class="label label-default">Minutes</span>&nbsp;\n            <span class="label label-success">Hour</span>&nbsp;\n            <span class="label label-default">Day</span>&nbsp;\n            <span class="label label-default">Month</span>&nbsp;\n            <span class="label label-default">Year</span>\n        <br>\n        <br>\n        启动时间：\n        <br>\n        <ul class="list-group">\n            <li class="list-group-item">Cras justo odio</li>\n            <li class="list-group-item">Dapibus ac facilisis in</li>\n            <li class="list-group-item">Morbi leo risus</li>\n            <li class="list-group-item">Porta ac consectetur ac</li>\n            <li class="list-group-item">Vestibulum at eros</li>\n        </ul> \n        调度描述：\n        <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n\n        <br>\n        <span class="pull-right label label-info">Ctrl + Enter</span>\n        <br>\n    </div>\n</div>\n');
+      var gcyc, gnext, gs, gstyle, i, ssd, _i, _len;
+    
+      gs = this.GetSecond();
+    
+      __out.push('\n');
+    
+      gstyle = this.GetCycStyle();
+    
+      __out.push('\n');
+    
+      gcyc = this.GetCyc();
+    
+      __out.push('\n');
+    
+      gnext = this.GetNextStart();
+    
+      __out.push('\n<div class="addSchedule row panel panel-default fdin" style="width: 450px; ">\n    <div class="addScheduleHead panel-heading" style="cursor: move; background-color: #E0E0E0;">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">修改调度信息</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="scheduleName" type="text" class="form-control" placeholder="调度名称" value="');
+    
+      __out.push(__sanitize(this.Name));
+    
+      __out.push('"/>\n        <br>\n            <span class="cyclbl label label-default" style="cursor: pointer;" >Second</span>&nbsp;\n            <span class="cyclbl label label-default" style="cursor: pointer;" >Minute</span>&nbsp;\n            <span class="cyclbl label label-default" style="cursor: pointer;" >Hour</span>&nbsp;\n            <span class="cyclbl label label-default" style="cursor: pointer;" >Day</span>&nbsp;\n            <span class="cyclbl label label-default" style="cursor: pointer;" >Month</span>&nbsp;\n            <span class="cyclbl label label-default" style="cursor: pointer;" >Year</span>\n        <br>\n        <br>\n        启动时间：\n        <br>\n        <ul class="startList list-group">\n            ');
+    
+      for (i = _i = 0, _len = gs.length; _i < _len; i = ++_i) {
+        ssd = gs[i];
+        if (!(ssd !== "未设置")) {
+          continue;
+        }
+        __out.push('\n                <li class="list-group-item" >\n                    <span class="startSecond glyphicon glyphicon-dashboard"  style="cursor: pointer;">&nbsp;');
+        __out.push(__sanitize(ssd));
+        __out.push('&nbsp; </span>\n                    <input type="text" class="startSecondInput form-control" \n                        style="display:none;" value="');
+        __out.push(__sanitize(ssd));
+        __out.push('"/>\n                    <span class="delStart pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n                </li>\n            ');
+      }
+    
+      __out.push('\n        </ul> \n        <div>\n            <span class="pull-right" style="cursor: pointer;">\n                 <span class="addStart glyphicon glyphicon-plus" ></span>\n             </span> \n         </div> \n        <br>\n        调度描述：\n        <textarea id="scheduleDesc" class="form-control" rows="4" value="');
+    
+      __out.push(__sanitize(this.Desc));
+    
+      __out.push('"></textarea>\n\n        <br>\n        <span class="pull-right label label-info">Ctrl + Enter</span>\n        <br>\n    </div>\n</div>\n');
     
     }).call(this);
     
