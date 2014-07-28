@@ -84,7 +84,7 @@ class ScheduleSymbol
     @layout()
 
   layout: =>
-    @scheduleManager.set.transform("t#{@width-220},10")
+    @scheduleManager.st.transform("t#{@width-220},10")
     @jobManager.set.transform("t#{@width-220},#{@scheduleManager.height+10}")
 
 module.exports = ScheduleInfo

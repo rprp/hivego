@@ -46,7 +46,7 @@ func controller(m *martini.ClassicMartini) {
 		r.Get("", getSchedules)
 		r.Post("", addSchedule)
 		r.Get("/:id", getScheduleById)
-		r.Put("/:id", updateSchedule)
+		r.Put("/:id", binding.Bind(schedule.Schedule{}), updateSchedule)
 		r.Delete("/:id", deleteSchedule)
 
 		r.Get("/:sid/jobs", getJobsForSchedule)
@@ -326,9 +326,25 @@ func deleteSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.Sche
 
 } // }}}
 
-func updateSchedule(params martini.Params, ctx *web.Context, res http.ResponseWriter) { // {{{
-	fmt.Println(params)
-
+//updateSchedule获取客户端发送的Schedule信息，并调用Schedule的Update方法将其
+//持久化并更新至Schedule中。
+//成功返回更新后的Schedule信息
+func updateSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, scd schedule.Schedule) { // {{{
+	fmt.Println("0-------------------")
+	if scd.Name == "" {
+		ctx.WriteHeader(500)
+		return
+	}
+	if s := Ss.GetScheduleById(int64(scd.Id)); s != nil {
+		if err := s.UpdateSchedule(&scd); err != nil {
+			ctx.WriteHeader(500)
+			fmt.Println(err)
+		} else {
+			r.JSON(200, s)
+		}
+	} else {
+		ctx.WriteHeader(500)
+	}
 } // }}}
 
 func Logger() martini.Handler { // {{{

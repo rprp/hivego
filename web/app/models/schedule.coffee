@@ -59,11 +59,12 @@ class Schedule extends Spine.Model
   ParseSecond: (sd) ->
     ss = 0
     sc = ""
-    secd = 1000 * 1000 * 1000
+    second = 1000 * 1000 * 1000
     mi = 60 * second
     h = 60 * mi
     d = 24 * h
-
+    k = 0
+    month = 0
 
     clst = ["年","月","周","日","点","分","秒"]
     switch @Cyc
@@ -76,9 +77,50 @@ class Schedule extends Spine.Model
       else ""
 
     if sc is sd[1]
+      tp = ""
+      j = []
+      for v,i in sd[1..]
+        if v in clst
+          if tp isnt ""
+            switch v
+              when "秒"
+                if parseInt(tp) > 60
+                  return [0,-1]
+                else
+                  k += parseInt(tp) * second
+                  j.push(parseInt(tp) * second)
+              when "分"
+                if parseInt(tp) > 60
+                  return [0,-1]
+                else
+                  k += parseInt(tp) * mi
+                  j.push(parseInt(tp) * mi)
+              when "点"
+                if parseInt(tp) > 24
+                  return [0,-1]
+                else
+                  k += parseInt(tp) * h
+                  j.push(parseInt(tp) * h)
+              when "日"
+                if parseInt(tp) > 30
+                  return [0,-1]
+                else
+                  k += parseInt(tp) * d
+                  j.push(parseInt(tp) * d)
+              when "月"
+                if parseInt(tp) > 12
+                  return [0,-1]
+                else
+                  month = parseInt(tp)
+              else ""
+            tp = ""
+        else if not isNaN(v)
+          tp = "#{tp}#{v}"
+          
+    else
+      return [0,-1]
 
-    
-
+    return [month, k]
 
 
   GetDefaultSecond: ->

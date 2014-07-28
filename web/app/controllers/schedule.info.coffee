@@ -10,16 +10,19 @@ class ScheduleManager extends Spine.Controller
     ".addScheduleHead":  "scheduleHead"
     ".cyclbl": "cycGroup"
     ".startList":"startList"
-    ".startSecond":"startSecond"
-    ".startSecondInput":"startSecondInput"
+    ".start":"start"
+    ".startInput":"startInput"
+    "#scheduleName":"scheduleName"
+    "#scheduleDesc":"scheduleDesc"
 
   events:
     "click .close": "postSchedule"
     "click .cyclbl": "setCyc"
     "click .addStart": "addStart"
     "click .delStart": "delStart"
-    "click .startSecond":"editStartSecond"
-    "keypress .startSecondInput":"setStartSecond"
+    "click .start":"editStart"
+    "keypress .startInput":"setStartSecond"
+    "keypress .addSchedule":  "addSchedule"
 
     "mouseenter .list-group-item":  "showDelStart"
     "mouseleave .list-group-item":  "hideDelStart"
@@ -42,8 +45,10 @@ class ScheduleManager extends Spine.Controller
 
   refreshSchedule: (top, left) =># {{{
     return [top,left] unless @isRefresh
-    @paper.setStart()
 
+    @st.pop().remove() while @st?.length
+
+    @paper.setStart()
     [top,left] = [top + (@item.Name.length//7) * 20, left]
     #标题，调度名称，每行超过7个字符后要换行
     @title = @paper.text(left, top, @item.SplitName(7)).attr(@fontStyle)
@@ -56,7 +61,7 @@ class ScheduleManager extends Spine.Controller
     #调度时间
     gs=@item.GetSecond()
     [top,left] = [top+30, left]
-    @startSecond = @paper.text(left, top, "启动时间：").attr(@fontStyle)
+    @start = @paper.text(left, top, "启动时间：").attr(@fontStyle)
 
     @startSecondList = []
     for ss in gs
@@ -81,7 +86,7 @@ class ScheduleManager extends Spine.Controller
     @titlerect.hover(@hoveron,@hoverout)
     @titlerect.click(@showSchedule,@)
 
-    @set = @paper.setFinish()
+    @st = @paper.setFinish()
 
     @isRefresh = false
     @height = top# }}}
@@ -97,7 +102,7 @@ class ScheduleManager extends Spine.Controller
 
   addStart: ->
     @startList.append(require('views/schedule-start')(@item.GetDefaultSecond()))
-    $(".startSecondInput").focus()
+    $(".startInput").focus()
 
   setStartSecond: (e) ->
     e = e||window.event
@@ -105,17 +110,52 @@ class ScheduleManager extends Spine.Controller
       $(e.target).css("display","none")
       $(e.target).siblings().not(".delStart").css("display","")
       $(e.target).siblings().not(".delStart").text(" #{$(e.target).val()}")
+      [m,t] = @item.ParseSecond($(e.target).val())
 
-  editStartSecond: (e) ->
+      if t is -1
+        $(e.target).siblings().not(".delStart").addClass("alert-danger")
+      else
+        $(e.target).siblings().not(".delStart").removeClass("alert-danger")
+        $(e.target).siblings().filter(".startSecond").val(t)
+        $(e.target).siblings().filter(".startMonth").val(m)
+
+  editStart: (e) ->
     $(e.target).siblings().not(".delStart").css("display","")
     $(e.target).siblings().focus()
     $(e.target).css("display","none")
 
+  addSchedule: (e) ->
+    e = e||window.event
+    if e.ctrlKey and e.keyCode in [13,10]
+      @el.css("display","none")
+      @item.Name = @scheduleName.val()
+      @item.Desc = @scheduleDesc.val()
+      @item.StartMonth = []
+      @item.StartSecond = []
+      for li,i in @startList.children("li")
+        ss = $(li).children(".startSecond").val()
+        sm = $(li).children(".startMonth").val()
+        if ss isnt -1 and ss isnt ""
+          @item.StartMonth.push(parseInt(sm))
+          @item.StartSecond.push(parseInt(ss))
+      @item.bind("ajaxSuccess",@scheduleRefresh)
+      @item.save()
+
+  scheduleRefresh:  (data, status, xhr) =>
+    if xhr is "success"
+      id = @item.Id
+      Schedule.fetch({Id:id})
+      @item = Schedule.find(id)
+      @isRefresh = true
+
+
   setCyc: (e) -># {{{
     @cycGroup.removeClass("label-success")
     @cycGroup.addClass("label-default")
+
     $(e.target).removeClass("label-default")
     $(e.target).addClass("label-success")
+
     @item.SetCyc($(e.target).text())
 # }}}
 

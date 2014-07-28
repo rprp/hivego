@@ -272,11 +272,29 @@ func (s *Schedule) UpdateJob(job *Job) (err error) {
 		j.ModifyTime = time.Now()
 		j.ModifyUserId = job.ModifyUserId
 
-		if err = j.Update(); err == nil {
-			return err
-		}
+		return j.Update()
+	} else {
+		err = errors.New(fmt.Sprintf("not found job by id %d", job.Id))
 	}
 	return err
+}
+
+//UpdateSchedule方法会将传入参数的信息更新到Schedule结构并持久化到数据库中
+//在持久化之前会调用addStart方法将启动列表持久化
+func (s *Schedule) UpdateSchedule(scd *Schedule) (err error) {
+	s.Name = scd.Name
+	s.Desc = scd.Desc
+	s.Cyc = scd.Cyc
+	s.StartMonth = scd.StartMonth
+	s.StartSecond = scd.StartSecond
+	s.ModifyTime = time.Now()
+	s.ModifyUserId = scd.ModifyUserId
+
+	if err = s.addStart(); err != nil {
+		return err
+	}
+
+	return s.Update()
 }
 
 //GetJobById遍历Jobs列表，返回调度中指定Id的Job，若没找到返回nil
@@ -291,7 +309,7 @@ func (s *Schedule) GetJobById(Id int64) *Job {
 
 //Delete方法，删除元数据库中的调度信息
 func (s *Schedule) Delete() error { // {{{
-	sql := `Delete scd_schedule WHERE scd_id=?`
+	sql := `Delete FROM scd_schedule WHERE scd_id=?`
 	_, err := g.HiveConn.Exec(sql, &s.Id)
 	g.L.Debugln("schedule", s.Name, " was deleted.")
 
@@ -324,6 +342,32 @@ func (s *Schedule) SetNewId() { // {{{
 	return
 
 } // }}}// }}}
+
+//addStart将Schedule的启动列表持久化到数据库
+//添加前先调用delStart方法将Schedule中的原有启动列表清空
+//若成功则开始添加，失败返回err信息
+func (s *Schedule) addStart() (err error) {
+	if err = s.delStart(); err == nil {
+		for i, st := range s.StartSecond {
+			sm := s.StartMonth[i]
+			sql := `INSERT INTO scd_start 
+            (scd_id, scd_start, scd_start_month,
+            create_user_id, create_time)
+         VALUES  (?, ?, ?, ?, ?)`
+			_, err = g.HiveConn.Exec(sql, &s.Id, &st, &sm, &s.ModifyUserId, &s.ModifyTime)
+			CheckErr("setStart run Sql "+sql, err)
+		}
+	}
+	return err
+}
+
+//delStart删除该Schedule的所有启动时间列表
+func (s *Schedule) delStart() (err error) {
+	sql := `DELETE FROM scd_start WHERE scd_id=?`
+	_, err = g.HiveConn.Exec(sql, &s.Id)
+	return err
+
+}
 
 //getStart，从元数据库获取指定Schedule的启动时间。
 func (s *Schedule) setStart() { // {{{

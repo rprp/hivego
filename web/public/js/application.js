@@ -25510,7 +25510,7 @@ Released under the MIT License
     };
 
     ScheduleSymbol.prototype.layout = function() {
-      this.scheduleManager.set.transform("t" + (this.width - 220) + ",10");
+      this.scheduleManager.st.transform("t" + (this.width - 220) + ",10");
       return this.jobManager.set.transform("t" + (this.width - 220) + "," + (this.scheduleManager.height + 10));
     };
 
@@ -25595,8 +25595,10 @@ Released under the MIT License
       ".addScheduleHead": "scheduleHead",
       ".cyclbl": "cycGroup",
       ".startList": "startList",
-      ".startSecond": "startSecond",
-      ".startSecondInput": "startSecondInput"
+      ".start": "start",
+      ".startInput": "startInput",
+      "#scheduleName": "scheduleName",
+      "#scheduleDesc": "scheduleDesc"
     };
 
     ScheduleManager.prototype.events = {
@@ -25604,8 +25606,9 @@ Released under the MIT License
       "click .cyclbl": "setCyc",
       "click .addStart": "addStart",
       "click .delStart": "delStart",
-      "click .startSecond": "editStartSecond",
-      "keypress .startSecondInput": "setStartSecond",
+      "click .start": "editStart",
+      "keypress .startInput": "setStartSecond",
+      "keypress .addSchedule": "addSchedule",
       "mouseenter .list-group-item": "showDelStart",
       "mouseleave .list-group-item": "hideDelStart",
       "mousedown .addScheduleHead": "setMoveFlg",
@@ -25619,6 +25622,7 @@ Released under the MIT License
       this.item = item;
       this.width = width;
       this.render = __bind(this.render, this);
+      this.scheduleRefresh = __bind(this.scheduleRefresh, this);
       this.refreshSchedule = __bind(this.refreshSchedule, this);
       ScheduleManager.__super__.constructor.apply(this, arguments);
       this.isMove = false;
@@ -25645,30 +25649,33 @@ Released under the MIT License
     }
 
     ScheduleManager.prototype.refreshSchedule = function(top, left) {
-      var gs, ss, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+      var gs, ss, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       if (!this.isRefresh) {
         return [top, left];
       }
+      while ((_ref = this.st) != null ? _ref.length : void 0) {
+        this.st.pop().remove();
+      }
       this.paper.setStart();
-      _ref = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref[0], left = _ref[1];
+      _ref1 = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
       this.title = this.paper.text(left, top, this.item.SplitName(7)).attr(this.fontStyle);
       this.title.attr("font-size", 22);
-      _ref1 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
+      _ref2 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref2[0], left = _ref2[1];
       this.cyc = this.paper.text(left, top, "调度周期：" + (this.item.GetCyc())).attr(this.fontStyle);
       gs = this.item.GetSecond();
-      _ref2 = [top + 30, left], top = _ref2[0], left = _ref2[1];
-      this.startSecond = this.paper.text(left, top, "启动时间：").attr(this.fontStyle);
+      _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
+      this.start = this.paper.text(left, top, "启动时间：").attr(this.fontStyle);
       this.startSecondList = [];
       for (_i = 0, _len = gs.length; _i < _len; _i++) {
         ss = gs[_i];
-        _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
+        _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
         this.startSecondList.push(this.paper.text(left + 20, top, "" + ss).attr(this.fontStyle));
       }
-      _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
-      this.taskCnt = this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(this.fontStyle);
       _ref5 = [top + 30, left], top = _ref5[0], left = _ref5[1];
-      this.nextStart = this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(this.fontStyle);
+      this.taskCnt = this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(this.fontStyle);
       _ref6 = [top + 30, left], top = _ref6[0], left = _ref6[1];
+      this.nextStart = this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(this.fontStyle);
+      _ref7 = [top + 30, left], top = _ref7[0], left = _ref7[1];
       this.betweenline = this.paper.path("M " + left + "," + top + "L " + (this.width - 30) + "," + top).attr({
         stroke: "#A0522D",
         "stroke-width": 2,
@@ -25677,7 +25684,7 @@ Released under the MIT License
       this.titlerect = this.paper.rect(left, 0, 190, top - 10, 3).attr(this.titlerectStyle);
       this.titlerect.hover(this.hoveron, this.hoverout);
       this.titlerect.click(this.showSchedule, this);
-      this.set = this.paper.setFinish();
+      this.st = this.paper.setFinish();
       this.isRefresh = false;
       return this.height = top;
     };
@@ -25696,23 +25703,67 @@ Released under the MIT License
 
     ScheduleManager.prototype.addStart = function() {
       this.startList.append(require('views/schedule-start')(this.item.GetDefaultSecond()));
-      return $(".startSecondInput").focus();
+      return $(".startInput").focus();
     };
 
     ScheduleManager.prototype.setStartSecond = function(e) {
-      var _ref;
+      var m, t, _ref, _ref1;
       e = e || window.event;
       if ((_ref = e.keyCode) === 13 || _ref === 10) {
         $(e.target).css("display", "none");
         $(e.target).siblings().not(".delStart").css("display", "");
-        return $(e.target).siblings().not(".delStart").text(" " + ($(e.target).val()));
+        $(e.target).siblings().not(".delStart").text(" " + ($(e.target).val()));
+        _ref1 = this.item.ParseSecond($(e.target).val()), m = _ref1[0], t = _ref1[1];
+        if (t === -1) {
+          return $(e.target).siblings().not(".delStart").addClass("alert-danger");
+        } else {
+          $(e.target).siblings().not(".delStart").removeClass("alert-danger");
+          $(e.target).siblings().filter(".startSecond").val(t);
+          return $(e.target).siblings().filter(".startMonth").val(m);
+        }
       }
     };
 
-    ScheduleManager.prototype.editStartSecond = function(e) {
+    ScheduleManager.prototype.editStart = function(e) {
       $(e.target).siblings().not(".delStart").css("display", "");
       $(e.target).siblings().focus();
       return $(e.target).css("display", "none");
+    };
+
+    ScheduleManager.prototype.addSchedule = function(e) {
+      var i, li, sm, ss, _i, _len, _ref, _ref1;
+      e = e || window.event;
+      if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
+        this.el.css("display", "none");
+        this.item.Name = this.scheduleName.val();
+        this.item.Desc = this.scheduleDesc.val();
+        this.item.StartMonth = [];
+        this.item.StartSecond = [];
+        _ref1 = this.startList.children("li");
+        for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
+          li = _ref1[i];
+          ss = $(li).children(".startSecond").val();
+          sm = $(li).children(".startMonth").val();
+          if (ss !== -1 && ss !== "") {
+            this.item.StartMonth.push(parseInt(sm));
+            this.item.StartSecond.push(parseInt(ss));
+          }
+        }
+        this.item.bind("ajaxSuccess", this.scheduleRefresh);
+        return this.item.save();
+      }
+    };
+
+    ScheduleManager.prototype.scheduleRefresh = function(data, status, xhr) {
+      var id;
+      if (xhr === "success") {
+        id = this.item.Id;
+        Schedule.fetch({
+          Id: id
+        });
+        this.item = Schedule.find(id);
+        return this.isRefresh = true;
+      }
     };
 
     ScheduleManager.prototype.setCyc = function(e) {
@@ -26547,7 +26598,8 @@ Released under the MIT License
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __modulo = function(a, b) { return (a % b + +b) % b; };
+    __modulo = function(a, b) { return (a % b + +b) % b; },
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   Moment = require('momentifycn');
 
@@ -26650,9 +26702,15 @@ Released under the MIT License
     };
 
     Schedule.prototype.ParseSecond = function(sd) {
-      var clst, sc, ss;
+      var clst, d, h, i, j, k, mi, month, sc, second, ss, tp, v, _i, _len, _ref;
       ss = 0;
       sc = "";
+      second = 1000 * 1000 * 1000;
+      mi = 60 * second;
+      h = 60 * mi;
+      d = 24 * h;
+      k = 0;
+      month = 0;
       clst = ["年", "月", "周", "日", "点", "分", "秒"];
       switch (this.Cyc) {
         case "mi":
@@ -26676,9 +26734,67 @@ Released under the MIT License
         default:
           "";
       }
-      if (sc !== sd[1]) {
-
+      if (sc === sd[1]) {
+        tp = "";
+        j = [];
+        _ref = sd.slice(1);
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          v = _ref[i];
+          if (__indexOf.call(clst, v) >= 0) {
+            if (tp !== "") {
+              switch (v) {
+                case "秒":
+                  if (parseInt(tp) > 60) {
+                    return [0, -1];
+                  } else {
+                    k += parseInt(tp) * second;
+                    j.push(parseInt(tp) * second);
+                  }
+                  break;
+                case "分":
+                  if (parseInt(tp) > 60) {
+                    return [0, -1];
+                  } else {
+                    k += parseInt(tp) * mi;
+                    j.push(parseInt(tp) * mi);
+                  }
+                  break;
+                case "点":
+                  if (parseInt(tp) > 24) {
+                    return [0, -1];
+                  } else {
+                    k += parseInt(tp) * h;
+                    j.push(parseInt(tp) * h);
+                  }
+                  break;
+                case "日":
+                  if (parseInt(tp) > 30) {
+                    return [0, -1];
+                  } else {
+                    k += parseInt(tp) * d;
+                    j.push(parseInt(tp) * d);
+                  }
+                  break;
+                case "月":
+                  if (parseInt(tp) > 12) {
+                    return [0, -1];
+                  } else {
+                    month = parseInt(tp);
+                  }
+                  break;
+                default:
+                  "";
+              }
+              tp = "";
+            }
+          } else if (!isNaN(v)) {
+            tp = "" + tp + v;
+          }
+        }
+      } else {
+        return [0, -1];
       }
+      return [month, k];
     };
 
     Schedule.prototype.GetDefaultSecond = function() {
@@ -27161,11 +27277,11 @@ module.exports = content;}, "views/schedule-start": function(exports, require, m
   }
   (function() {
     (function() {
-      __out.push('<li class="list-group-item" >\n    <span class="startSecond glyphicon glyphicon-dashboard" style="display:none; cursor: pointer; "></span>\n    <input type="text" class="startSecondInput form-control"\n    placeholder="如： ');
+      __out.push('<li class="list-group-item" >\n    <span class="start glyphicon glyphicon-dashboard" style="display:none; cursor: pointer; "></span>\n    <input type="text" class="startInput form-control"\n    placeholder="如： ');
     
       __out.push(__sanitize(this));
     
-      __out.push('"\n    style="display:block;" value=""/>\n    <span class="delStart pull-right glyphicon glyphicon-minus" style="display:none; cursor: pointer;"></span>\n</li>\n');
+      __out.push('"\n    style="display:block;" value=""/>\n    <span class="delStart pull-right glyphicon glyphicon-minus" style="display:none; cursor: pointer;"></span>\n    <input class="startSecond " type="hidden" />\n    <input class="startMonth" type="hidden" />\n</li>\n');
     
     }).call(this);
     
@@ -27239,18 +27355,22 @@ module.exports = content;}, "views/schedule": function(exports, require, module)
         if (!(ssd !== "未设置")) {
           continue;
         }
-        __out.push('\n                <li class="list-group-item" >\n                    <span class="startSecond glyphicon glyphicon-dashboard"  style="cursor: pointer;">&nbsp;');
+        __out.push('\n                <li class="list-group-item" >\n                    <span class="start glyphicon glyphicon-dashboard"  style="cursor: pointer;">&nbsp;');
         __out.push(__sanitize(ssd));
-        __out.push('&nbsp; </span>\n                    <input type="text" class="startSecondInput form-control" \n                        style="display:none;" value="');
+        __out.push('&nbsp; </span>\n                    <input type="text" class="startInput form-control" \n                        style="display:none;" value="');
         __out.push(__sanitize(ssd));
-        __out.push('"/>\n                    <span class="delStart pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n                </li>\n            ');
+        __out.push('"/>\n                    <span class="delStart pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n                    <input class="startSecond " type="hidden" value="');
+        __out.push(__sanitize(this.StartSecond[i]));
+        __out.push('" />\n                    <input class="startMonth" type="hidden" value="');
+        __out.push(__sanitize(this.StartMonth[i]));
+        __out.push('" />\n                </li>\n            ');
       }
     
-      __out.push('\n        </ul> \n        <div>\n            <span class="pull-right" style="cursor: pointer;">\n                 <span class="addStart glyphicon glyphicon-plus" ></span>\n             </span> \n         </div> \n        <br>\n        调度描述：\n        <textarea id="scheduleDesc" class="form-control" rows="4" value="');
+      __out.push('\n        </ul> \n        <div>\n            <span class="pull-right" style="cursor: pointer;">\n                 <span class="addStart glyphicon glyphicon-plus" ></span>\n             </span> \n         </div> \n        <br>\n        调度描述：\n        <textarea id="scheduleDesc" class="form-control" rows="4" >');
     
       __out.push(__sanitize(this.Desc));
     
-      __out.push('"></textarea>\n\n        <br>\n        <span class="pull-right label label-info">Ctrl + Enter</span>\n        <br>\n    </div>\n</div>\n');
+      __out.push('</textarea>\n\n        <br>\n        <span class="pull-right label label-info">Ctrl + Enter</span>\n        <br>\n    </div>\n</div>\n');
     
     }).call(this);
     

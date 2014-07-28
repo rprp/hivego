@@ -26,10 +26,12 @@
         <ul class="startList list-group">
             <% for ssd,i in gs when ssd isnt "未设置": %>
                 <li class="list-group-item" >
-                    <span class="startSecond glyphicon glyphicon-dashboard"  style="cursor: pointer;">&nbsp;<%= ssd %>&nbsp; </span>
-                    <input type="text" class="startSecondInput form-control" 
+                    <span class="start glyphicon glyphicon-dashboard"  style="cursor: pointer;">&nbsp;<%= ssd %>&nbsp; </span>
+                    <input type="text" class="startInput form-control" 
                         style="display:none;" value="<%= ssd %>"/>
                     <span class="delStart pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>
+                    <input class="startSecond " type="hidden" value="<%= @StartSecond[i] %>" />
+                    <input class="startMonth" type="hidden" value="<%= @StartMonth[i] %>" />
                 </li>
             <% end %>
         </ul> 
@@ -40,7 +42,7 @@
          </div> 
         <br>
         调度描述：
-        <textarea id="scheduleDesc" class="form-control" rows="4" value="<%= @Desc %>"></textarea>
+        <textarea id="scheduleDesc" class="form-control" rows="4" ><%= @Desc %></textarea>
 
         <br>
         <span class="pull-right label label-info">Ctrl + Enter</span>
