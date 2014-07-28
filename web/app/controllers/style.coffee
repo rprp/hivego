@@ -21,10 +21,10 @@ class Style
     @slider = {fill: "#333", "fill-opacity": 0.3, "stroke-width": 2, "stroke-opacity": 0.1}
     
     @font = "Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', '华文细黑', Helvetica, Tahoma, Arial, STXihei, sans-serif"
-    @fontStyle = {fill: "#333", "font-family":@font, "text-anchor": "start", stroke: "none", "font-size": 18, "fill-opacity": 1, "stroke-width": 1}
+    @fontStyle = {fill: "#333", "font-family":@font, "text-anchor": "start", stroke: "none", "font-size": 14, "fill-opacity": 1, "stroke-width": 1}
     @jobFontStyle = {"font-family":@font , "font-size": 18, "stroke-opacity":1, "fill-opacity": 1, "stroke-width": 0}
     @jobcirStyle = {"fill-opacity": 0.2, "stroke-width": 1, cursor: "hand"}
     @jobrectStyle = {"fill-opacity": 0.1, "stroke-width": 0}
-    @titlerectStyle = {fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.05, "stroke-width": 0, cursor: "hand"}
+    @titlerectStyle = {fill: "#31708f", stroke: "#31708f", "fill-opacity": 0.01, "stroke-width": 0, cursor: "hand"}
 
 module.exports = Style

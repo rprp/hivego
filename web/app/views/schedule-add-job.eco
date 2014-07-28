@@ -27,7 +27,7 @@
             <input id="jobid" type="hidden" value="<%= @Id %>" />
             <br>
         <% end %>
-            <span class="pull-right label label-info">Ctrl + Enter</span>
+            <span id="submitJob" class="pull-right label label-info" style="cursor: pointer;">Ctrl + Enter</span>
             <br>
       </div>
 </div>

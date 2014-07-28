@@ -349,12 +349,13 @@ func (s *Schedule) SetNewId() { // {{{
 func (s *Schedule) addStart() (err error) {
 	if err = s.delStart(); err == nil {
 		for i, st := range s.StartSecond {
+			t := time.Duration(st) / time.Second
 			sm := s.StartMonth[i]
 			sql := `INSERT INTO scd_start 
             (scd_id, scd_start, scd_start_month,
             create_user_id, create_time)
          VALUES  (?, ?, ?, ?, ?)`
-			_, err = g.HiveConn.Exec(sql, &s.Id, &st, &sm, &s.ModifyUserId, &s.ModifyTime)
+			_, err = g.HiveConn.Exec(sql, &s.Id, &t, &sm, &s.ModifyUserId, &s.ModifyTime)
 			CheckErr("setStart run Sql "+sql, err)
 		}
 	}

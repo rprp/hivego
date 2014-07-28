@@ -25134,7 +25134,6 @@ Released under the MIT License
     __extends(JobManager, _super);
 
     JobManager.prototype.elements = {
-      ".close": "close",
       "#jobname": "jobname",
       "#jobdesc": "jobdesc",
       "#prejobid": "prejobid",
@@ -25142,7 +25141,8 @@ Released under the MIT License
     };
 
     JobManager.prototype.events = {
-      "click .close": "postJob",
+      "click .close": "hideJob",
+      "click #submitJob": "postJob",
       "keypress #jobname": "keypress",
       "keypress #jobdesc": "keypress"
     };
@@ -25178,7 +25178,7 @@ Released under the MIT License
     }
 
     JobManager.prototype.refreshJobList = function(top, left) {
-      var i, job, jobcir, jobname, jobrect, s, s1, subButton, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _results;
+      var i, job, jobcir, jobname, jobrect, s, s1, subButton, _i, _j, _len, _len1, _ref, _ref1, _ref2, _results;
       if (!this.item.Jobs) {
         return [top, left];
       }
@@ -25189,19 +25189,16 @@ Released under the MIT License
         _ref = this.list;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           s = _ref[_i];
-          s.pop().remove();
-          s.pop().remove();
-          s.pop().remove();
-          if ((_ref1 = s.pop()) != null) {
-            _ref1.remove();
+          while (s != null ? s.length : void 0) {
+            s.pop().remove();
           }
         }
       }
       this.list = [];
-      _ref2 = this.item.Jobs;
+      _ref1 = this.item.Jobs;
       _results = [];
-      for (i = _j = 0, _len1 = _ref2.length; _j < _len1; i = ++_j) {
-        job = _ref2[i];
+      for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
+        job = _ref1[i];
         if (!(job.Id !== 0)) {
           continue;
         }
@@ -25237,7 +25234,7 @@ Released under the MIT License
         this.list.push(s);
         this.lastJob = job;
         this.isRefresh = false;
-        _results.push((_ref3 = [top + 50, left], top = _ref3[0], left = _ref3[1], _ref3));
+        _results.push((_ref2 = [top + 50, left], top = _ref2[0], left = _ref2[1], _ref2));
       }
       return _results;
     };
@@ -25312,6 +25309,10 @@ Released under the MIT License
       return jb.destroy({
         url: "/schedules/" + (this.data("Sid")) + "/jobs/" + (this.data("Id"))
       });
+    };
+
+    JobManager.prototype.hideJob = function(e) {
+      return this.el.css("display", "none");
     };
 
     JobManager.prototype.postJob = function(e) {
@@ -25572,7 +25573,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedule.info": function(exports, require, module) {(function() {
-  var $, Eve, Raphael, Schedule, ScheduleManager, Spine,
+  var $, Eve, Raphael, Schedule, ScheduleManager, Spine, Style,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -25580,6 +25581,8 @@ Released under the MIT License
   Spine = require('spineify');
 
   Raphael = require('raphaelify');
+
+  Style = require('controllers/style');
 
   Eve = require('eve');
 
@@ -25591,8 +25594,6 @@ Released under the MIT License
     __extends(ScheduleManager, _super);
 
     ScheduleManager.prototype.elements = {
-      ".close": "close",
-      ".addScheduleHead": "scheduleHead",
       ".cyclbl": "cycGroup",
       ".startList": "startList",
       ".start": "start",
@@ -25602,13 +25603,14 @@ Released under the MIT License
     };
 
     ScheduleManager.prototype.events = {
-      "click .close": "postSchedule",
+      "click .close": "hideSchedule",
       "click .cyclbl": "setCyc",
       "click .addStart": "addStart",
       "click .delStart": "delStart",
       "click .start": "editStart",
-      "keypress .startInput": "setStartSecond",
-      "keypress .addSchedule": "addSchedule",
+      "keypress .startInput": "setStartVal",
+      "keypress .addSchedule": "keypress",
+      "click #submitSchedule": "addSchedule",
       "mouseenter .list-group-item": "showDelStart",
       "mouseleave .list-group-item": "hideDelStart",
       "mousedown .addScheduleHead": "setMoveFlg",
@@ -25626,23 +25628,6 @@ Released under the MIT License
       this.refreshSchedule = __bind(this.refreshSchedule, this);
       ScheduleManager.__super__.constructor.apply(this, arguments);
       this.isMove = false;
-      this.font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif";
-      this.titlerectStyle = {
-        fill: "#98FB98",
-        stroke: "#98FB98",
-        "fill-opacity": 0.05,
-        "stroke-width": 0,
-        cursor: "hand"
-      };
-      this.fontStyle = {
-        fill: "#333",
-        "font-family": this.font,
-        "text-anchor": "start",
-        stroke: "none",
-        "font-size": 14,
-        "fill-opacity": 1,
-        "stroke-width": 1
-      };
       this.height = 0;
       this.isRefresh = true;
       this.refreshSchedule(20, 10);
@@ -25658,30 +25643,30 @@ Released under the MIT License
       }
       this.paper.setStart();
       _ref1 = [top + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref1[0], left = _ref1[1];
-      this.title = this.paper.text(left, top, this.item.SplitName(7)).attr(this.fontStyle);
+      this.title = this.paper.text(left, top, this.item.SplitName(7)).attr(Style.fontStyle);
       this.title.attr("font-size", 22);
       _ref2 = [top + 30 + (Math.floor(this.item.Name.length / 7)) * 20, left], top = _ref2[0], left = _ref2[1];
-      this.cyc = this.paper.text(left, top, "调度周期：" + (this.item.GetCyc())).attr(this.fontStyle);
+      this.cyc = this.paper.text(left, top, "调度周期：" + (this.item.GetCyc())).attr(Style.fontStyle);
       gs = this.item.GetSecond();
       _ref3 = [top + 30, left], top = _ref3[0], left = _ref3[1];
-      this.start = this.paper.text(left, top, "启动时间：").attr(this.fontStyle);
+      this.start = this.paper.text(left, top, "启动时间：").attr(Style.fontStyle);
       this.startSecondList = [];
       for (_i = 0, _len = gs.length; _i < _len; _i++) {
         ss = gs[_i];
         _ref4 = [top + 30, left], top = _ref4[0], left = _ref4[1];
-        this.startSecondList.push(this.paper.text(left + 20, top, "" + ss).attr(this.fontStyle));
+        this.startSecondList.push(this.paper.text(left + 20, top, "" + ss).attr(Style.fontStyle));
       }
       _ref5 = [top + 30, left], top = _ref5[0], left = _ref5[1];
-      this.taskCnt = this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(this.fontStyle);
+      this.taskCnt = this.paper.text(left, top, "任务数量：" + this.item.TaskCnt).attr(Style.fontStyle);
       _ref6 = [top + 30, left], top = _ref6[0], left = _ref6[1];
-      this.nextStart = this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(this.fontStyle);
+      this.nextStart = this.paper.text(left, top, "下次执行：" + (this.item.GetNextStart())).attr(Style.fontStyle);
       _ref7 = [top + 30, left], top = _ref7[0], left = _ref7[1];
       this.betweenline = this.paper.path("M " + left + "," + top + "L " + (this.width - 30) + "," + top).attr({
         stroke: "#A0522D",
         "stroke-width": 2,
         "stroke-opacity": 0.2
       });
-      this.titlerect = this.paper.rect(left, 0, 190, top - 10, 3).attr(this.titlerectStyle);
+      this.titlerect = this.paper.rect(left, 0, 190, top - 10, 18).attr(Style.titlerectStyle);
       this.titlerect.hover(this.hoveron, this.hoverout);
       this.titlerect.click(this.showSchedule, this);
       this.st = this.paper.setFinish();
@@ -25706,7 +25691,7 @@ Released under the MIT License
       return $(".startInput").focus();
     };
 
-    ScheduleManager.prototype.setStartSecond = function(e) {
+    ScheduleManager.prototype.setStartVal = function(e) {
       var m, t, _ref, _ref1;
       e = e || window.event;
       if ((_ref = e.keyCode) === 13 || _ref === 10) {
@@ -25730,28 +25715,33 @@ Released under the MIT License
       return $(e.target).css("display", "none");
     };
 
-    ScheduleManager.prototype.addSchedule = function(e) {
-      var i, li, sm, ss, _i, _len, _ref, _ref1;
+    ScheduleManager.prototype.keypress = function(e) {
+      var _ref;
       e = e || window.event;
       if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
-        this.el.css("display", "none");
-        this.item.Name = this.scheduleName.val();
-        this.item.Desc = this.scheduleDesc.val();
-        this.item.StartMonth = [];
-        this.item.StartSecond = [];
-        _ref1 = this.startList.children("li");
-        for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
-          li = _ref1[i];
-          ss = $(li).children(".startSecond").val();
-          sm = $(li).children(".startMonth").val();
-          if (ss !== -1 && ss !== "") {
-            this.item.StartMonth.push(parseInt(sm));
-            this.item.StartSecond.push(parseInt(ss));
-          }
-        }
-        this.item.bind("ajaxSuccess", this.scheduleRefresh);
-        return this.item.save();
+        return this.addSchedule(e);
       }
+    };
+
+    ScheduleManager.prototype.addSchedule = function(e) {
+      var i, li, sm, ss, _i, _len, _ref;
+      this.el.css("display", "none");
+      this.item.Name = this.scheduleName.val();
+      this.item.Desc = this.scheduleDesc.val();
+      this.item.StartMonth = [];
+      this.item.StartSecond = [];
+      _ref = this.startList.children("li");
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        li = _ref[i];
+        ss = $(li).children(".startSecond").val();
+        sm = $(li).children(".startMonth").val();
+        if (ss !== -1 && ss !== "") {
+          this.item.StartMonth.push(parseInt(sm));
+          this.item.StartSecond.push(parseInt(ss));
+        }
+      }
+      this.item.bind("ajaxSuccess", this.scheduleRefresh);
+      return this.item.save();
     };
 
     ScheduleManager.prototype.scheduleRefresh = function(data, status, xhr) {
@@ -25804,7 +25794,7 @@ Released under the MIT License
     ScheduleManager.prototype.hoveron = function() {
       var a;
       a = Raphael.animation({
-        "fill-opacity": 0.4
+        "fill-opacity": 0.1
       }, 200);
       return this.animate(a);
     };
@@ -25812,7 +25802,7 @@ Released under the MIT License
     ScheduleManager.prototype.hoverout = function() {
       var b;
       b = Raphael.animation({
-        "fill-opacity": 0.1
+        "fill-opacity": 0.01
       }, 200);
       return this.animate(b);
     };
@@ -25841,7 +25831,7 @@ Released under the MIT License
       return e;
     };
 
-    ScheduleManager.prototype.postSchedule = function() {
+    ScheduleManager.prototype.hideSchedule = function() {
       return this.el.css("display", "none");
     };
 
@@ -26103,7 +26093,7 @@ Released under the MIT License
       "font-family": Style.font,
       "text-anchor": "start",
       stroke: "none",
-      "font-size": 18,
+      "font-size": 14,
       "fill-opacity": 1,
       "stroke-width": 1
     };
@@ -26130,7 +26120,7 @@ Released under the MIT License
     Style.titlerectStyle = {
       fill: "#31708f",
       stroke: "#31708f",
-      "fill-opacity": 0.05,
+      "fill-opacity": 0.01,
       "stroke-width": 0,
       cursor: "hand"
     };
@@ -27063,7 +27053,7 @@ Released under the MIT License
         __out.push('" />\n            <br>\n        ');
       }
     
-      __out.push('\n            <span class="pull-right label label-info">Ctrl + Enter</span>\n            <br>\n      </div>\n</div>\n');
+      __out.push('\n            <span id="submitJob" class="pull-right label label-info" style="cursor: pointer;">Ctrl + Enter</span>\n            <br>\n      </div>\n</div>\n');
     
     }).call(this);
     
@@ -27370,7 +27360,7 @@ module.exports = content;}, "views/schedule": function(exports, require, module)
     
       __out.push(__sanitize(this.Desc));
     
-      __out.push('</textarea>\n\n        <br>\n        <span class="pull-right label label-info">Ctrl + Enter</span>\n        <br>\n    </div>\n</div>\n');
+      __out.push('</textarea>\n\n        <br>\n        <span id="submitSchedule" class="pull-right label label-info" style="cursor: pointer;">Ctrl + Enter</span>\n        <br>\n    </div>\n</div>\n');
     
     }).call(this);
     

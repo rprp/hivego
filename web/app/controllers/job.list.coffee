@@ -10,48 +10,41 @@ $       = Spine.$
 
 class JobManager extends Spine.Controller
   elements:
-    ".close":  "close"
     "#jobname":  "jobname"
     "#jobdesc":  "jobdesc"
     "#prejobid":  "prejobid"
     "#jobid":  "jobid"
 
   events:
-    "click .close": "postJob"
+    "click .close": "hideJob"
+    "click #submitJob": "postJob"
     "keypress #jobname": "keypress"
     "keypress #jobdesc": "keypress"
 
   constructor: (@paper, @color, @item, @width, @sinfo) -># {{{
     super
     Job.fetch({url:"/schedules/#{@item.Id}/jobs"}) if @item.Jobs
-
     @isRefresh = true
-
     @height = 0
 
     @paper.setStart()
-
     [top,left] = [30, 10]
     @title = @paper.text(left, top, "作业列表").attr(Style.fontStyle)
     @titlerect = @paper.rect(left,top-20,190,35,3).attr(Style.titlerectStyle)
     @titlerect.hover(@hoveron,@hoverout)
     @titlerect.click(@showJob,@)
-
     @set = @paper.setFinish()
-    
-    [top,left]=@refreshJobList(top+40,left)
 
-    @height = top# }}}
+    [top,left]=@refreshJobList(top+40,left)
+    @height = top
+  # }}}
 
   refreshJobList:(top,left) =># {{{
     return [top,left] unless @item.Jobs
     return [top,left] unless @isRefresh
     if @list
       for s in @list
-        s.pop().remove()
-        s.pop().remove()
-        s.pop().remove()
-        s.pop()?.remove()
+        s.pop().remove() while s?.length
 
     @list = []
     for job,i in @item.Jobs when job.Id isnt 0
@@ -92,36 +85,41 @@ class JobManager extends Spine.Controller
       @lastJob = job
 
       @isRefresh = false
-      [top,left]=[top+50,left]# }}}
+      [top,left]=[top+50,left]
+  # }}}
 
   hlightTasks: -># {{{
-    @data("sinfo")?.taskManager.hlight(@data("Id"))# }}}
+    @data("sinfo")?.taskManager.hlight(@data("Id"))
+  # }}}
       
   hoveron: -># {{{
     a = Raphael.animation({"fill-opacity": 0.8}, 200)
     @.animate(a)
-    # }}}
+  # }}}
       
   nlightTasks: -># {{{
-    @data("sinfo")?.taskManager.nlight(@data("Id"))# }}}
+    @data("sinfo")?.taskManager.nlight(@data("Id"))
+  # }}}
 
   hoverout: -># {{{
     b = Raphael.animation({"fill-opacity": 0.1}, 200)
     @.animate(b)
-    # }}}
+  # }}}
 
   render: (x, y, job) =># {{{
     @html(require('views/schedule-add-job')(job))
     @el.css("display","block")
     @el.css("left",x-300)
     @el.css("top",y-120)
-    @el.css("position","absolute")# }}}
+    @el.css("position","absolute")
+  # }}}
     
   editJob: (e) -># {{{
     e = e||window.event
     @.opt = "edit"
     Spine.trigger("addJobRender", e.clientX, e.clientY, @)
-    e# }}}
+    e
+  # }}}
 
   showJob: (e) -># {{{
     e = e||window.event
@@ -129,20 +127,27 @@ class JobManager extends Spine.Controller
     @.lastJob.opt = "add"
     Spine.trigger("addJobRender",e.clientX,e.clientY,@.lastJob)
     @jobname.focus()
-    e# }}}
+    e
+  # }}}
 
   keypress: (e) -># {{{
     e = e||window.event
     if e.ctrlKey and e.keyCode in [13,10]
       @postJob(e)
     else if e.keyCode in [13,10]
-      @jobdesc.focus()# }}}
+      @jobdesc.focus()
+  # }}}
 
-  delJob: (e) ->
+  delJob: (e) -># {{{
     jb = Job.find(@.data("Id"))
     ts = @.data("this")
     jb.bind("change",ts?.delJobAndRefresh)
     jb.destroy({url:"/schedules/#{@.data("Sid")}/jobs/#{@.data("Id")}"})
+  # }}}
+
+  hideJob: (e) -># {{{
+    @el.css("display","none")
+  # }}}
 
   postJob: (e) -># {{{
     @el.css("display","none")
@@ -169,13 +174,13 @@ class JobManager extends Spine.Controller
       Schedule.fetch({Id:id})
       @item = Schedule.find(id)
       @isRefresh = true
-    # }}}
+  # }}}
  
   delJobAndRefresh: (data, status, xhr) =># {{{
     id = @item.Id
     Schedule.fetch({Id:id})
     @item = Schedule.find(id)
     @isRefresh = true
-    # }}}
+  # }}}
  
 module.exports = JobManager

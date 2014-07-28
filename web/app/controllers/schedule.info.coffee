@@ -1,13 +1,12 @@
 Spine = require('spineify')
 Raphael = require('raphaelify')
+Style = require('controllers/style')
 Eve = require('eve')
 Schedule = require('models/schedule')
 $       = Spine.$
 
 class ScheduleManager extends Spine.Controller
   elements:
-    ".close":  "close"
-    ".addScheduleHead":  "scheduleHead"
     ".cyclbl": "cycGroup"
     ".startList":"startList"
     ".start":"start"
@@ -16,13 +15,14 @@ class ScheduleManager extends Spine.Controller
     "#scheduleDesc":"scheduleDesc"
 
   events:
-    "click .close": "postSchedule"
+    "click .close": "hideSchedule"
     "click .cyclbl": "setCyc"
     "click .addStart": "addStart"
     "click .delStart": "delStart"
     "click .start":"editStart"
-    "keypress .startInput":"setStartSecond"
-    "keypress .addSchedule":  "addSchedule"
+    "keypress .startInput":"setStartVal"
+    "keypress .addSchedule":  "keypress"
+    "click #submitSchedule": "addSchedule"
 
     "mouseenter .list-group-item":  "showDelStart"
     "mouseleave .list-group-item":  "hideDelStart"
@@ -34,14 +34,10 @@ class ScheduleManager extends Spine.Controller
   constructor: (@paper, @color, @item, @width) -># {{{
     super
     @isMove = false
-    @font = "Helvetica, Tahoma, Arial, STXihei, '华文细黑', Heiti, '黑体', 'Microsoft YaHei', '微软雅黑', SimSun, '宋体', sans-serif"
-    @titlerectStyle = {fill: "#98FB98", stroke: "#98FB98", "fill-opacity": 0.05, "stroke-width": 0, cursor: "hand"}
-    @fontStyle = {fill: "#333", "font-family":@font, "text-anchor": "start", stroke: "none", "font-size": 14, "fill-opacity": 1, "stroke-width": 1}
     @height = 0
-
     @isRefresh = true
-
-    @refreshSchedule(20, 10)# }}}
+    @refreshSchedule(20, 10)
+  # }}}
 
   refreshSchedule: (top, left) =># {{{
     return [top,left] unless @isRefresh
@@ -51,30 +47,30 @@ class ScheduleManager extends Spine.Controller
     @paper.setStart()
     [top,left] = [top + (@item.Name.length//7) * 20, left]
     #标题，调度名称，每行超过7个字符后要换行
-    @title = @paper.text(left, top, @item.SplitName(7)).attr(@fontStyle)
+    @title = @paper.text(left, top, @item.SplitName(7)).attr(Style.fontStyle)
     @title.attr("font-size", 22)
     [top,left] = [top + 30 + (@item.Name.length//7) * 20, left]
     
     #调度周期
-    @cyc = @paper.text(left, top, "调度周期：#{@item.GetCyc()}").attr(@fontStyle)
+    @cyc = @paper.text(left, top, "调度周期：#{@item.GetCyc()}").attr(Style.fontStyle)
 
     #调度时间
     gs=@item.GetSecond()
     [top,left] = [top+30, left]
-    @start = @paper.text(left, top, "启动时间：").attr(@fontStyle)
+    @start = @paper.text(left, top, "启动时间：").attr(Style.fontStyle)
 
     @startSecondList = []
     for ss in gs
       [top,left] = [top+30, left]
-      @startSecondList.push(@paper.text(left+20, top, "#{ss}").attr(@fontStyle))
+      @startSecondList.push(@paper.text(left+20, top, "#{ss}").attr(Style.fontStyle))
 
     #任务数量
     [top,left] = [top+30, left]
-    @taskCnt = @paper.text(left, top, "任务数量：#{@item.TaskCnt}").attr(@fontStyle)
+    @taskCnt = @paper.text(left, top, "任务数量：#{@item.TaskCnt}").attr(Style.fontStyle)
 
     #下次执行时间
     [top,left] = [top+30, left]
-    @nextStart = @paper.text(left, top, "下次执行：#{@item.GetNextStart()}").attr(@fontStyle)
+    @nextStart = @paper.text(left, top, "下次执行：#{@item.GetNextStart()}").attr(Style.fontStyle)
     
     #当前状态
     #所有者
@@ -82,7 +78,7 @@ class ScheduleManager extends Spine.Controller
     [top,left] = [top+30, left]
     @betweenline = @paper.path("M #{left},#{top}L #{@width-30},#{top}").attr({stroke: "#A0522D", "stroke-width": 2, "stroke-opacity": 0.2})
 
-    @titlerect = @paper.rect(left,0,190,top-10,3).attr(@titlerectStyle)
+    @titlerect = @paper.rect(left,0,190,top-10,18).attr(Style.titlerectStyle)
     @titlerect.hover(@hoveron,@hoverout)
     @titlerect.click(@showSchedule,@)
 
@@ -104,7 +100,7 @@ class ScheduleManager extends Spine.Controller
     @startList.append(require('views/schedule-start')(@item.GetDefaultSecond()))
     $(".startInput").focus()
 
-  setStartSecond: (e) ->
+  setStartVal: (e) ->
     e = e||window.event
     if e.keyCode in [13,10]
       $(e.target).css("display","none")
@@ -124,22 +120,25 @@ class ScheduleManager extends Spine.Controller
     $(e.target).siblings().focus()
     $(e.target).css("display","none")
 
-  addSchedule: (e) ->
+  keypress: (e) ->
     e = e||window.event
     if e.ctrlKey and e.keyCode in [13,10]
-      @el.css("display","none")
-      @item.Name = @scheduleName.val()
-      @item.Desc = @scheduleDesc.val()
-      @item.StartMonth = []
-      @item.StartSecond = []
-      for li,i in @startList.children("li")
-        ss = $(li).children(".startSecond").val()
-        sm = $(li).children(".startMonth").val()
-        if ss isnt -1 and ss isnt ""
-          @item.StartMonth.push(parseInt(sm))
-          @item.StartSecond.push(parseInt(ss))
-      @item.bind("ajaxSuccess",@scheduleRefresh)
-      @item.save()
+      @addSchedule(e)
+
+  addSchedule: (e) ->
+    @el.css("display","none")
+    @item.Name = @scheduleName.val()
+    @item.Desc = @scheduleDesc.val()
+    @item.StartMonth = []
+    @item.StartSecond = []
+    for li,i in @startList.children("li")
+      ss = $(li).children(".startSecond").val()
+      sm = $(li).children(".startMonth").val()
+      if ss isnt -1 and ss isnt ""
+        @item.StartMonth.push(parseInt(sm))
+        @item.StartSecond.push(parseInt(ss))
+    @item.bind("ajaxSuccess",@scheduleRefresh)
+    @item.save()
 
   scheduleRefresh:  (data, status, xhr) =>
     if xhr is "success"
@@ -183,17 +182,17 @@ class ScheduleManager extends Spine.Controller
 
     @preLeft = e.clientX
     @preTop = e.clientY
-# }}}
+  # }}}
 
   hoveron: -># {{{
-    a = Raphael.animation({"fill-opacity": 0.4}, 200)
+    a = Raphael.animation({"fill-opacity": 0.1}, 200)
     @.animate(a)
-      # }}}
+    # }}}
 
   hoverout: -># {{{
-    b = Raphael.animation({"fill-opacity": 0.1}, 200)
+    b = Raphael.animation({"fill-opacity": 0.01}, 200)
     @.animate(b)
-# }}}
+  # }}}
 
   render: (x, y, schedule) =># {{{
     @html(require('views/schedule')(schedule))
@@ -206,17 +205,16 @@ class ScheduleManager extends Spine.Controller
     @el.css("position","absolute")
     @el.css("left", x-400)
     @el.css("top", y-50)
-
-    # }}}
+  # }}}
 
   showSchedule: (e) -># {{{
     e = e||window.event
     Spine.trigger("editScheduleRender",e.clientX,e.clientY,@.item)
     e
-    # }}}
+  # }}}
     
-  postSchedule: -># {{{
+  hideSchedule: -># {{{
     @el.css("display","none")
-# }}}
+  # }}}
 
 module.exports = ScheduleManager

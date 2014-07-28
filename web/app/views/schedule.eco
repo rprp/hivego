@@ -45,7 +45,7 @@
         <textarea id="scheduleDesc" class="form-control" rows="4" ><%= @Desc %></textarea>
 
         <br>
-        <span class="pull-right label label-info">Ctrl + Enter</span>
+        <span id="submitSchedule" class="pull-right label label-info" style="cursor: pointer;">Ctrl + Enter</span>
         <br>
     </div>
 </div>
