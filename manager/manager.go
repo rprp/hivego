@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func StartManager(sl *schedule.ScheduleManager) {
+func StartManager(sl *schedule.ScheduleManager) { // {{{
 	m := martini.Classic()
 	m.Use(Logger)
 	m.Use(martini.Static("web/public"))
@@ -35,9 +35,9 @@ func StartManager(sl *schedule.ScheduleManager) {
 	if err != nil {
 		log.Fatal("Fail to start server: %v", err)
 	}
-}
+} // }}}
 
-func controller(m *martini.ClassicMartini) {
+func controller(m *martini.ClassicMartini) { // {{{
 	m.Get("/", func(r render.Render) {
 		r.HTML(200, "index", nil)
 	})
@@ -54,9 +54,14 @@ func controller(m *martini.ClassicMartini) {
 		r.Put("/:sid/jobs/:id", binding.Bind(schedule.Job{}), updateJob)
 		r.Delete("/:sid/jobs/:id", deleteJob)
 
+		r.Get("/:sid/jobs/:jid/tasks", getJobsForSchedule)
+		r.Post("/:sid/jobs/:jid/tasks", binding.Bind(schedule.Task{}), addTask)
+		r.Put("/:sid/jobs/:jid/tasks/:id", binding.Bind(schedule.Task{}), updateTask)
+		r.Delete("/:sid/jobs/:jid/tasks/:id", deleteJob)
+
 	})
 
-}
+} // }}}
 
 func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
 	sl := make([]*schedule.Schedule, 0)
@@ -132,6 +137,8 @@ func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job
 		job.ScheduleCyc = s.Cyc
 		job.CreateUserId = 1
 		job.ModifyUserId = 1
+		job.CreateTime = time.Now()
+		job.ModifyTime = time.Now()
 		if err := s.AddJob(&job); err != nil {
 			ctx.WriteHeader(500)
 			fmt.Println(err)
@@ -146,7 +153,7 @@ func addJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job
 //updateJob获取客户端发送的Job信息，并调用Schedule的UpdateJob方法将其
 //持久化并更新至Schedule中。
 //成功返回更新后的Job信息
-func updateJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) {
+func updateJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) { // {{{
 	if job.Name == "" {
 		ctx.WriteHeader(500)
 		return
@@ -162,7 +169,40 @@ func updateJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, 
 		ctx.WriteHeader(500)
 	}
 
-}
+} // }}}
+
+//addTask获取客户端发送的Task信息，并调用Schedule的AddJob方法将其
+//持久化并添加至Schedule中。
+//成功返回添加好的Job信息
+//错误返回err信息
+func addTask(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, task schedule.Task) { // {{{
+	if task.Name == "" {
+		ctx.WriteHeader(500)
+		return
+	}
+	task.TaskType = 1
+	task.CreateUserId = 1
+	task.ModifyUserId = 1
+	task.CreateTime = time.Now()
+	task.ModifyTime = time.Now()
+	if err := task.Add(); err != nil {
+		ctx.WriteHeader(500)
+		fmt.Println(err)
+	} else {
+		r.JSON(200, task)
+	}
+} // }}}
+
+//updateTask获取客户端发送的Task信息，并调用Job的UpdateTask方法将其
+//持久化并更新至Job中。
+//成功返回更新后的Task信息
+func updateTask(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, task schedule.Task) { // {{{
+	if task.Name == "" {
+		ctx.WriteHeader(500)
+		return
+	}
+
+} // }}}
 
 func getJobsForSchedule(ctx *web.Context, params martini.Params, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
 

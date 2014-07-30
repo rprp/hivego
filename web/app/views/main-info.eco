@@ -1,0 +1,14 @@
+<div class="panel panel-default fdin" style="background:transparent; border: 0;">
+    <div class="pant">
+    </div>
+</div>
+<div class="btn-toolbar" role="toolbar" style="position: absolute; top:80px; left:100px; opacity: 0.8">
+   <div class="btn-group">
+       <button type="button" class="btn btn-default btn-sm">
+           <span id="btnRefreshAll" class="addStart glyphicon glyphicon-refresh" ></span>
+       </button>
+       <button id="btnAddTask" type="button" class="btn btn-default btn-sm">
+           <span class="addStart glyphicon glyphicon-plus" ></span>
+       </button>
+    </div>
+</div>

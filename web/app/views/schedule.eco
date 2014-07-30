@@ -26,7 +26,7 @@
         <ul class="startList list-group">
             <% for ssd,i in gs when ssd isnt "未设置": %>
                 <li class="list-group-item" >
-                    <span class="start glyphicon glyphicon-dashboard"  style="cursor: pointer;">&nbsp;<%= ssd %>&nbsp; </span>
+                    <span class="start glyphicon glyphicon-time"  style="cursor: pointer;">&nbsp;<%= ssd %>&nbsp; </span>
                     <input type="text" class="startInput form-control" 
                         style="display:none;" value="<%= ssd %>"/>
                     <span class="delStart pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>

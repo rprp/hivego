@@ -107,7 +107,7 @@ class JobManager extends Spine.Controller
   # }}}
 
   render: (x, y, job) =># {{{
-    @html(require('views/schedule-add-job')(job))
+    @html(require('views/job')(job))
     @el.css("display","block")
     @el.css("left",x-300)
     @el.css("top",y-120)

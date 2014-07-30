@@ -14,14 +14,17 @@ class ScheduleInfo extends Spine.Controller
 
   elements:
     ".pant":          "pant"
+    "#btnAddTask":    "btnAddTask"
 
-  #events:
+  events:
+    "click #btnAddTask": "renderTask"
     #"mousewheel .pant": "mousewheel"
 
   constructor: ->
     super
     Schedule.bind("findRecord",  @draw)
     Spine.bind("addJobRender", @renderJob)
+    Spine.bind("addTaskRender", @renderTask)
     Spine.bind("editScheduleRender", @renderSchedule)
     @active @change
 
@@ -30,14 +33,14 @@ class ScheduleInfo extends Spine.Controller
     @render()
 
   render: =>
-    @html(require('views/schedule-show-info')())
+    @html(require('views/main-info')())
 
   mousewheel: (event, delta, deltaX, deltaY)->
     if delta > 0
-      @ssl.taskManager.set.transform("...s1.1")
+      @ssl.taskManager.setpp.transform("...s1.1")
       tt.sp.refresh() for tt in @ssl.taskManager.ts
     else
-      @ssl.taskManager.set.transform("...s0.9")
+      @ssl.taskManager.setpp.transform("...s0.9")
       tt.sp.refresh() for tt in @ssl.taskManager.ts
     event.stopPropagation()
     
@@ -58,6 +61,7 @@ class ScheduleInfo extends Spine.Controller
     else
       paper = Raphael(@pant.get(0),'100%','100%')
       @ssl = new ScheduleSymbol(paper,@width,@height,@item) 
+
     @ssl
 
   renderSchedule: (x, y, schedule) =>
@@ -65,6 +69,9 @@ class ScheduleInfo extends Spine.Controller
 
   renderJob: (x, y, job) =>
     @append(@ssl.jobManager.render(x, y, job))
+
+  renderTask: (task) ->
+    @append (@ssl.taskManager.render(task))
 
 class ScheduleSymbol
   constructor: (@paper, @width, @height, @item) ->

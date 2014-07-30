@@ -31,9 +31,6 @@ class App extends Spine.Controller
       '': (params)-> main.scheduleList.active(params)
       '/schedules': (params)-> main.scheduleList.active(params)
       '/schedules/:id': (params) -> main.scheduleInfo.active(params)
-      #'/contacts/:id':    (params) -> @show.active(params)
-      #'/contacts':        (params) -> @list.active(params)
-      #
 
     Spine.Route.setup()
 

@@ -15,14 +15,16 @@ class ScheduleManager extends Spine.Controller
     "#scheduleDesc":"scheduleDesc"
 
   events:
-    "click .close": "hideSchedule"
-    "click .cyclbl": "setCyc"
-    "click .addStart": "addStart"
-    "click .delStart": "delStart"
-    "click .start":"editStart"
-    "keypress .startInput":"setStartVal"
-    "keypress .addSchedule":  "keypress"
+    "click .close"        :  "hideSchedule"
+    "click .cyclbl"       :  "setCyc"
+    "click .addStart"     :  "appendStart"
+    "click .delStart"     :  "delStart"
+    "click .start"        :  "editStart"
     "click #submitSchedule": "addSchedule"
+
+    "keypress .startInput":  "startKeypress"
+    "keypress .addSchedule": "keypress"
+    "blur .startInput":  "setStartVal"
 
     "mouseenter .list-group-item":  "showDelStart"
     "mouseleave .list-group-item":  "hideDelStart"
@@ -41,7 +43,6 @@ class ScheduleManager extends Spine.Controller
 
   refreshSchedule: (top, left) =># {{{
     return [top,left] unless @isRefresh
-
     @st.pop().remove() while @st?.length
 
     @paper.setStart()
@@ -85,47 +86,60 @@ class ScheduleManager extends Spine.Controller
     @st = @paper.setFinish()
 
     @isRefresh = false
-    @height = top# }}}
+    @height = top
+  # }}}
 
-  showDelStart: (e) ->
+  showDelStart: (e) -># {{{
     $(e.target).children(".delStart").css("display","")
+  # }}}
 
-  hideDelStart: (e) ->
+  hideDelStart: (e) -># {{{
     $(e.target).children(".delStart").css("display","none")
+  # }}}
 
-  delStart: (e) ->
+  delStart: (e) -># {{{
     $(e.target).parent("li").remove()
+  # }}}
 
-  addStart: ->
+  appendStart: -># {{{
     @startList.append(require('views/schedule-start')(@item.GetDefaultSecond()))
     $(".startInput").focus()
+  # }}}
 
-  setStartVal: (e) ->
+  setStartVal: (e) -># {{{
+    e = e||window.event
+    $(e.target).css("display","none")
+    $(e.target).siblings().not(".delStart").css("display","")
+    $(e.target).siblings().not(".delStart").text(" #{$(e.target).val()}")
+    [m,t] = @item.ParseSecond($(e.target).val())
+
+    if t is -1
+      $(e.target).siblings().not(".delStart").addClass("alert-danger")
+    else
+      $(e.target).siblings().not(".delStart").removeClass("alert-danger")
+      $(e.target).siblings().filter(".startSecond").val(t)
+      $(e.target).siblings().filter(".startMonth").val(m)
+  # }}}
+
+  startKeypress: (e) -># {{{
     e = e||window.event
     if e.keyCode in [13,10]
-      $(e.target).css("display","none")
-      $(e.target).siblings().not(".delStart").css("display","")
-      $(e.target).siblings().not(".delStart").text(" #{$(e.target).val()}")
-      [m,t] = @item.ParseSecond($(e.target).val())
+      @setStartVal()
+  # }}}
 
-      if t is -1
-        $(e.target).siblings().not(".delStart").addClass("alert-danger")
-      else
-        $(e.target).siblings().not(".delStart").removeClass("alert-danger")
-        $(e.target).siblings().filter(".startSecond").val(t)
-        $(e.target).siblings().filter(".startMonth").val(m)
-
-  editStart: (e) ->
+  editStart: (e) -># {{{
     $(e.target).siblings().not(".delStart").css("display","")
     $(e.target).siblings().focus()
     $(e.target).css("display","none")
+  # }}}
 
-  keypress: (e) ->
+  keypress: (e) -># {{{
     e = e||window.event
     if e.ctrlKey and e.keyCode in [13,10]
       @addSchedule(e)
+  # }}}
 
-  addSchedule: (e) ->
+  addSchedule: (e) -># {{{
     @el.css("display","none")
     @item.Name = @scheduleName.val()
     @item.Desc = @scheduleDesc.val()
@@ -139,14 +153,15 @@ class ScheduleManager extends Spine.Controller
         @item.StartSecond.push(parseInt(ss))
     @item.bind("ajaxSuccess",@scheduleRefresh)
     @item.save()
+  # }}}
 
-  scheduleRefresh:  (data, status, xhr) =>
+  scheduleRefresh:  (data, status, xhr) =># {{{
     if xhr is "success"
       id = @item.Id
       Schedule.fetch({Id:id})
       @item = Schedule.find(id)
       @isRefresh = true
-
+  # }}}
 
   setCyc: (e) -># {{{
     @cycGroup.removeClass("label-success")
@@ -156,19 +171,19 @@ class ScheduleManager extends Spine.Controller
     $(e.target).addClass("label-success")
 
     @item.SetCyc($(e.target).text())
-# }}}
+  # }}}
 
   setMoveFlg: (e) -># {{{
     @isMove = true
     @preLeft = e.clientX
     @preTop = e.clientY
     @el.css("opacity", 0.4)
-# }}}
+  # }}}
 
   clearMoveFlg: (e) -># {{{
     @isMove = false
     @el.css("opacity", 1)
-# }}}
+  # }}}
 
   movePanel: (e) -># {{{
     return unless @isMove

@@ -10,17 +10,18 @@ type Task struct { // {{{
 	Id           int64             // 任务的ID
 	Address      string            // 任务的执行地址
 	Name         string            // 任务名称
-	JobType      string            // 任务类型
+	TaskType     int64             // 任务类型
 	ScheduleCyc  string            //调度周期
 	TaskCyc      string            //调度周期
 	StartSecond  time.Duration     //周期内启动时间
 	Cmd          string            // 任务执行的命令或脚本、函数名等。
 	Desc         string            //任务说明
 	TimeOut      int64             // 设定超时时间，0表示不做超时限制。单位秒
-	Param        map[string]string // 任务的参数信息
+	Param        []string          // 任务的参数信息
 	Attr         map[string]string // 任务的属性信息
 	JobId        int64             //所属作业ID
-	RelTasks     map[string]*Task  //依赖的任务
+	RelTasksId   []int64           //依赖的任务Id
+	RelTasks     map[string]*Task  //`json:"-"` //依赖的任务
 	RelTaskCnt   int64             //依赖的任务数量
 	CreateUserId int64             //创建人
 	CreateTime   time.Time         //创人
@@ -35,18 +36,20 @@ func (t *Task) refreshTask(jobid int64) { // {{{
 	t.Address = tt.Address
 	t.Name = tt.Name
 	t.TimeOut = tt.TimeOut
-	t.JobType = tt.JobType
+	t.TaskType = tt.TaskType
 	t.TaskCyc = tt.TaskCyc
 	t.StartSecond = tt.StartSecond
 	t.Cmd = tt.Cmd
 	t.Param = tt.Param
 	t.JobId = jobid
 	t.Attr = tt.Attr
+	t.RelTasksId = make([]int64, 0)
 	t.RelTasks = make(map[string]*Task)
 	t.RelTaskCnt = 0
 
 	reltask := getRelTaskId(t.Id)
 	for _, rtid := range reltask {
+		t.RelTasksId = append(t.RelTasksId, rtid)
 		t.RelTasks[string(rtid)] = g.Tasks[string(rtid)]
 		t.RelTaskCnt++
 	}
@@ -101,7 +104,7 @@ func (t *Task) Add() (err error) { // {{{
              task_cmd, task_desc, create_user_id, create_time,
              modify_user_id, modify_time)
 			VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = g.HiveConn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
+	_, err = g.HiveConn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.TaskType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
 	if err == nil {
 		for _, rt := range t.RelTasks {
 			t.AddRelTask(rt.Id)
@@ -116,14 +119,13 @@ func (t *Task) Add() (err error) { // {{{
 } // }}}
 
 //增加作业参数信息至元数据库
-func (t *Task) AddParam(pname string) (err error) { // {{{
+func (t *Task) AddParam(pvalue string) (err error) { // {{{
 	pid, _ := t.GetNewParamTaskId()
-	pv := t.Param[pname]
 	sql := `INSERT INTO scd_task_param
             (scd_param_id,task_id, scd_param_name, scd_param_value,
              create_user_id, create_time)
 			VALUES      (?, ?, ?, ?, ?, ?)`
-	_, err = g.HiveConn.Exec(sql, &pid, &t.Id, &pname, &pv, &t.CreateUserId, &t.CreateTime)
+	_, err = g.HiveConn.Exec(sql, &pid, &t.Id, "0", &pvalue, &t.CreateUserId, &t.CreateTime)
 
 	return err
 } // }}}
@@ -153,7 +155,7 @@ func (t *Task) Update() (err error) { // {{{
 				modify_user_id=?,
 				modify_time=?
 			WHERE task_id=?`
-	_, err = g.HiveConn.Exec(sql, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.JobType, &t.Cmd, &t.Desc, &t.ModifyUserId, &t.ModifyTime, &t.Id)
+	_, err = g.HiveConn.Exec(sql, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.TaskType, &t.Cmd, &t.Desc, &t.ModifyUserId, &t.ModifyTime, &t.Id)
 
 	return err
 } // }}}
@@ -247,9 +249,9 @@ type RelTask struct { // {{{
 } // }}}
 
 //从元数据库获取任务参数信息
-func getTaskParam(id int64) (taskParam map[string]string, err error) { // {{{
+func getTaskParam(id int64) (taskParam []string, err error) { // {{{
 
-	taskParam = make(map[string]string)
+	taskParam = make([]string, 0)
 
 	//查询指定的Task属性列表
 	sql := `SELECT pm.task_id,
@@ -266,7 +268,7 @@ func getTaskParam(id int64) (taskParam map[string]string, err error) { // {{{
 		var id int64
 		var name, value string
 		err = rows.Scan(&id, &name, &value)
-		taskParam[name] = value
+		taskParam = append(taskParam, value)
 	}
 	return taskParam, err
 } // }}}
@@ -315,10 +317,11 @@ func getTask(id int64) (task *Task) { // {{{
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.TaskCyc, &td, &task.Cmd)
+		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.TaskType, &task.TaskCyc, &td, &task.Cmd)
 		//初始化relTask、param的内存
+		task.RelTasksId = make([]int64, 0)
 		task.RelTasks = make(map[string]*Task)
-		task.Param = make(map[string]string)
+		task.Param = make([]string, 0)
 		task.Attr = make(map[string]string)
 		task.Attr, err = getTaskAttr(task.Id)
 		task.Param, err = getTaskParam(task.Id)
@@ -351,10 +354,11 @@ func getAllTasks() (tasks map[string]*Task, err error) { // {{{
 	for rows.Next() {
 		task := &Task{}
 		var td int64
-		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.JobType, &task.TaskCyc, &td, &task.Cmd)
+		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.TaskType, &task.TaskCyc, &td, &task.Cmd)
 		//初始化relTask、param的内存
+		task.RelTasksId = make([]int64, 0)
 		task.RelTasks = make(map[string]*Task)
-		task.Param = make(map[string]string)
+		task.Param = make([]string, 0)
 		task.Attr = make(map[string]string)
 		task.Attr, err = getTaskAttr(task.Id)
 		task.Param, err = getTaskParam(task.Id)

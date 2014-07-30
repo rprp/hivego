@@ -1,0 +1,80 @@
+<div class="addTask row panel panel-default fdin" style="width: 450px;">
+    <div class="addTaskHead panel-heading" style="cursor: move; background-color: #E0E0E0;">
+        <button type="button" class="tclose close pull-right">
+            <span aria-hidden="true">&times;</span>
+            <span class="sr-only">Close</span>
+        </button>
+        <h3 class="panel-title">新增任务</h3>
+    </div>
+    <div class="panel-body" style="background-color: #f5f5f5;" >
+        <input id="taskName" type="text" class="form-control" placeholder="任务名称" value="<%= @Name %>"/>
+        <br>
+        <input id="taskAddr" type="text" class="form-control" placeholder="任务执行地址。如：192.168.0.5" value="<%= @Address %>"/>
+        <br>
+        任务命令行：
+        <textarea id="taskCmd" class="form-control" rows="2" ><%= @Cmd %></textarea>
+        <br>
+        任务参数：
+        <br>
+        <ul class="taskParamList list-group">
+            <% for p,i in @Param? : %>
+            <li class="list-group-item" >
+                <span class="tparam glyphicon glyphicon-th-list"  style="cursor: pointer;">&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;  &nbsp; </span>
+                    <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>
+                <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"
+                style="display:none;" value="<%= p? %>"/>
+            </li>
+            <% end %>
+        </ul> 
+        <div>
+            <span class="pull-right" style="cursor: pointer;">
+                 <span class="addParam glyphicon glyphicon-plus" ></span>
+             </span> 
+         </div> 
+
+        <br>
+        <br>
+        <div class="panel-group" id="accordion">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h4 class="panel-title">
+                <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree">
+                  设置另外的调度周期与启动时间
+                </a>
+              </h4>
+            </div>
+            <div id="collapseThree" class="panel-collapse collapse">
+              <div class="panel-body">
+                 <div>
+                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Second</span>&nbsp;
+                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Minute</span>&nbsp;
+                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Hour</span>&nbsp;
+                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Day</span>&nbsp;
+                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Month</span>&nbsp;
+                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Year</span>
+                 </div>
+                 <br>
+                 启动时间：
+                 <br>
+                 <ul class="startList list-group">
+                         <li class="list-group-item" >
+                             <span class="start glyphicon glyphicon-time"  style="cursor: pointer;">&nbsp;&nbsp; </span>
+                             <input type="text" class="tstartInput form-control" style="display:none;" value=""/>
+                             <input class="startSecond " type="hidden" value="" />
+                             <input class="startMonth" type="hidden" value="" />
+                         </li>
+                 </ul> 
+              </div>
+            </div>
+          </div>
+        </div>
+       
+        <br>
+        任务描述：
+        <textarea id="taskDesc" class="form-control" rows="4" ></textarea>
+        <br>
+        <span id="submitTask" class="pull-right label label-info" style="cursor: pointer;">Ctrl + Enter</span>
+        <br>
+        <input id="taskid" type="hidden" value="<%= @Id %>" />
+    </div>
+</div>

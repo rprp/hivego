@@ -1,56 +1,243 @@
 Spine = require('spineify')
 Raphael = require('raphaelify')
 Eve = require('eve')
+Style = require('controllers/style')
+Task = require('models/task')
+Job = require('models/job')
 $       = Spine.$
 
-class TaskManager
-  constructor: (@paper, @color, @item, @width, @height) ->
-    @set = @paper.set()
+class TaskManager extends Spine.Controller
+  elements:
+    "#taskName": "taskName"
+    "#taskAddr": "taskAddr"
+    "#taskid": "taskId"
+    "#taskCmd":  "taskCmd"
+    ".taskParam":"taskParam"
+    "#taskDesc":"taskDesc"
+    ".tcyclbl": "cycGroup"
+    ".startList":"startList"
+    ".taskParamList":"taskParamList"
+
+  events:
+    "click .tclose"        :  "hideTask"
+    "click .tparam"        :  "editParam"
+    "click .addParam"     :  "appendParam"
+    "click .delParam"     :  "delParam"
+    "click #submitTask": "postTask"
+
+    "keypress .addTask":  "addTaskKeyPress"
+    "keypress .taskParam":  "paramKeyPress"
+    "blur .taskParam":  "setTaskParamVal"
+
+    "mouseenter .list-group-item":  "showDelParam"
+    "mouseleave .list-group-item":  "hideDelParam"
+
+    "mousedown .addTaskHead": "setMoveFlg"
+    "mouseup .addTaskHead": "clearMoveFlg"
+    "mousemove .addTaskHead": "movePanel"
+
+  constructor: (@paper, @color, @item, @w, @h) -># {{{
+    super
+    @setpp = @paper.set()
+    @isRefresh = true
+    @isMove = false
+    @jobList = []
+    @taskList = []
     top = 80
-    @ts = []
     
     if @item.Jobs
-      for job,i in @item.Jobs
-        tasks = (v for k,v of job.Tasks)
-        spacing = (@width-200)/tasks.length if tasks.length > 0
-        r = 25
-        spacing = 100
+      @refreshTaskList(top)
+  # }}}
+
+  refreshTaskList: (top) =># {{{
+    for job,i in @item.Jobs
+      Spine.Module.extend.call(job, Job)
+      @jobList.push(job)
+
+      tasks = (v for k,v of job.Tasks)
+      spacing = 100
   
-        left = (@width-200)/2-(tasks.length/2) * spacing if tasks.length > 0
-        for task,j in tasks
-          t= new TaskSymbol(paper,left,top,task.Name,@color[i],r)
-          t.Id = task.Id
-          t.JobId = job.Id
-          t.RelTaskId = (v.Id for k,v of task.RelTasks)
-          @ts.push(t)
-          @set.push(t.sp)
-          @set.push(t.text)
+      left = (@w-200)/2-(tasks.length/2) * spacing if tasks.length > 0
+      for task,j in tasks
+        Spine.Module.extend.call(task, Task)
+        t= new TaskShape(@paper,left,top,task,@color[i],25)
+        @taskList.push(t)
+        
+        @setpp.push(t.sp)
+        @setpp.push(t.text)
   
-          rts.addNext(t) for rts in @getTaskSymbol(t.RelTaskId)
-          left += spacing
+        rts.addNext(t) for rts in @getTaskShape(t.RelTaskId)
+        left += spacing
+      top += 100
+  # }}}
 
-        top += 120
+  showDelParam: (e) -># {{{
+    $(e.target).children(".delParam").css("display","")
+  # }}}
 
-  getTaskSymbol: (Ids) ->
-     t for t in @ts when t.Id in Ids
+  hideDelParam: (e) -># {{{
+    $(e.target).children(".delParam").css("display","none")
+  # }}}
 
-  hlight: (Id) ->
-    a = Raphael.animation({"fill-opacity": 0.7}, 500)
-    for t in @ts
-      if t.JobId is Id
+  delParam: (e) -># {{{
+    $(e.target).parent("li").remove()
+  # }}}
+
+  appendParam: -># {{{
+    @taskParamList.append(require('views/task-param')())
+    $(".taskParam").focus()
+  # }}}
+
+  getTaskShape: (Ids) -># {{{
+     t for t in @taskList when t.task.Id in Ids
+  # }}}
+
+  addTaskKeyPress: (e) -># {{{
+    e = e||window.event
+    if e.ctrlKey and e.keyCode in [13,10]
+      @postTask(e)
+  # }}}
+
+  postTask: (e) -># {{{
+    @el.css("display","none")
+    if @taskId.val()
+      tk = t.task for t in @taskList when t.task.Id is @taskId.val()
+      tk.bind("ajaxSuccess",@addTaskAndRefresh)
+      tk.Name = @taskName.val()
+      tk.Address = @taskAddr.val()
+      tk.Cmd = @taskCmd.val()
+      tk.Desc = @taskDesc.val()
+
+      tk.Param = []
+      for li,i in @taskParamList.children("li")
+        tp = $(li).children(".taskParam").val()
+        if tp isnt ""
+          tk.Param.push(tp)
+
+      tk.save({url:"/schedules/#{@item.Id}/jobs/#{tk.jobid}/tasks/#{tk.Id}"})
+    else
+      tk = new Task()
+      tk.bind("ajaxSuccess",@addTaskAndRefresh)
+      tk.Name = @taskName.val()
+      tk.Address = @taskAddr.val()
+      tk.Cmd = @taskCmd.val()
+      tk.Desc = @taskDesc.val()
+      tk.Id = -1
+
+      tk.Param = []
+      for li,i in @taskParamList.children("li")
+        tp = $(li).children(".taskParam").val()
+        if tp isnt ""
+          tk.Param.push(tp)
+
+      tk.create({url:"/schedules/#{@item.Id}/jobs/0/tasks"}) if tk.Name
+  # }}}
+
+  addTaskAndRefresh: (task, status, xhr) =># {{{
+    s = Raphael.animation({"fill-opacity": .5, "stroke-width": 6}, 1500, -> @.animate(e))
+    e = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 1500, -> @.animate(s))
+    if xhr is "success"
+      Spine.Module.extend.call(task, Task)
+      t= new TaskShape(@paper,150,35,task,"#FF8C00",25)
+      t.sp.animate(s)
+      @taskList.push(t)
+      
+      @setpp.push(t.sp)
+      @setpp.push(t.text)
+
+      @isRefresh = true
+  # }}}
+
+  hlight: (Id) -># {{{
+    a = Raphael.animation({"fill-opacity": 0.5}, 500)
+    for t in @taskList
+      if t.task.JobId is Id
         t.sp.animate(a)
         t.sp.g = t.sp.glow({color: t.sp.attr("fill"), "fill-opacity": 0.2, width:10})
+  # }}}
 
-  nlight: (Id) ->
+  nlight: (Id) -># {{{
     a = Raphael.animation({"fill-opacity": 0.2}, 500)
-    for t in @ts
-      if t.JobId is Id
+    for t in @taskList
+      if t.task.JobId is Id
         t.sp.animate(a)
         t.sp.g.remove()
+  # }}}
 
+  render: (task) ->
+    @html(require("views/task")(task))
 
-class TaskSymbol
-  constructor: (@paper, @cx, @cy, @name, @color, @r=20) ->
+    cs = c for c in @cycGroup when c.textContent is @item.GetCyc()
+    $(cs).removeClass("label-default")
+    $(cs).addClass("label-success")
+    $(cs).css("display","none")
+    $(cs).prevAll().css("display","none")
+
+    @el.css("display","block")
+    @el.css("position","absolute")
+    @el.css("left",200)
+    @el.css("top", 60)
+
+  setCyc: (e) -># {{{
+    @cycGroup.removeClass("label-success")
+    @cycGroup.addClass("label-default")
+
+    $(e.target).removeClass("label-default")
+    $(e.target).addClass("label-success")
+
+    @item.SetCyc($(e.target).text())
+  # }}}
+
+  hideTask: ->
+    @el.css("display","none")
+
+  setMoveFlg: (e) -># {{{
+    @isMove = true
+    @preLeft = e.clientX
+    @preTop = e.clientY
+    @el.css("opacity", 0.4)
+  # }}}
+
+  clearMoveFlg: (e) -># {{{
+    @isMove = false
+    @el.css("opacity", 1)
+  # }}}
+
+  movePanel: (e) -># {{{
+    return unless @isMove
+    e = e||window.event
+
+    dx = (e.clientX - @preLeft) + parseInt(@el.css("left"))
+    dy = (e.clientY - @preTop) + parseInt(@el.css("top"))
+    @el.css("left", dx)
+    @el.css("top", dy)
+    @el.css("opacity", 0.4)
+
+    @preLeft = e.clientX
+    @preTop = e.clientY
+  # }}}
+
+  editParam: (e) -># {{{
+    $(e.target).siblings().not(".delParam").css("display","")
+    $(e.target).siblings().focus()
+    $(e.target).css("display","none")
+  # }}}
+
+  setTaskParamVal: (e) -># {{{
+    e = e||window.event
+    $(e.target).css("display","none")
+    $(e.target).siblings().not(".delParam").css("display","")
+    $(e.target).siblings().not(".delParam").text(" #{$(e.target).val()}           ")
+  # }}}
+
+  paramKeyPress: (e) ->
+    e = e||window.event
+    if e.keyCode in [13,10]
+      @setTaskParamVal(e)
+
+class TaskShape
+  constructor: (@paper, @cx, @cy, @task, @color, @r=20) ->
+    @RelTaskId = (v.Id for k,v of @task.RelTasks)
     @pre=[]
     @preRel=[]
 
@@ -72,7 +259,7 @@ class TaskSymbol
 
     @sp.drag(@move, @dragger, @up)
 
-    @text = @paper.text(@cx, @cy, @name)
+    @text = @paper.text(@cx, @cy, @task.Name)
     @text.toBack()
     @text.attr({fill: "#333", stroke: "none", "font-size": 15, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
     @sp.pair=@text

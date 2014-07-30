@@ -1,5 +1,5 @@
 <li class="list-group-item" >
-    <span class="start glyphicon glyphicon-dashboard" style="display:none; cursor: pointer; "></span>
+    <span class="start glyphicon glyphicon-time" style="display:none; cursor: pointer; "></span>
     <input type="text" class="startInput form-control"
     placeholder="如： <%= @ %>"
     style="display:block;" value=""/>

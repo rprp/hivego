@@ -345,6 +345,7 @@ func (s *Schedule) SetNewId() { // {{{
 
 //addStart将Schedule的启动列表持久化到数据库
 //添加前先调用delStart方法将Schedule中的原有启动列表清空
+//需要注意的是：内存中的启动列表单位为纳秒，存储前需要转成秒
 //若成功则开始添加，失败返回err信息
 func (s *Schedule) addStart() (err error) {
 	if err = s.delStart(); err == nil {
