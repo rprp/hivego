@@ -123,6 +123,7 @@ class TaskManager extends Spine.Controller
       tk.Cmd = @taskCmd.val()
       tk.Desc = @taskDesc.val()
       tk.Id = -1
+      tk.JobId = @item.Jobs?[0]?.Id
 
       tk.Param = []
       for li,i in @taskParamList.children("li")
@@ -134,12 +135,13 @@ class TaskManager extends Spine.Controller
   # }}}
 
   addTaskAndRefresh: (task, status, xhr) =># {{{
-    s = Raphael.animation({"fill-opacity": .5, "stroke-width": 6}, 1500, -> @.animate(e))
-    e = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 1500, -> @.animate(s))
+    s = Raphael.animation({"fill-opacity": .3, "stroke-opacity": .3, "stroke-width": 6}, 1500, -> @.animate(e))
+    e = Raphael.animation({"fill-opacity": .01, "stroke-opacity": .01, "stroke-width": 1}, 1500, -> @.animate(s))
     if xhr is "success"
       Spine.Module.extend.call(task, Task)
-      t= new TaskShape(@paper,150,35,task,"#FF8C00",25)
+      t= new TaskShape(@paper,150,35,task,null,25)
       t.sp.animate(s)
+      t.text.animate(s)
       @taskList.push(t)
       
       @setpp.push(t.sp)
@@ -164,7 +166,7 @@ class TaskManager extends Spine.Controller
         t.sp.g.remove()
   # }}}
 
-  render: (task) ->
+  render: (task) -># {{{
     @html(require("views/task")(task))
 
     cs = c for c in @cycGroup when c.textContent is @item.GetCyc()
@@ -173,10 +175,15 @@ class TaskManager extends Spine.Controller
     $(cs).css("display","none")
     $(cs).prevAll().css("display","none")
 
+    window.setTimeout( =>
+            @taskName.focus()
+      ,500)
     @el.css("display","block")
     @el.css("position","absolute")
     @el.css("left",200)
     @el.css("top", 60)
+
+# }}}
 
   setCyc: (e) -># {{{
     @cycGroup.removeClass("label-success")
@@ -188,8 +195,9 @@ class TaskManager extends Spine.Controller
     @item.SetCyc($(e.target).text())
   # }}}
 
-  hideTask: ->
+  hideTask: -># {{{
     @el.css("display","none")
+# }}}
 
   setMoveFlg: (e) -># {{{
     @isMove = true
@@ -230,13 +238,14 @@ class TaskManager extends Spine.Controller
     $(e.target).siblings().not(".delParam").text(" #{$(e.target).val()}           ")
   # }}}
 
-  paramKeyPress: (e) ->
+  paramKeyPress: (e) -># {{{
     e = e||window.event
     if e.keyCode in [13,10]
       @setTaskParamVal(e)
+# }}}
 
 class TaskShape
-  constructor: (@paper, @cx, @cy, @task, @color, @r=20) ->
+  constructor: (@paper, @cx, @cy, @task, @color="#FF8C00", @r=20) ->
     @RelTaskId = (v.Id for k,v of @task.RelTasks)
     @pre=[]
     @preRel=[]

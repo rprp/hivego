@@ -171,24 +171,34 @@ func updateJob(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, 
 
 } // }}}
 
-//addTask获取客户端发送的Task信息，并调用Schedule的AddJob方法将其
-//持久化并添加至Schedule中。
+//addTask获取客户端发送的Task信息，调用Task的AddTask方法持久化。
+//成功后根据其中的JobId找到对应Job将其添加
 //成功返回添加好的Job信息
 //错误返回err信息
 func addTask(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, task schedule.Task) { // {{{
-	if task.Name == "" {
+	sid, sidok := params["sid"]
+	ssid, _ := strconv.Atoi(sid)
+
+	if !sidok || task.Name == "" || task.JobId == 0 {
 		ctx.WriteHeader(500)
 		return
 	}
+
 	task.TaskType = 1
 	task.CreateUserId = 1
 	task.ModifyUserId = 1
 	task.CreateTime = time.Now()
 	task.ModifyTime = time.Now()
-	if err := task.Add(); err != nil {
+
+	if err := task.AddTask(); err != nil {
 		ctx.WriteHeader(500)
 		fmt.Println(err)
 	} else {
+		if s := Ss.GetScheduleById(int64(ssid)); s != nil {
+			if j := s.GetJobById(task.JobId); j != nil {
+				j.Tasks[string(task.Id)] = &task
+			}
+		}
 		r.JSON(200, task)
 	}
 } // }}}
@@ -230,7 +240,6 @@ func deleteSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.Sche
 //持久化并更新至Schedule中。
 //成功返回更新后的Schedule信息
 func updateSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, scd schedule.Schedule) { // {{{
-	fmt.Println("0-------------------")
 	if scd.Name == "" {
 		ctx.WriteHeader(500)
 		return

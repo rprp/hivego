@@ -26287,7 +26287,7 @@ Released under the MIT License
     };
 
     TaskManager.prototype.postTask = function(e) {
-      var i, li, t, tk, tp, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+      var i, li, t, tk, tp, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4;
       this.el.css("display", "none");
       if (this.taskId.val()) {
         _ref = this.taskList;
@@ -26322,10 +26322,11 @@ Released under the MIT License
         tk.Cmd = this.taskCmd.val();
         tk.Desc = this.taskDesc.val();
         tk.Id = -1;
+        tk.JobId = (_ref2 = this.item.Jobs) != null ? (_ref3 = _ref2[0]) != null ? _ref3.Id : void 0 : void 0;
         tk.Param = [];
-        _ref2 = this.taskParamList.children("li");
-        for (i = _k = 0, _len2 = _ref2.length; _k < _len2; i = ++_k) {
-          li = _ref2[i];
+        _ref4 = this.taskParamList.children("li");
+        for (i = _k = 0, _len2 = _ref4.length; _k < _len2; i = ++_k) {
+          li = _ref4[i];
           tp = $(li).children(".taskParam").val();
           if (tp !== "") {
             tk.Param.push(tp);
@@ -26342,21 +26343,24 @@ Released under the MIT License
     TaskManager.prototype.addTaskAndRefresh = function(task, status, xhr) {
       var e, s, t;
       s = Raphael.animation({
-        "fill-opacity": .5,
+        "fill-opacity": .3,
+        "stroke-opacity": .3,
         "stroke-width": 6
       }, 1500, function() {
         return this.animate(e);
       });
       e = Raphael.animation({
-        "fill-opacity": .2,
+        "fill-opacity": .01,
+        "stroke-opacity": .01,
         "stroke-width": 1
       }, 1500, function() {
         return this.animate(s);
       });
       if (xhr === "success") {
         Spine.Module.extend.call(task, Task);
-        t = new TaskShape(this.paper, 150, 35, task, "#FF8C00", 25);
+        t = new TaskShape(this.paper, 150, 35, task, null, 25);
         t.sp.animate(s);
+        t.text.animate(s);
         this.taskList.push(t);
         this.setpp.push(t.sp);
         this.setpp.push(t.text);
@@ -26420,6 +26424,11 @@ Released under the MIT License
       $(cs).addClass("label-success");
       $(cs).css("display", "none");
       $(cs).prevAll().css("display", "none");
+      window.setTimeout((function(_this) {
+        return function() {
+          return _this.taskName.focus();
+        };
+      })(this), 500);
       this.el.css("display", "block");
       this.el.css("position", "absolute");
       this.el.css("left", 200);
@@ -26497,7 +26506,7 @@ Released under the MIT License
       this.cx = cx;
       this.cy = cy;
       this.task = task;
-      this.color = color;
+      this.color = color != null ? color : "#FF8C00";
       this.r = r != null ? r : 20;
       this.hoverout = __bind(this.hoverout, this);
       this.hoveron = __bind(this.hoveron, this);
@@ -27640,7 +27649,7 @@ module.exports = content;}, "views/task-param": function(exports, require, modul
   }
   (function() {
     (function() {
-      __out.push('<li class="list-group-item" >\n    <span class="tparam glyphicon glyphicon-th-list"  style="cursor: pointer;">&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;  &nbsp; </span>\n        <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n    <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"\n    style="display:none;" value=""/>\n</li>\n');
+      __out.push('<li class="list-group-item" >\n    <span class="tparam glyphicon glyphicon-th-list" style="display:none; cursor: pointer;">&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;  &nbsp; </span>\n        <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n    <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"\n    value=""/>\n</li>\n');
     
     }).call(this);
     

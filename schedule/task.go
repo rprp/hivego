@@ -95,6 +95,63 @@ func (t *Task) String() string { // {{{
 
 } // }}}
 
+//AddTask方法持久化当前的Task信息。
+//先调用Add方法将Task基本信息持久化，成功则依次持久化
+//关联的作业信息、Task依赖关系、参数列表。
+func (t *Task) AddTask() (err error) { // {{{
+	if err = t.Add(); err == nil {
+		if err = t.AddRelJob(); err != nil {
+			fmt.Println("addRelJob", err)
+			return err
+		}
+		for _, rt := range t.RelTasks {
+			if err = t.AddRelTask(rt.Id); err != nil {
+				fmt.Println("addRelTask", err)
+				return err
+			}
+		}
+		for _, p := range t.Param {
+			if err = t.AddParam(p); err != nil {
+				fmt.Println("addParam", err)
+				return err
+			}
+		}
+
+	}
+
+	return err
+} // }}}
+
+//AddRelJob将Task与Job的关系持久化。
+func (t *Task) AddRelJob() (err error) {
+	var id int64
+	if id, err = t.GetRelJobId(); err == nil {
+		sql := `INSERT INTO scd_job_task
+            (job_task_id,job_id,task_id,job_task_no,
+            create_user_id,create_time)
+            VALUES    (?, ?, ?, ?, ?, ?)`
+		_, err = g.HiveConn.Exec(sql, &id, &t.JobId, &t.Id, &t.Id, &t.CreateUserId, &t.CreateTime)
+	}
+	return err
+}
+
+//GetRelJobId获取最大的Id
+func (t *Task) GetRelJobId() (id int64, err error) {
+
+	//查询全部schedule列表
+	sql := `SELECT max(t.job_task_id) as job_task_id
+			FROM scd_job_task t`
+	rows, err := g.HiveConn.Query(sql)
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id)
+	}
+
+	return id + 1, err
+
+}
+
 //增加作业信息至元数据库
 func (t *Task) Add() (err error) { // {{{
 	t.SetNewId()
@@ -105,17 +162,8 @@ func (t *Task) Add() (err error) { // {{{
              modify_user_id, modify_time)
 			VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err = g.HiveConn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.TaskType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
-	if err == nil {
-		for _, rt := range t.RelTasks {
-			t.AddRelTask(rt.Id)
-		}
-		for _, p := range t.Param {
-			t.AddParam(p)
-		}
-	}
 
 	return err
-
 } // }}}
 
 //增加作业参数信息至元数据库

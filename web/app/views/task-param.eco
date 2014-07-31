@@ -1,6 +1,6 @@
 <li class="list-group-item" >
-    <span class="tparam glyphicon glyphicon-th-list"  style="cursor: pointer;">&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;  &nbsp; </span>
+    <span class="tparam glyphicon glyphicon-th-list" style="display:none; cursor: pointer;">&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;  &nbsp; </span>
         <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>
     <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"
-    style="display:none;" value=""/>
+    value=""/>
 </li>
