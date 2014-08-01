@@ -26501,7 +26501,7 @@ Released under the MIT License
 
   TaskShape = (function() {
     function TaskShape(paper, cx, cy, task, color, r) {
-      var an, k, st, v;
+      var k, v;
       this.paper = paper;
       this.cx = cx;
       this.cy = cy;
@@ -26524,9 +26524,30 @@ Released under the MIT License
       this.preRel = [];
       this.next = [];
       this.nextRel = [];
-      this.paper.setStart();
+      this.draw();
+    }
+
+    TaskShape.prototype.draw = function() {
+      this.toolset = this.paper.set();
+      this.editImg = this.paper.image("img/edit.png", this.cx, this.cy, 15, 15);
+      this.deleteImg = this.paper.image("img/delete.png", this.cx, this.cy, 15, 15);
+      this.connImg = this.paper.image("img/conn.png", this.cx, this.cy, 15, 15);
+      this.edit = this.paper.circle(this.cx, this.cy, 14);
+      this["delete"] = this.paper.circle(this.cx, this.cy, 14);
+      this.conn = this.paper.circle(this.cx, this.cy, 14);
+      this.toolset.push(this.editImg, this.deleteImg, this.connImg, this.edit, this["delete"], this.conn);
+      this.toolset.attr({
+        fill: this.color,
+        stroke: this.color,
+        "fill-opacity": 0.1,
+        "stroke-width": .5,
+        cursor: "hand"
+      });
+      this.toolset.hover(this.hlight, this.nlight);
+      this.toolset.hide();
       this.sp = this.paper.circle(this.cx, this.cy, this.r);
       this.sp.ts = this;
+      this.sp.dblclick(this.showTool);
       this.sp.hover(this.hoveron, this.hoverout);
       this.sp.attr({
         fill: this.color,
@@ -26536,7 +26557,7 @@ Released under the MIT License
         cursor: "move"
       });
       this.sp.refresh = function() {
-        var i, _i, _j, _len, _len1, _ref, _ref1, _results;
+        var i, r, _i, _j, _len, _len1, _ref, _ref1, _results;
         if (this.ts.nextRel) {
           _ref = this.ts.nextRel;
           for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
@@ -26557,34 +26578,108 @@ Released under the MIT License
       this.sp.drag(this.move, this.dragger, this.up);
       this.text = this.paper.text(this.cx, this.cy, this.task.Name);
       this.text.toBack();
-      this.text.attr({
+      return this.text.attr({
         fill: "#333",
         stroke: "none",
-        "font-size": 15,
+        "font-size": 10,
         "fill-opacity": 1,
         "stroke-width": 1,
         cursor: "move"
       });
-      this.sp.pair = this.text;
-      an = Raphael.animation({
-        "fill-opacity": .2
-      }, 200);
-      this.sp.animate(an.repeat(10));
-      st = this.paper.setFinish();
-      this.sp;
-    }
-
-    TaskShape.prototype.addNext = function(ts) {
-      var r;
-      this.next.push(ts);
-      r = this.paper.connection(this.sp, ts.sp, this.sp.attr('fill'), "" + (this.sp.attr('fill')) + "|2");
-      this.nextRel.push(r);
-      ts.pre.push(this);
-      return ts.preRel.push(r);
     };
 
-    TaskShape.prototype.click = function() {
-      return alert(this.data('a'));
+    TaskShape.prototype.hlight = function() {
+      var a;
+      a = Raphael.animation({
+        "fill-opacity": 0.5
+      }, 200);
+      return this.animate(a);
+    };
+
+    TaskShape.prototype.nlight = function() {
+      var a;
+      a = Raphael.animation({
+        "fill-opacity": 0.1
+      }, 200);
+      return this.animate(a);
+    };
+
+    TaskShape.prototype.addNext = function(taskShape) {
+      var r;
+      this.next.push(taskShape);
+      r = this.paper.connection(this.sp, taskShape.sp, this.sp.attr('fill'), "" + (this.sp.attr('fill')) + "|1");
+      this.nextRel.push(r);
+      taskShape.pre.push(this);
+      return taskShape.preRel.push(r);
+    };
+
+    TaskShape.prototype.showTool = function() {
+      if (this.isShowTool) {
+        this.ts.editImg.animate({
+          "x": this.ox,
+          "y": this.oy
+        }, 200, "backin", function() {
+          return this.hide();
+        });
+        this.ts.deleteImg.animate({
+          "x": this.ox,
+          "y": this.oy
+        }, 200, "backin", function() {
+          return this.hide();
+        });
+        this.ts.connImg.animate({
+          "x": this.ox,
+          "y": this.oy
+        }, 200, "backin", function() {
+          return this.hide();
+        });
+        this.ts.edit.animate({
+          "cx": this.ox,
+          "cy": this.oy
+        }, 200, "backin", function() {
+          return this.hide();
+        });
+        this.ts["delete"].animate({
+          "cx": this.ox,
+          "cy": this.oy
+        }, 200, "backin", function() {
+          return this.hide();
+        });
+        this.ts.conn.animate({
+          "cx": this.ox,
+          "cy": this.oy
+        }, 200, "backin", function() {
+          return this.hide();
+        });
+        return this.isShowTool = false;
+      } else {
+        this.ts.editImg.animate({
+          "x": this.ts.editImg.ox + 50,
+          "y": this.ts.editImg.oy - 7.5
+        }, 600, "elastic");
+        this.ts.deleteImg.animate({
+          "x": this.ts.deleteImg.ox + 50 * Math.cos(45 * Math.PI / 180),
+          "y": this.ts.deleteImg.oy + 50 * Math.sin(45 * Math.PI / 180) - 7.5
+        }, 600, "elastic");
+        this.ts.connImg.animate({
+          "x": this.ts.connImg.ox + 50 * Math.cos(45 * Math.PI / 180),
+          "y": this.ts.connImg.oy - 50 * Math.sin(45 * Math.PI / 180) - 7.5
+        }, 600, "elastic");
+        this.ts.edit.animate({
+          "cx": this.ts.edit.ox + 57,
+          "cy": this.ts.edit.oy
+        }, 600, "elastic");
+        this.ts["delete"].animate({
+          "cx": this.ts["delete"].ox + 60 * Math.cos(45 * Math.PI / 180),
+          "cy": this.ts["delete"].oy + 50 * Math.sin(45 * Math.PI / 180)
+        }, 600, "elastic");
+        this.ts.conn.animate({
+          "cx": this.ts.conn.ox + 60 * Math.cos(45 * Math.PI / 180),
+          "cy": this.ts.conn.oy - 50 * Math.sin(45 * Math.PI / 180)
+        }, 600, "elastic");
+        this.ts.toolset.show();
+        return this.isShowTool = true;
+      }
     };
 
     TaskShape.prototype.hoveron = function() {
@@ -26650,16 +26745,22 @@ Released under the MIT License
     };
 
     TaskShape.prototype.dragger = function() {
-      var _ref, _ref1;
+      var _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       _ref = [this.attr("cx"), this.attr("cy")], this.ox = _ref[0], this.oy = _ref[1];
       if (this.type !== "text") {
         this.animate({
           "fill-opacity": .5
         }, 500);
       }
-      _ref1 = [this.attr("x"), this.attr("y")], this.pair.ox = _ref1[0], this.pair.oy = _ref1[1];
-      if (this.pair.type !== "text") {
-        return this.pair.animate({
+      _ref1 = [this.ts["delete"].attr("cx"), this.ts["delete"].attr("cy")], this.ts["delete"].ox = _ref1[0], this.ts["delete"].oy = _ref1[1];
+      _ref2 = [this.ts.deleteImg.attr("x"), this.ts.deleteImg.attr("y")], this.ts.deleteImg.ox = _ref2[0], this.ts.deleteImg.oy = _ref2[1];
+      _ref3 = [this.ts.edit.attr("cx"), this.ts.edit.attr("cy")], this.ts.edit.ox = _ref3[0], this.ts.edit.oy = _ref3[1];
+      _ref4 = [this.ts.editImg.attr("x"), this.ts.editImg.attr("y")], this.ts.editImg.ox = _ref4[0], this.ts.editImg.oy = _ref4[1];
+      _ref5 = [this.ts.conn.attr("cx"), this.ts.conn.attr("cy")], this.ts.conn.ox = _ref5[0], this.ts.conn.oy = _ref5[1];
+      _ref6 = [this.ts.connImg.attr("x"), this.ts.connImg.attr("y")], this.ts.connImg.ox = _ref6[0], this.ts.connImg.oy = _ref6[1];
+      _ref7 = [this.attr("x"), this.attr("y")], this.ts.text.ox = _ref7[0], this.ts.text.oy = _ref7[1];
+      if (this.ts.text.type !== "text") {
+        return this.ts.text.animate({
           "fill-opacity": .2
         }, 500);
       }
@@ -26672,7 +26773,43 @@ Released under the MIT License
           cy: this.oy + dy
         }
       ]);
-      this.pair.attr([
+      this.ts["delete"].attr([
+        {
+          cx: this.ts["delete"].ox + dx,
+          cy: this.ts["delete"].oy + dy
+        }
+      ]);
+      this.ts.deleteImg.attr([
+        {
+          x: this.ts.deleteImg.ox + dx,
+          y: this.ts.deleteImg.oy + dy
+        }
+      ]);
+      this.ts.edit.attr([
+        {
+          cx: this.ts.edit.ox + dx,
+          cy: this.ts.edit.oy + dy
+        }
+      ]);
+      this.ts.editImg.attr([
+        {
+          x: this.ts.editImg.ox + dx,
+          y: this.ts.editImg.oy + dy
+        }
+      ]);
+      this.ts.conn.attr([
+        {
+          cx: this.ts.conn.ox + dx,
+          cy: this.ts.conn.oy + dy
+        }
+      ]);
+      this.ts.connImg.attr([
+        {
+          x: this.ts.connImg.ox + dx,
+          y: this.ts.connImg.oy + dy
+        }
+      ]);
+      this.ts.text.attr([
         {
           x: this.ox + dx,
           y: this.oy + dy
@@ -26687,8 +26824,8 @@ Released under the MIT License
           "fill-opacity": 0.2
         }, 500);
       }
-      if (this.pair.type !== "text") {
-        return this.pair.animate({
+      if (this.ts.text.type !== "text") {
+        return this.ts.text.animate({
           "fill-opacity": 0.2
         }, 500);
       }

@@ -246,53 +246,89 @@ class TaskManager extends Spine.Controller
 
 class TaskShape
   constructor: (@paper, @cx, @cy, @task, @color="#FF8C00", @r=20) ->
+    
     @RelTaskId = (v.Id for k,v of @task.RelTasks)
     @pre=[]
     @preRel=[]
-
     @next=[]
     @nextRel=[]
 
-    @paper.setStart()
+    @draw()
+
+  draw: ->
+    @toolset = @paper.set()
+    @editImg=@paper.image("img/edit.png", @cx, @cy, 15, 15)
+    @deleteImg=@paper.image("img/delete.png", @cx , @cy, 15, 15)
+    @connImg=@paper.image("img/conn.png", @cx, @cy, 15, 15)
+
+    @edit=@paper.circle(@cx, @cy , 14)
+    @delete=@paper.circle(@cx, @cy, 14)
+    @conn=@paper.circle(@cx, @cy, 14)
+    @toolset.push(@editImg,@deleteImg,@connImg,@edit,@delete,@conn)
+    @toolset.attr({fill: @color, stroke: @color, "fill-opacity": 0.1, "stroke-width": .5, cursor: "hand"})
+    @toolset.hover(@hlight,@nlight)
+    @toolset.hide()
+
     @sp=@paper.circle(@cx, @cy, @r)
     @sp.ts=@
+    @sp.dblclick(@showTool)
     @sp.hover(@hoveron,@hoverout)
     @sp.attr({fill: @color, stroke: @color, "fill-opacity": 0.2, "stroke-width": 1, cursor: "move"})
-
     @sp.refresh = ->
       if @ts.nextRel then for r,i in @ts.nextRel
         @paper.connection(r)
 
       if @ts.preRel then for r,i in @ts.preRel
         @paper.connection(r)
-
     @sp.drag(@move, @dragger, @up)
 
     @text = @paper.text(@cx, @cy, @task.Name)
     @text.toBack()
-    @text.attr({fill: "#333", stroke: "none", "font-size": 15, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
-    @sp.pair=@text
+    @text.attr({fill: "#333", stroke: "none", "font-size": 10, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
 
-    an = Raphael.animation({"fill-opacity": .2}, 200)
-    @sp.animate(an.repeat(10)) 
+  hlight: -># {{{
+    a = Raphael.animation({"fill-opacity": 0.5}, 200)
+    @animate(a)
+  # }}}
 
-    st = @paper.setFinish()
-    @sp
+  nlight: ->
+    a = Raphael.animation({"fill-opacity": 0.1}, 200)
+    @animate(a)
 
-  addNext: (ts) ->
-    @next.push(ts)
-    r=@paper.connection(@sp,ts.sp,@sp.attr('fill'),"#{@sp.attr('fill')}|2")
+  addNext: (taskShape) ->
+    @next.push(taskShape)
+    r=@paper.connection(@sp,taskShape.sp,@sp.attr('fill'),"#{@sp.attr('fill')}|1")
     @nextRel.push(r)
 
-    ts.pre.push(@)
-    ts.preRel.push(r)
+    taskShape.pre.push(@)
+    taskShape.preRel.push(r)
 
-  click: ->
-    alert(@.data('a'))
+  showTool: ->
+    if @isShowTool
+      @ts.editImg.animate({"x": @ox, "y": @oy}, 200, "backin",-> @.hide())
+      @ts.deleteImg.animate({"x": @ox, "y": @oy}, 200, "backin",-> @.hide())
+      @ts.connImg.animate({"x": @ox, "y": @oy}, 200, "backin",-> @.hide())
+      @ts.edit.animate({"cx": @ox, "cy": @oy}, 200, "backin",-> @.hide())
+      @ts.delete.animate({"cx": @ox, "cy": @oy}, 200, "backin",-> @.hide())
+      @ts.conn.animate({"cx": @ox, "cy": @oy}, 200, "backin",-> @.hide())
+      #@ts.toolset.hide()
+      @isShowTool = false
+    else
+      #@edit=@paper.circle(@cx + 57, @cy , 14)
+      #@delete=@paper.circle(@cx + 60 * Math.cos(45*Math.PI/180), @cy + 50 * Math.sin(45*Math.PI/180), 14)
+      #@conn=@paper.circle(@cx + 60 * Math.cos(45*Math.PI/180), @cy - 50 * Math.sin(45*Math.PI/180), 14)
+      
+      @ts.editImg.animate({"x": @ts.editImg.ox + 50, "y": @ts.editImg.oy - 7.5}, 600, "elastic")
+      @ts.deleteImg.animate({"x": @ts.deleteImg.ox + 50 * Math.cos(45*Math.PI/180), "y": @ts.deleteImg.oy + 50 * Math.sin(45*Math.PI/180) - 7.5}, 600, "elastic")
+      @ts.connImg.animate({"x": @ts.connImg.ox + 50 * Math.cos(45*Math.PI/180), "y": @ts.connImg.oy - 50 * Math.sin(45*Math.PI/180) - 7.5}, 600, "elastic")
+      @ts.edit.animate({"cx": @ts.edit.ox + 57, "cy": @ts.edit.oy}, 600, "elastic")
+      @ts.delete.animate({"cx": @ts.delete.ox + 60 * Math.cos(45*Math.PI/180), "cy": @ts.delete.oy + 50 * Math.sin(45*Math.PI/180)}, 600, "elastic")
+      @ts.conn.animate({"cx": @ts.conn.ox + 60 * Math.cos(45*Math.PI/180), "cy": @ts.conn.oy - 50 * Math.sin(45*Math.PI/180)}, 600, "elastic")
+      @ts.toolset.show()
+      @isShowTool = true
 
   hoveron: =>
     a = Raphael.animation({"stroke-width": 6, "fill-opacity": 0.5}, 300)
-
     @sp.animate(a)
     r.line.animate(a)  for r in @nextRel
     n.sp.animate(a)    for n in @next
@@ -301,7 +337,6 @@ class TaskShape
       
   hoverout: =>
     b = Raphael.animation({"stroke-width": 1,"fill-opacity": 0.2}, 300)
-
     @sp.animate(b)
     r.line.animate(b)  for r in @nextRel
     n.sp.animate(b)    for n in @next
@@ -312,16 +347,31 @@ class TaskShape
     [@ox, @oy]  = [@attr("cx"), @attr("cy")]
     @animate({"fill-opacity": .5}, 500) if @type isnt "text"
 
-    [@pair.ox, @pair.oy] = [@attr("x"),@attr("y")]
-    @pair.animate({"fill-opacity": .2}, 500) if @pair.type isnt "text"
+    [@ts.delete.ox, @ts.delete.oy]  = [@ts.delete.attr("cx"), @ts.delete.attr("cy")]
+    [@ts.deleteImg.ox, @ts.deleteImg.oy]  = [@ts.deleteImg.attr("x"), @ts.deleteImg.attr("y")]
+    [@ts.edit.ox, @ts.edit.oy]  = [@ts.edit.attr("cx"), @ts.edit.attr("cy")]
+    [@ts.editImg.ox, @ts.editImg.oy]  = [@ts.editImg.attr("x"), @ts.editImg.attr("y")]
+    [@ts.conn.ox, @ts.conn.oy]  = [@ts.conn.attr("cx"), @ts.conn.attr("cy")]
+    [@ts.connImg.ox, @ts.connImg.oy]  = [@ts.connImg.attr("x"), @ts.connImg.attr("y")]
+
+    [@ts.text.ox, @ts.text.oy] = [@attr("x"),@attr("y")]
+    @ts.text.animate({"fill-opacity": .2}, 500) if @ts.text.type isnt "text"
 
   move: (dx, dy) ->
     @attr([ cx:@ox + dx, cy:@oy + dy])
-    @pair.attr([x:@ox + dx, y:@oy + dy])
+
+    @ts.delete.attr([ cx:@ts.delete.ox + dx, cy:@ts.delete.oy + dy])
+    @ts.deleteImg.attr([ x:@ts.deleteImg.ox + dx, y:@ts.deleteImg.oy + dy])
+    @ts.edit.attr([ cx:@ts.edit.ox + dx, cy:@ts.edit.oy + dy])
+    @ts.editImg.attr([ x:@ts.editImg.ox + dx, y:@ts.editImg.oy + dy])
+    @ts.conn.attr([ cx:@ts.conn.ox + dx, cy:@ts.conn.oy + dy])
+    @ts.connImg.attr([ x:@ts.connImg.ox + dx, y:@ts.connImg.oy + dy])
+
+    @ts.text.attr([x:@ox + dx, y:@oy + dy])
     @refresh()
 
   up: ->
     @animate({"fill-opacity": 0.2}, 500) if @type isnt "text"
-    @pair.animate({"fill-opacity": 0.2}, 500) if @pair.type isnt "text"
+    @ts.text.animate({"fill-opacity": 0.2}, 500) if @ts.text.type isnt "text"
 
 module.exports = TaskManager
