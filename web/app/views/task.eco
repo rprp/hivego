@@ -11,6 +11,23 @@
         <br>
         <input id="taskAddr" type="text" class="form-control" placeholder="任务执行地址。如：192.168.0.5" value="<%= @Address %>"/>
         <br>
+
+        <div class="btn-group">
+          <button type="button" class="jobbtn btn" style="background-color: <%= @RgbColor[@JobNo] or @RgbColor[0] %>;">&nbsp;&nbsp;<%= @JobName %>&nbsp;&nbsp;</button>
+          <button type="button" class="jobbl btn dropdown-toggle" style="background-color: <%= @RgbColor[@JobNo] or @RgbColor[0] %>;" data-toggle="dropdown">
+          <input id="jobid" type="hidden" value="<%= @JobId %>" />
+            <span class="caret"></span>
+            <span class="sr-only">Toggle Dropdown</span>
+          </button>
+          <ul class="dropdown-menu" role="menu">
+            <% for p,i in @JobList : %>
+            <li class="jobli" style="cursor: pointer; background-color: <%= @RgbColor[i] %>;" data="<%= p.Id %>"><%= p.Name %></li>
+            <% end %>
+          </ul>
+        </div>
+
+        <br>
+        <br>
         任务命令行：
         <textarea id="taskCmd" class="form-control" rows="2" ><%= @Cmd %></textarea>
         <br>

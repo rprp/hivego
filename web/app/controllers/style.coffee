@@ -14,6 +14,13 @@ class Style
         '#F4A460', '#2E8B57', '#A0522D', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F', '#4682B4', '#D2B48C', '#008080', '#40E0D0',
          '#006400', '#BDB76B','#EE82EE', '#F5DEB3', '#FFFF00', '#9ACD32']
 
+    @getRgbColor: ->
+      for c in @color
+        @hex2rgb(c)
+
+    @hex2rgb: (c) ->
+      rgb ="rgba(#{parseInt(c[1..2],16) if c[1..2]},#{parseInt(c[3..4],16) if c[3..4]},#{parseInt(c[5..6],16) if c[5..6]},0.5)"
+
     [@sopt, @eopt] = [Raphael.animation({"fill-opacity": .2}, 1000), Raphael.animation({"fill-opacity": .5}, 1000)]
 
     [@csopt, @ceopt] = [Raphael.animation({"fill-opacity": .2}, 2000, -> @.animate(@ceopt)), Raphael.animation({"fill-opacity": .5}, 2000, -> @.animate(@csopt))]

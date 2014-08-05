@@ -70,7 +70,7 @@ class ScheduleInfo extends Spine.Controller
   renderJob: (x, y, job) =>
     @append(@ssl.jobManager.render(x, y, job))
 
-  renderTask: (task) ->
+  renderTask: (task) =>
     @append (@ssl.taskManager.render(task))
 
 class ScheduleSymbol

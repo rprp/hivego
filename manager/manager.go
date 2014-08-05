@@ -197,6 +197,7 @@ func addTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sched
 		if s := Ss.GetScheduleById(int64(ssid)); s != nil {
 			if j := s.GetJobById(task.JobId); j != nil {
 				j.Tasks[string(task.Id)] = &task
+				j.TaskCnt++
 			}
 		}
 		r.JSON(200, task)
