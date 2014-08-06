@@ -41,6 +41,7 @@ func (t *Task) refreshTask(jobid int64) { // {{{
 	t.StartSecond = tt.StartSecond
 	t.Cmd = tt.Cmd
 	t.Param = tt.Param
+	t.Desc = tt.Desc
 	t.JobId = jobid
 	t.Attr = tt.Attr
 	t.RelTasksId = make([]int64, 0)
@@ -94,6 +95,36 @@ func (t *Task) String() string { // {{{
 		t.ModifyTime)
 
 } // }}}
+
+//UpdateTask方法调用Update方法将Task信息更新到元数据库中，
+//同时更新Task的参数信息
+func (t *Task) UpdateTask() (err error) { // {{{
+	if err = t.Update(); err != nil {
+		return err
+	}
+
+	if err = t.DelParam(); err != nil {
+		return err
+	}
+
+	for _, p := range t.Param {
+		fmt.Println("t.Param:", p)
+		if err = t.AddParam(p); err != nil {
+			return err
+		}
+	}
+
+	return err
+} // }}}
+
+//DelParam方法从元数据库删除Task的Param信息
+func (t *Task) DelParam() (err error) {
+	sql := `DELETE FROM scd_task_param
+			WHERE task_id=?`
+	_, err = g.HiveConn.Exec(sql, &t.Id)
+
+	return err
+}
 
 //AddTask方法持久化当前的Task信息。
 //先调用Add方法将Task基本信息持久化，成功则依次持久化
@@ -354,6 +385,7 @@ func getTask(id int64) (task *Task) { // {{{
 			   task.task_time_out,
 			   task.task_type_id,
 			   task.task_cyc,
+			   task.task_desc,
 			   task.task_start,
 			   task.task_cmd
 			FROM scd_task task
@@ -365,7 +397,7 @@ func getTask(id int64) (task *Task) { // {{{
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.TaskType, &task.TaskCyc, &td, &task.Cmd)
+		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.TaskType, &task.TaskCyc, &task.Desc, &td, &task.Cmd)
 		//初始化relTask、param的内存
 		task.RelTasksId = make([]int64, 0)
 		task.RelTasks = make(map[string]*Task)
@@ -392,6 +424,7 @@ func getAllTasks() (tasks map[string]*Task, err error) { // {{{
 			   task.task_time_out,
 			   task.task_type_id,
 			   task.task_cyc,
+			   task.task_desc,
 			   task.task_start,
 			   task.task_cmd
 			FROM scd_task task`
@@ -402,7 +435,7 @@ func getAllTasks() (tasks map[string]*Task, err error) { // {{{
 	for rows.Next() {
 		task := &Task{}
 		var td int64
-		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.TaskType, &task.TaskCyc, &td, &task.Cmd)
+		err = rows.Scan(&task.Id, &task.Address, &task.Name, &task.TimeOut, &task.TaskType, &task.TaskCyc, &task.Desc, &td, &task.Cmd)
 		//初始化relTask、param的内存
 		task.RelTasksId = make([]int64, 0)
 		task.RelTasks = make(map[string]*Task)

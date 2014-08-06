@@ -34,12 +34,12 @@
         任务参数：
         <br>
         <ul class="taskParamList list-group">
-            <% for p,i in @Param? : %>
+            <% for p,i in @Param : %>
             <li class="list-group-item" >
-                <span class="tparam glyphicon glyphicon-th-list"  style="cursor: pointer;">&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;  &nbsp; </span>
+                <span class="tparam glyphicon glyphicon-th-list"  style="cursor: pointer;"><%= p %>&nbsp;&nbsp; &nbsp;  &nbsp; </span>
                     <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>
                 <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"
-                style="display:none;" value="<%= p? %>"/>
+                style="display:none;" value="<%= p %>"/>
             </li>
             <% end %>
         </ul> 
@@ -88,7 +88,7 @@
        
         <br>
         任务描述：
-        <textarea id="taskDesc" class="form-control" rows="4" ></textarea>
+        <textarea id="taskDesc" class="form-control" rows="4" ><%= @Desc %></textarea>
         <br>
         <span id="submitTask" class="pull-right label label-info" style="cursor: pointer;">Ctrl + Enter</span>
         <br>

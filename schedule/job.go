@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -125,6 +126,34 @@ func (j *Job) AddTask(taskid int64, taskno int64) (err error) { // {{{
 
 	return err
 } // }}}
+
+//UpdateTask更新Job中指定Task的信息。
+//它会根据参数查找本Job下符合的Task，找到后更新信息
+//并调用Task的Add方法进行持久化操作。
+func (j *Job) UpdateTask(task *Task) (err error) {
+	t, ok := j.Tasks[string(task.Id)]
+	if !ok {
+		return errors.New(fmt.Sprintf("update error. not found task by id %d", task.Id))
+	}
+	t.Name = task.Name
+	t.Desc = task.Desc
+	t.Address = task.Address
+	t.TaskType = task.TaskType
+	t.TaskCyc = task.TaskCyc
+	t.StartSecond = task.StartSecond
+	t.Cmd = task.Cmd
+	t.TimeOut = task.TimeOut
+	t.Param = task.Param
+	t.Attr = task.Attr
+	t.ModifyUserId = task.ModifyUserId
+	t.ModifyTime = time.Now()
+
+	if err := t.UpdateTask(); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 //删除作业任务映射关系至元数据库
 func (j *Job) DeleteTask(taskid int64) (err error) { // {{{

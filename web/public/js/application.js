@@ -26212,9 +26212,12 @@ Released under the MIT License
       this.item = item;
       this.w = w;
       this.h = h;
+      this.startConnect = __bind(this.startConnect, this);
       this.addTaskAndRefresh = __bind(this.addTaskAndRefresh, this);
+      this.updateTaskAndRefresh = __bind(this.updateTaskAndRefresh, this);
       this.refreshTaskList = __bind(this.refreshTaskList, this);
       TaskManager.__super__.constructor.apply(this, arguments);
+      Spine.bind("connectTask", this.startConnect);
       this.setpp = this.paper.set();
       this.isRefresh = true;
       this.isMove = false;
@@ -26259,6 +26262,7 @@ Released under the MIT License
             value = task[key];
             tk[key] = value;
           }
+          tk.JobNo = i;
           t = new TaskShape(this.paper, left, top, tk, this.color[i], 25);
           this.taskList.push(t);
           this.setpp.push(t.sp);
@@ -26324,7 +26328,7 @@ Released under the MIT License
             tk = t.task;
           }
         }
-        tk.bind("ajaxSuccess", this.addTaskAndRefresh);
+        tk.bind("ajaxSuccess", this.updateTaskAndRefresh);
         tk.Name = this.taskName.val();
         tk.JobId = parseInt(this.JobId.val());
         tk.Address = this.taskAddr.val();
@@ -26340,7 +26344,8 @@ Released under the MIT License
           }
         }
         return tk.save({
-          url: "/schedules/" + this.item.Id + "/jobs/" + tk.jobid + "/tasks/" + tk.Id
+          method: "PUT",
+          url: "/schedules/" + this.item.Id + "/jobs/" + tk.JobId + "/tasks/" + tk.Id
         });
       } else {
         tk = new Task();
@@ -26368,22 +26373,34 @@ Released under the MIT License
       }
     };
 
-    TaskManager.prototype.addTaskAndRefresh = function(task, status, xhr) {
-      var ci, e, i, j, s, t, _i, _len, _ref;
+    TaskManager.prototype.updateTaskAndRefresh = function(task, status, xhr) {
+      var e, s, t, tp, _i, _len, _ref;
       s = Raphael.animation({
-        "fill-opacity": .3,
-        "stroke-opacity": .3,
+        "fill-opacity": 1,
         "stroke-width": 6
-      }, 1500, function() {
+      }, 1200, function() {
         return this.animate(e);
       });
       e = Raphael.animation({
-        "fill-opacity": .01,
-        "stroke-opacity": .01,
+        "fill-opacity": .2,
         "stroke-width": 1
-      }, 1500, function() {
-        return this.animate(s);
-      });
+      }, 300);
+      if (xhr === "success") {
+        _ref = this.taskList;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          t = _ref[_i];
+          if (t.task.Id === parseInt(task.Id)) {
+            tp = t;
+          }
+        }
+        tp.task = task;
+        tp.sp.animate(s);
+        return this.isRefresh = true;
+      }
+    };
+
+    TaskManager.prototype.addTaskAndRefresh = function(task, status, xhr) {
+      var ci, i, j, t, _i, _len, _ref;
       if (xhr === "success") {
         Spine.Module.extend.call(task, Task);
         _ref = this.item.Jobs;
@@ -26453,6 +26470,10 @@ Released under the MIT License
 
     TaskManager.prototype.render = function(task) {
       var c, cs, i, n, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+      if (!task.Name) {
+        task = new Task();
+        task.Param = [];
+      }
       task.JobList = this.item.Jobs;
       _ref = this.item.Jobs;
       for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
@@ -26552,6 +26573,40 @@ Released under the MIT License
       return $('.jobbl').css("background-color", this.$(e.target).css("background-color"));
     };
 
+    TaskManager.prototype.startConnect = function(task) {
+      var e, i, s, s1, t, _i, _len, _ref, _results;
+      s = Raphael.animation({
+        "fill-opacity": 1,
+        "stroke-width": 6
+      }, 500, function() {
+        return this.animate(e);
+      });
+      e = Raphael.animation({
+        "fill-opacity": .6,
+        "stroke-width": 6
+      }, 300);
+      s1 = Raphael.animation({
+        "fill-opacity": .2,
+        "stroke-width": 0
+      }, 800);
+      _ref = this.taskList;
+      _results = [];
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        t = _ref[i];
+        t.sp.unhover(t.hoveron, t.hoverout);
+        t.sp.undrag(t.move, t.dragger, t.up);
+        if (t.task.JobNo < task.JobNo) {
+          _results.push(t.sp.animate(s));
+        } else if (t.task.Id !== task.Id) {
+          t.sp.animate(s1);
+          _results.push(t.text.animate(s1));
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
     return TaskManager;
 
   })(Spine.Controller);
@@ -26586,13 +26641,19 @@ Released under the MIT License
 
     TaskShape.prototype.draw = function() {
       this.toolset = this.paper.set();
-      this.editImg = this.paper.image("img/edit.png", this.cx, this.cy, 15, 15);
-      this.deleteImg = this.paper.image("img/delete.png", this.cx, this.cy, 15, 15);
-      this.connImg = this.paper.image("img/conn.png", this.cx, this.cy, 15, 15);
       this.edit = this.paper.circle(this.cx, this.cy, 14);
       this.edit.click(this.showEdit, this);
       this["delete"] = this.paper.circle(this.cx, this.cy, 14);
+      this["delete"].click(this.deleteTask, this);
       this.conn = this.paper.circle(this.cx, this.cy, 14);
+      this.conn.tc = this;
+      this.conn.refresh = function() {};
+      this.conn.mousedown(this.connClick, this);
+      this.conn.drag(this.move, this.dragger, this.up);
+      this.editImg = this.paper.image("img/edit.png", this.cx, this.cy, 15, 15);
+      this.deleteImg = this.paper.image("img/delete.png", this.cx, this.cy, 15, 15);
+      this.connImg = this.paper.image("img/conn.png", this.cx, this.cy, 15, 15);
+      this.connImg.toBack();
       this.toolset.push(this.editImg, this.deleteImg, this.connImg, this.edit, this["delete"], this.conn);
       this.toolset.attr({
         fill: this.color,
@@ -26605,7 +26666,8 @@ Released under the MIT License
       this.toolset.hide();
       this.sp = this.paper.circle(this.cx, this.cy, this.r);
       this.sp.ts = this;
-      this.sp.dblclick(this.showTool, this);
+      this.sp.mousedown(this.setShowFlg, this);
+      this.sp.mouseup(this.showTool, this);
       this.sp.hover(this.hoveron, this.hoverout);
       this.sp.attr({
         fill: this.color,
@@ -26679,14 +26741,33 @@ Released under the MIT License
       return e;
     };
 
+    TaskShape.prototype.deleteTask = function(e) {
+      e = e || window.event;
+      this.task.opt = "delete";
+      return e;
+    };
+
+    TaskShape.prototype.connClick = function(e) {
+      e = e || window.event;
+      Spine.trigger("connectTask", this.task);
+      return e;
+    };
+
+    TaskShape.prototype.setShowFlg = function() {
+      return this.sp.flg = true;
+    };
+
     TaskShape.prototype.showTool = function() {
+      if (!this.sp.flg) {
+        return;
+      }
       if (this.sp.isShowTool) {
         this.sp.ts.toolset.animate({
           "x": this.sp.ox,
           "y": this.sp.oy,
           "cx": this.sp.ox,
           "cy": this.sp.oy
-        }, 200, "backin", function() {
+        }, 100, "backin", function() {
           return this.hide();
         });
         return this.sp.isShowTool = false;
@@ -26790,59 +26871,76 @@ Released under the MIT License
           "fill-opacity": .5
         }, 500);
       }
-      _ref1 = this.ts.toolset;
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        el = _ref1[_i];
-        if (el.type === "image") {
-          el.ox = el.attr("x");
-          el.oy = el.attr("y");
-        } else {
-          el.ox = el.attr("cx");
-          el.oy = el.attr("cy");
-        }
+      if (this.tc) {
+        this.tc.connImg.ox = this.tc.connImg.attr("x");
+        this.tc.connImg.oy = this.tc.connImg.attr("y");
       }
-      _ref2 = [this.attr("x"), this.attr("y")], this.ts.text.ox = _ref2[0], this.ts.text.oy = _ref2[1];
-      if (this.ts.text.type !== "text") {
-        return this.ts.text.animate({
-          "fill-opacity": .2
-        }, 500);
+      if (this.ts) {
+        _ref1 = this.ts.toolset;
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          el = _ref1[_i];
+          if (el.type === "image") {
+            el.ox = el.attr("x");
+            el.oy = el.attr("y");
+          } else {
+            el.ox = el.attr("cx");
+            el.oy = el.attr("cy");
+          }
+        }
+        _ref2 = [this.attr("x"), this.attr("y")], this.ts.text.ox = _ref2[0], this.ts.text.oy = _ref2[1];
+        if (this.ts.text.type !== "text") {
+          return this.ts.text.animate({
+            "fill-opacity": .2
+          }, 500);
+        }
       }
     };
 
     TaskShape.prototype.move = function(dx, dy) {
       var el, _i, _len, _ref;
+      this.flg = false;
       this.attr([
         {
           cx: this.ox + dx,
           cy: this.oy + dy
         }
       ]);
-      _ref = this.ts.toolset;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        el = _ref[_i];
-        if (el.attr("cx")) {
-          el.attr([
-            {
-              cx: el.ox + dx,
-              cy: el.oy + dy
-            }
-          ]);
-        }
-        if (el.attr("x")) {
-          el.attr([
-            {
-              x: el.ox + dx,
-              y: el.oy + dy
-            }
-          ]);
-        }
+      if (this.tc) {
+        this.tc.connImg.attr([
+          {
+            x: this.tc.connImg.ox + dx,
+            y: this.tc.connImg.oy + dy
+          }
+        ]);
       }
-      this.ts.text.attr([
-        {
-          x: this.ox + dx,
-          y: this.oy + dy
+      if (this.ts) {
+        _ref = this.ts.toolset;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          el = _ref[_i];
+          if (el.attr("cx")) {
+            el.attr([
+              {
+                cx: el.ox + dx,
+                cy: el.oy + dy
+              }
+            ]);
+          }
+          if (el.attr("x")) {
+            el.attr([
+              {
+                x: el.ox + dx,
+                y: el.oy + dy
+              }
+            ]);
+          }
         }
-      ]);
+        this.ts.text.attr([
+          {
+            x: this.ox + dx,
+            y: this.oy + dy
+          }
+        ]);
+      }
       return this.refresh();
     };
 
@@ -26852,10 +26950,12 @@ Released under the MIT License
           "fill-opacity": 0.2
         }, 500);
       }
-      if (this.ts.text.type !== "text") {
-        return this.ts.text.animate({
-          "fill-opacity": 0.2
-        }, 500);
+      if (this.ts) {
+        if (this.ts.text.type !== "text") {
+          return this.ts.text.animate({
+            "fill-opacity": 0.2
+          }, 500);
+        }
       }
     };
 
@@ -27907,15 +28007,21 @@ module.exports = content;}, "views/task": function(exports, require, module) {va
     
       __out.push('</textarea>\n        <br>\n        任务参数：\n        <br>\n        <ul class="taskParamList list-group">\n            ');
     
-      _ref1 = this.Param != null;
+      _ref1 = this.Param;
       for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
         p = _ref1[i];
-        __out.push('\n            <li class="list-group-item" >\n                <span class="tparam glyphicon glyphicon-th-list"  style="cursor: pointer;">&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;  &nbsp; </span>\n                    <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n                <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"\n                style="display:none;" value="');
-        __out.push(__sanitize(p != null));
+        __out.push('\n            <li class="list-group-item" >\n                <span class="tparam glyphicon glyphicon-th-list"  style="cursor: pointer;">');
+        __out.push(__sanitize(p));
+        __out.push('&nbsp;&nbsp; &nbsp;  &nbsp; </span>\n                    <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n                <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"\n                style="display:none;" value="');
+        __out.push(__sanitize(p));
         __out.push('"/>\n            </li>\n            ');
       }
     
-      __out.push('\n        </ul> \n        <div>\n            <span class="pull-right" style="cursor: pointer;">\n                 <span class="addParam glyphicon glyphicon-plus" ></span>\n             </span> \n         </div> \n\n        <br>\n        <br>\n        <div class="panel-group" id="accordion">\n          <div class="panel panel-default">\n            <div class="panel-heading">\n              <h4 class="panel-title">\n                <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree">\n                  设置另外的调度周期与启动时间\n                </a>\n              </h4>\n            </div>\n            <div id="collapseThree" class="panel-collapse collapse">\n              <div class="panel-body">\n                 <div>\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Second</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Minute</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Hour</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Day</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Month</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Year</span>\n                 </div>\n                 <br>\n                 启动时间：\n                 <br>\n                 <ul class="startList list-group">\n                         <li class="list-group-item" >\n                             <span class="start glyphicon glyphicon-time"  style="cursor: pointer;">&nbsp;&nbsp; </span>\n                             <input type="text" class="tstartInput form-control" style="display:none;" value=""/>\n                             <input class="startSecond " type="hidden" value="" />\n                             <input class="startMonth" type="hidden" value="" />\n                         </li>\n                 </ul> \n              </div>\n            </div>\n          </div>\n        </div>\n       \n        <br>\n        任务描述：\n        <textarea id="taskDesc" class="form-control" rows="4" ></textarea>\n        <br>\n        <span id="submitTask" class="pull-right label label-info" style="cursor: pointer;">Ctrl + Enter</span>\n        <br>\n        <input id="taskid" type="hidden" value="');
+      __out.push('\n        </ul> \n        <div>\n            <span class="pull-right" style="cursor: pointer;">\n                 <span class="addParam glyphicon glyphicon-plus" ></span>\n             </span> \n         </div> \n\n        <br>\n        <br>\n        <div class="panel-group" id="accordion">\n          <div class="panel panel-default">\n            <div class="panel-heading">\n              <h4 class="panel-title">\n                <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree">\n                  设置另外的调度周期与启动时间\n                </a>\n              </h4>\n            </div>\n            <div id="collapseThree" class="panel-collapse collapse">\n              <div class="panel-body">\n                 <div>\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Second</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Minute</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Hour</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Day</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Month</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Year</span>\n                 </div>\n                 <br>\n                 启动时间：\n                 <br>\n                 <ul class="startList list-group">\n                         <li class="list-group-item" >\n                             <span class="start glyphicon glyphicon-time"  style="cursor: pointer;">&nbsp;&nbsp; </span>\n                             <input type="text" class="tstartInput form-control" style="display:none;" value=""/>\n                             <input class="startSecond " type="hidden" value="" />\n                             <input class="startMonth" type="hidden" value="" />\n                         </li>\n                 </ul> \n              </div>\n            </div>\n          </div>\n        </div>\n       \n        <br>\n        任务描述：\n        <textarea id="taskDesc" class="form-control" rows="4" >');
+    
+      __out.push(__sanitize(this.Desc));
+    
+      __out.push('</textarea>\n        <br>\n        <span id="submitTask" class="pull-right label label-info" style="cursor: pointer;">Ctrl + Enter</span>\n        <br>\n        <input id="taskid" type="hidden" value="');
     
       __out.push(__sanitize(this.Id));
     

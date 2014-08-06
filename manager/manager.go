@@ -207,8 +207,25 @@ func addTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sched
 //updateTask获取客户端发送的Task信息，并调用Job的UpdateTask方法将其
 //持久化并更新至Job中。
 //成功返回更新后的Task信息
-func updateTask(ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, task schedule.Task) { // {{{
-	if task.Name == "" {
+func updateTask(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, task schedule.Task) { // {{{
+	var err error
+	sid, sidok := params["sid"]
+	ssid, _ := strconv.Atoi(sid)
+
+	if !sidok || task.Name == "" || task.JobId == 0 {
+		ctx.WriteHeader(500)
+		return
+	}
+
+	if s := Ss.GetScheduleById(int64(ssid)); s != nil {
+		if j := s.GetJobById(task.JobId); j != nil {
+			err = j.UpdateTask(&task)
+		}
+	}
+
+	if err == nil {
+		r.JSON(200, task)
+	} else {
 		ctx.WriteHeader(500)
 		return
 	}

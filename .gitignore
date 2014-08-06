@@ -1,6 +1,7 @@
 .DS_Store
 hive
 *.log
+tags
 cpuprofile
 memprofile
 worker_pid_file
