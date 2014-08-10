@@ -59,6 +59,8 @@ func controller(m *martini.ClassicMartini) { // {{{
 		r.Put("/:sid/jobs/:jid/tasks/:id", binding.Bind(schedule.Task{}), updateTask)
 		r.Delete("/:sid/jobs/:jid/tasks/:id", deleteJob)
 
+		r.Post("/:sid/jobs/:jid/tasks/:id/reltask/:relid", addRelTask)
+		r.Delete("/:sid/jobs/:jid/tasks/:id/reltask/:relid", deleteRelTask)
 	})
 
 } // }}}
@@ -273,6 +275,66 @@ func updateSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss
 		ctx.WriteHeader(500)
 	}
 } // }}}
+
+//addRelTask根据Url参数获取到要添加的Task关系
+func addRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager) { // {{{
+	sid, _ := strconv.Atoi(params["sid"])
+	jid, _ := strconv.Atoi(params["jid"])
+	id, _ := strconv.Atoi(params["id"])
+	relid, _ := strconv.Atoi(params["relid"])
+
+	if sid == 0 || jid == 0 || id == 0 || relid == 0 {
+		ctx.WriteHeader(500)
+		return
+	}
+
+	if s := Ss.GetScheduleById(int64(sid)); s != nil {
+		t := s.GetTaskById(int64(id))
+		rt := s.GetTaskById(int64(relid))
+
+		if t == nil || rt == nil {
+			ctx.WriteHeader(500)
+			return
+		}
+
+		err := t.AddRelTask(rt)
+		if err != nil {
+			ctx.WriteHeader(500)
+			return
+		}
+		r.JSON(200, t)
+	}
+
+} // }}}
+
+func deleteRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager) { // {{{
+	sid, _ := strconv.Atoi(params["sid"])
+	jid, _ := strconv.Atoi(params["jid"])
+	id, _ := strconv.Atoi(params["id"])
+	relid, _ := strconv.Atoi(params["relid"])
+
+	if sid == 0 || jid == 0 || id == 0 || relid == 0 {
+		ctx.WriteHeader(500)
+		return
+	}
+
+	if s := Ss.GetScheduleById(int64(sid)); s != nil {
+		t := s.GetTaskById(int64(id))
+
+		if t == nil {
+			ctx.WriteHeader(500)
+			return
+		}
+
+		err := t.DeleteRelTask(int64(relid))
+		if err != nil {
+			ctx.WriteHeader(500)
+			return
+		}
+		r.JSON(200, t)
+	}
+
+}
 
 func Logger() martini.Handler { // {{{
 	return func(res http.ResponseWriter, req *http.Request, ctx martini.Context, log *log.Logger) {

@@ -1,4 +1,5 @@
 Spine = require('spineify')
+Ajax  = Spine.Ajax.Base
 Raphael = require('raphaelify')
 Eve = require('eve')
 Style = require('controllers/style')
@@ -40,12 +41,16 @@ class TaskManager extends Spine.Controller
 
   constructor: (@paper, @color, @item, @w, @h) -># {{{
     super
-    Spine.bind("connectTask", @startConnect)
+    Spine.bind("connectTaskStart", @connectStart)
+    Spine.bind("connectTaskFinish", @connectFinish)
+    Spine.bind("deleteTaskRelStart", @showTaskRel)
     @setpp = @paper.set()
     @isRefresh = true
     @isMove = false
     @jobList = []
     @taskList = []
+    @currentTask
+    @relTask
     top = 80
     
     if @item.Jobs
@@ -69,6 +74,7 @@ class TaskManager extends Spine.Controller
           tk[key] = value
         tk.JobNo = i
         t= new TaskShape(@paper,left,top,tk,@color[i],25)
+        t.conn.drag(t.connMove, t.connDragger, t.connUp,@)
         @taskList.push(t)
         
         @setpp.push(t.sp)
@@ -270,7 +276,7 @@ class TaskManager extends Spine.Controller
     e = e||window.event
     if e.keyCode in [13,10]
       @setTaskParamVal(e)
-# }}}
+  # }}}
 
   setJob: (e) -># {{{
     $('#jobid').val(@$(e.target).attr("data"))
@@ -278,20 +284,114 @@ class TaskManager extends Spine.Controller
     $('.jobbtn').css("background-color",@$(e.target).css("background-color"))
     $('.jobbl').css("background-color",@$(e.target).css("background-color"))
   # }}}
+  
+  showTaskRel: (ts, e) =>
+    s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 200)
 
-  startConnect: (task) =>
-    s = Raphael.animation({"fill-opacity": 1, "stroke-width": 6}, 500, -> @.animate(e))
-    e = Raphael.animation({"fill-opacity": .6, "stroke-width": 6}, 300)
-    s1 = Raphael.animation({"fill-opacity": .2, "stroke-width": 0}, 800)
-    
+    @currentTask = ts
+
+    so = ["stroke-opacity",0]
+
     for t,i in @taskList
       t.sp.unhover(t.hoveron,t.hoverout)
-      t.sp.undrag(t.move,t.dragger,t.up)
-      if t.task.JobNo < task.JobNo
-        t.sp.animate(s)
-      else if t.task.Id isnt task.Id
+      if t isnt ts and t not in ts.pre
         t.sp.animate(s1)
         t.text.animate(s1)
+        [r.bg.attr(so...), r.line.attr(so...)] for r,i in t.preRel
+        [r.bg.attr(so...), r.line.attr(so...)] for r,i in t.nextRel
+      else if t is ts
+        for r,i in t.preRel
+          r.line.animate({"stroke-opacity": 0.05, "stroke-width": 12}, 500)
+          r.bg.animate({"stroke-width": 2}, 500)
+          r.line.hover(r.mouseover = ->
+              @animate({"stroke-opacity": 0.8}, 100)
+            ,r.mouseout = ->
+              @animate({"stroke-opacity": 0.05, "stroke-width": 12}, 200))
+
+          r.line.click(r.click = ->
+              @bg.animate({"stroke-opacity": 0.05}, 500)
+              @line.animate({"stroke-opacity": 0.05}, 500)
+              @line.unhover(@.mouseover,@.mouseout)
+            ,r)
+
+    ts.toolset.show()
+    ts.toolset.attr({"fill-opacity": 0.1, "stroke-width": 0.5})
+    ts.showTool()
+    $("svg").css("cursor","url('img/scissors.cur'),auto")
+
+  connectStart: (ts, e) =>
+    s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 200)
+
+    @currentTask = ts
+    c = ts.conn
+
+    so = ["stroke-opacity",0]
+    so2 = ["stroke-opacity",0.2]
+    cnt = [c,ts.sp,ts.sp.attr("fill"),"#{ts.sp.attr('fill')}|4"]
+
+    c.rel = ts.paper.connection(cnt...)
+    [c.rel.bg.attr(so2...), c.rel.line.attr(so2...)]
+    c.toFront()
+
+    for t,i in @taskList
+      t.sp.unhover(t.hoveron,t.hoverout)
+      if t.task.Id isnt ts.task.Id and t.task.JobNo >= ts.task.JobNo
+        t.sp.animate(s1)
+        t.text.animate(s1)
+        [r.bg.attr(so...), r.line.attr(so...)] for r,i in t.preRel
+        [r.bg.attr(so...), r.line.attr(so...)] for r,i in t.nextRel
+
+    tpre = ts.pre
+    while tpre.length > 0
+      tmp = []
+      for rts,i in tpre
+        [rts.sp.animate(s1), rts.text.animate(s1)]
+        [r.bg.attr(so...),r.line.attr(so...)] for r,i in rts.nextRel
+        if rts.pre.length > 0
+          tmp.push(r) for r,j in rts.pre
+            
+      tpre = tmp
+
+  connectFinish: (ts, e) =>
+    s1 = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 300)
+    txt = Raphael.animation({"fill-opacity": 1, "stroke-width": 1}, 300)
+    
+    cr = ts.conn.rel
+    cr.line.remove()
+    cr.bg.remove()
+    cr = null
+    if @relTask
+      ajax = new Ajax()
+      param = "tasks/#{ts.task.Id}/reltask/#{@relTask.task.Id}"
+      ajax.ajaxQueue(
+        {}, {
+        type: 'POST'
+        contentType: 'application/json'
+        data: ""
+        url: "/schedules/#{@item.Id}/jobs/#{ts.task.JobId}/#{param}"
+        parallel:{}
+        }
+      )
+      @relTask.addNext(ts)
+
+    so = ["stroke-opacity",1]
+    for t,i in @taskList
+      t.sp.hover(t.hoveron,t.hoverout)
+      if t.task.Id isnt ts.task.Id and t.task.JobNo >= ts.task.JobNo
+        [t.sp.animate(s1), t.text.animate(txt)]
+        [r.bg.attr(so...),r.line.attr(so...)] for r,i in t.preRel
+        [r.bg.attr(so...),r.line.attr(so...)] for r,i in t.nextRel
+
+    tpre = ts.pre
+    while tpre.length > 0
+      tmp = []
+      for rts,i in tpre
+        [rts.sp.animate(s1), rts.text.animate(txt)]
+        [r.bg.attr(so...),r.line.attr(so...)] for r,i in rts.nextRel
+        if rts.pre.length > 0
+          for r,j in rts.pre
+            tmp.push(r)
+      tpre = tmp
 
 class TaskShape
   constructor: (@paper, @cx, @cy, @task, @color="#FF8C00", @r=20) ->
@@ -307,36 +407,60 @@ class TaskShape
   draw: ->
     @toolset = @paper.set()
 
-    @edit=@paper.circle(@cx, @cy , 14)
-    @edit.click(@showEdit,@)
-
-    @delete=@paper.circle(@cx, @cy, 14)
-    @delete.click(@deleteTask,@)
-
-    @conn=@paper.circle(@cx, @cy, 14)
-    @conn.tc = @
-    @conn.refresh = ->
-      #if @ts.nextRel then for r,i in @ts.nextRel
-        #@paper.connection(r)
-
-      #if @ts.preRel then for r,i in @ts.preRel
-        #@paper.connection(r)
-    @conn.mousedown(@connClick,@)
-    @conn.drag(@move, @dragger, @up)
-    
-    @editImg=@paper.image("img/edit.png", @cx, @cy, 15, 15)
-    @deleteImg=@paper.image("img/delete.png", @cx , @cy, 15, 15)
-    @connImg=@paper.image("img/conn.png", @cx, @cy, 15, 15)
+    imgStyle = [@cx, @cy, 15, 15]
+    @editImg=@paper.image("img/edit.png", imgStyle...)
+    @deleteRelImg=@paper.image("img/delrel.png", imgStyle...)
+    @deleteImg=@paper.image("img/delete.png", imgStyle...)
+    @connImg=@paper.image("img/conn.png", imgStyle...)
     @connImg.toBack()
 
-    @toolset.push(@editImg,@deleteImg,@connImg,@edit,@delete,@conn)
+    @edit=@paper.circle(@cx, @cy , 14)
+    @edit.click(mm = (e) ->
+        @sp.flg = true
+        @showTool()
+        @.task.opt = "edit"
+        Spine.trigger("addTaskRender", @.task)
+      ,@)
+
+    @deleteRel=@paper.circle(@cx, @cy, 14)
+    @deleteRel.click(mm = (e) ->
+        Spine.trigger("deleteTaskRelStart", @, e||window.event)
+      ,@)
+
+    @delete=@paper.circle(@cx, @cy, 14)
+    @delete.click(mm = (e) ->
+        e = e||window.event
+        @.task.opt = "delete"
+      ,@)
+
+    @conn=@paper.circle(@cx, @cy, 14)
+    @conn.refresh = =>
+      if @conn.rel
+        @paper.connection(@conn.rel)
+
+    @conn.mousedown(mm = (e) ->
+        Spine.trigger("connectTaskStart", @, e||window.event)
+      ,@)
+
+    @conn.mouseup(mm = (e) ->
+        Spine.trigger("connectTaskFinish", @, e||window.event)
+      ,@)
+
+    @toolset.push(@editImg,@deleteRelImg,@deleteImg,@connImg,@edit,@deleteRel,@delete,@conn)
     @toolset.attr({fill: @color, stroke: @color, "fill-opacity": 0.1, "stroke-width": .5, cursor: "hand"})
-    @toolset.hover(@hlight,@nlight)
+    @toolset.hover(hh = ->
+        @animate({"fill-opacity": 0.5}, 200)
+      ,nn = ->
+        @animate({"fill-opacity": 0.1}, 200))
+    
     @toolset.hide()
 
     @sp=@paper.circle(@cx, @cy, @r)
     @sp.ts=@
-    @sp.mousedown(@setShowFlg,@)
+    @sp.mousedown( ->
+            @sp.flg = true
+        ,@)
+
     @sp.mouseup(@showTool,@)
     @sp.hover(@hoveron,@hoverout)
     @sp.attr({fill: @color, stroke: @color, "fill-opacity": 0.2, "stroke-width": 1, cursor: "move"})
@@ -352,14 +476,6 @@ class TaskShape
     @text.toBack()
     @text.attr({fill: "#333", stroke: "none", "font-size": 10, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
 
-  hlight: -># {{{
-    a = Raphael.animation({"fill-opacity": 0.5}, 200)
-    @animate(a)
-  # }}}
-
-  nlight: ->
-    a = Raphael.animation({"fill-opacity": 0.1}, 200)
-    @animate(a)
 
   addNext: (taskShape) ->
     @next.push(taskShape)
@@ -369,45 +485,33 @@ class TaskShape
     taskShape.pre.push(@)
     taskShape.preRel.push(r)
 
-  showEdit: (e) ->
-    e = e||window.event
-    @showTool()
-    @.task.opt = "edit"
-    Spine.trigger("addTaskRender", @.task)
-    e
-
-  deleteTask: (e) ->
-    e = e||window.event
-    @.task.opt = "delete"
-    e
-
-  connClick: (e) ->
-    e = e||window.event
-    Spine.trigger("connectTask", @.task)
-    e
-
-
-  setShowFlg: ->
-    @sp.flg = true
-
   showTool: ->
     return unless @sp.flg
 
+    s = @sp.ts
+    mc = Math.cos(45*Math.PI/180)
+    ms = Math.sin(45*Math.PI/180)
+    mc1 = Math.cos(90*Math.PI/180)
+    ms1 = Math.sin(90*Math.PI/180)
     if @sp.isShowTool
-      @sp.ts.toolset.animate({"x": @sp.ox, "y": @sp.oy, "cx": @sp.ox, "cy": @sp.oy}, 100, "backin",-> @.hide())
+      [x,y] = [@sp.attr("cx"), @sp.attr("cy")]
+      s.toolset.animate({"x": x, "y": y, "cx": x, "cy": y}, 80, "backin",-> @.hide())
       @sp.isShowTool = false
     else
-      @sp.ts.editImg.animate({"x": @sp.ts.editImg.ox + 50, "y": @sp.ts.editImg.oy - 7.5}, 600, "elastic")
-      @sp.ts.deleteImg.animate({"x": @sp.ts.deleteImg.ox + 50 * Math.cos(45*Math.PI/180), "y": @sp.ts.deleteImg.oy + 50 * Math.sin(45*Math.PI/180) - 7.5}, 600, "elastic")
-      @sp.ts.connImg.animate({"x": @sp.ts.connImg.ox + 50 * Math.cos(45*Math.PI/180), "y": @sp.ts.connImg.oy - 50 * Math.sin(45*Math.PI/180) - 7.5}, 600, "elastic")
-      @sp.ts.edit.animate({"cx": @sp.ts.edit.ox + 57, "cy": @sp.ts.edit.oy}, 600, "elastic")
-      @sp.ts.delete.animate({"cx": @sp.ts.delete.ox + 60 * Math.cos(45*Math.PI/180), "cy": @sp.ts.delete.oy + 50 * Math.sin(45*Math.PI/180)}, 600, "elastic")
-      @sp.ts.conn.animate({"cx": @sp.ts.conn.ox + 60 * Math.cos(45*Math.PI/180), "cy": @sp.ts.conn.oy - 50 * Math.sin(45*Math.PI/180)}, 600, "elastic")
-      @sp.ts.toolset.show()
+      s.editImg.animate({"x": s.editImg.ox + 50, "y": s.editImg.oy - 7.5}, 600, "elastic")
+      s.deleteImg.animate({"x": s.deleteImg.ox + 50 * mc, "y": s.deleteImg.oy + 50 * ms - 7.5}, 600, "elastic")
+      s.connImg.animate({"x": s.connImg.ox + 50 * mc, "y": s.connImg.oy - 50 * ms - 7.5}, 600, "elastic")
+      s.deleteRelImg.animate({"x": s.deleteRelImg.ox + 50 * mc1, "y": s.deleteRelImg.oy - 50 * ms1 - 7.5}, 600, "elastic")
+      s.edit.animate({"cx": s.edit.ox + 57, "cy": @sp.ts.edit.oy}, 600, "elastic")
+      s.delete.animate({"cx": s.delete.ox + 60 * mc, "cy": s.delete.oy + 50 * ms}, 600, "elastic")
+      s.deleteRel.animate({"cx": s.deleteRel.ox + 60 * mc1 + 7, "cy": s.deleteRel.oy - 50 * ms1}, 600, "elastic")
+      s.conn.animate({"cx": s.conn.ox + 60 * mc, "cy": s.conn.oy - 50 * ms}, 600, "elastic")
+      s.toolset.show()
       @sp.isShowTool = true
 
   hoveron: =>
     a = Raphael.animation({"stroke-width": 3, "fill-opacity": 0.7}, 200)
+
     @sp.animate(a)
     r.line.animate(a)  for r in @nextRel
     n.sp.animate(a)    for n in @next
@@ -426,38 +530,75 @@ class TaskShape
     [@ox, @oy]  = [@attr("cx"), @attr("cy")]
     @animate({"fill-opacity": .5}, 500) if @type isnt "text"
 
-    if @tc
-      @tc.connImg.ox = @tc.connImg.attr("x")
-      @tc.connImg.oy = @tc.connImg.attr("y")
+    for el in@ts.toolset
+      if el.type is "image"
+        [el.ox,el.oy] = [el.attr("x"), el.attr("y")]
+      else
+        [el.ox,el.oy]  = [el.attr("cx"), el.attr("cy")]
+    [@ts.text.ox, @ts.text.oy] = [@attr("x"),@attr("y")]
+    @ts.text.animate({"fill-opacity": .2}, 500) if @ts.text.type isnt "text"
 
-    if @ts
-      for el in@ts.toolset
-        if el.type is "image"
-          el.ox = el.attr("x")
-          el.oy = el.attr("y")
-        else
-          el.ox = el.attr("cx")
-          el.oy = el.attr("cy")
-      [@ts.text.ox, @ts.text.oy] = [@attr("x"),@attr("y")]
-      @ts.text.animate({"fill-opacity": .2}, 500) if @ts.text.type isnt "text"
 
   move: (dx, dy) ->
     @flg = false
     @attr([ cx:@ox + dx, cy:@oy + dy])
 
-    if @tc
-      @tc.connImg.attr([ x:@tc.connImg.ox + dx, y:@tc.connImg.oy + dy]) 
-
-    if @ts
-      for el in@ts.toolset
-        el.attr([ cx:el.ox + dx, cy:el.oy + dy]) if el.attr("cx")
-        el.attr([ x:el.ox + dx, y:el.oy + dy]) if el.attr("x")
-      @ts.text.attr([x:@ox + dx, y:@oy + dy])
+    for el in@ts.toolset
+      el.attr([ cx:el.ox + dx, cy:el.oy + dy]) if el.attr("cx")
+      el.attr([ x:el.ox + dx, y:el.oy + dy]) if el.attr("x")
+    @ts.text.attr([x:@ox + dx, y:@oy + dy])
     @refresh()
 
   up: ->
-    @animate({"fill-opacity": 0.2}, 500) if @type isnt "text"
-    if @ts
-      @ts.text.animate({"fill-opacity": 0.2}, 500) if @ts.text.type isnt "text"
+    a = [{"fill-opacity": 0.2}, 500]
+    @animate(a...) if @type isnt "text"
+    @ts.text.animate(a...) if @ts.text.type isnt "text"
+
+  connDragger: ->
+    c = @currentTask
+    [c.conn.ox, c.conn.oy]  = [c.conn.attr("cx"), c.conn.attr("cy")]
+    c.conn.animate({"fill-opacity": .5}, 500)
+
+    c.connImg.ox = c.connImg.attr("x")
+    c.connImg.oy = c.connImg.attr("y")
+    c.connImg.hide()
+    c.editImg.hide()
+    c.deleteRelImg.hide()
+    c.deleteImg.hide()
+    c.toolset.attr({"fill-opacity": 0, "stroke-width": 0})
+
+  connMove: (dx, dy) ->
+    flg = false
+    c = @currentTask
+    c.sp.flg = true
+    c.conn.attr([ cx:c.conn.ox + dx, cy:c.conn.oy + dy])
+
+    c.connImg.attr([ x:c.connImg.ox + dx, y:c.connImg.oy + dy])
+    for t, i in @taskList when t.sp.attr("fill-opacity") isnt .05
+      if t.sp.isPointInside(c.conn.attr("cx"),c.conn.attr("cy"))
+        @relTask = t
+        c.conn.animate({fill: t.sp.attr("fill"), "fill-opacity": 1, stroke: t.sp.attr("fill"), "stroke-width": 4},100)
+        c.conn.rel.line.animate({"stroke": t.sp.attr("fill"), "stroke-width": 6},100)
+        c.conn.rel.bg.animate({"stroke": t.sp.attr("fill"), "stroke-width": 6},100)
+        flg = true
+
+    unless flg
+      @relTask = null
+      c.conn.animate({fill: c.sp.attr("fill"), stroke: c.sp.attr("fill"), "stroke-width": 1}, 50)
+      c.conn.rel.line.animate({"stroke": c.sp.attr("fill"), "stroke-width": 2}, 50)
+      c.conn.rel.bg.animate({"stroke": c.sp.attr("fill"), "stroke-width": 2}, 50)
+
+    c.conn.refresh()
+
+  connUp: ->
+    c = @currentTask
+    c.conn.animate({fill: c.sp.attr("fill"), stroke: c.sp.attr("fill"), "fill-opacity": 0.2}, 500)
+    
+    c.toolset.show()
+    c.toolset.attr({"fill-opacity": 0.1, "stroke-width": 0.5})
+
+    c.showTool()
+    @currentTask = null
+    @relTask = null
 
 module.exports = TaskManager

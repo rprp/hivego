@@ -136,7 +136,7 @@ func (t *Task) AddTask() (err error) { // {{{
 			return err
 		}
 		for _, rt := range t.RelTasks {
-			if err = t.AddRelTask(rt.Id); err != nil {
+			if err = t.addRelTask(rt.Id); err != nil {
 				fmt.Println("addRelTask", err)
 				return err
 			}
@@ -164,6 +164,29 @@ func (t *Task) AddRelJob() (err error) {
 		_, err = g.HiveConn.Exec(sql, &id, &t.JobId, &t.Id, &t.Id, &t.CreateUserId, &t.CreateTime)
 	}
 	return err
+}
+
+func (t *Task) DeleteRelTask(relid int64) (err error) {
+	t.RelTasksId = append(t.RelTasksId, relid)
+	var i int
+	for k, v := range t.RelTasksId {
+		if v == relid {
+			i = k
+		}
+	}
+	t.RelTasksId = append(t.RelTasksId[0:i], t.RelTasksId[i+1:]...)
+	t.RelTaskCnt--
+	delete(t.RelTasks, string(relid))
+
+	return t.deleteRelTask(relid)
+}
+
+func (t *Task) AddRelTask(rt *Task) (err error) {
+	t.RelTasksId = append(t.RelTasksId, rt.Id)
+	t.RelTaskCnt++
+	t.RelTasks[string(rt.Id)] = rt
+
+	return t.addRelTask(rt.Id)
 }
 
 //GetRelJobId获取最大的Id
@@ -209,8 +232,16 @@ func (t *Task) AddParam(pvalue string) (err error) { // {{{
 	return err
 } // }}}
 
+//删除依赖任务至元数据库
+func (t *Task) deleteRelTask(id int64) (err error) { // {{{
+	sql := `DELETE FROM scd_task_rel WHERE task_id=? and rel_task_id=?`
+	_, err = g.HiveConn.Exec(sql, &t.Id, &id)
+
+	return err
+} // }}}
+
 //增加依赖任务至元数据库
-func (t *Task) AddRelTask(id int64) (err error) { // {{{
+func (t *Task) addRelTask(id int64) (err error) { // {{{
 	relid, _ := t.GetNewRelTaskId()
 	sql := `INSERT INTO scd_task_rel
             (task_rel_id, task_id, rel_task_id, create_user_id, create_time)
@@ -235,15 +266,6 @@ func (t *Task) Update() (err error) { // {{{
 				modify_time=?
 			WHERE task_id=?`
 	_, err = g.HiveConn.Exec(sql, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.TaskType, &t.Cmd, &t.Desc, &t.ModifyUserId, &t.ModifyTime, &t.Id)
-
-	return err
-} // }}}
-
-//删除任务参数至元数据库
-func (t *Task) DeleteRelTask(id int64) (err error) { // {{{
-
-	sql := `DELETE scd_task_param WHERE task_id=? and scd_param_id=?`
-	_, err = g.HiveConn.Exec(sql, &t.Id, &id)
 
 	return err
 } // }}}

@@ -84,7 +84,8 @@ type Schedule struct { // {{{// {{{
 	TimeOut      int64           //最大执行时间
 	JobId        int64           //作业ID
 	Job          *Job            //作业
-	Jobs         []*Job          //作业
+	Jobs         []*Job          //作业列表
+	Tasks        []*Task         `json:"-"` //任务列表
 	Desc         string          //调度说明
 	JobCnt       int64           //调度中作业数量
 	TaskCnt      int64           //调度中任务数量
@@ -136,6 +137,7 @@ func (s *Schedule) refreshSchedule() { // {{{
 		tj.refreshJob()
 		s.Job = tj
 		s.Jobs = make([]*Job, 0)
+		s.Tasks = make([]*Task, 0)
 
 		s.JobCnt = 0
 		s.TaskCnt = 0
@@ -143,11 +145,29 @@ func (s *Schedule) refreshSchedule() { // {{{
 			s.Jobs = append(s.Jobs, j)
 			s.JobCnt++
 			s.TaskCnt += j.TaskCnt
+			for _, t := range j.Tasks {
+				s.addTaskList(t)
+			}
 			j = j.NextJob
 		}
 	}
 	g.L.Println("schedule refreshed", s)
 } // }}}
+
+//addTaskList将传入的*Task添加到*Schedule.Tasks中
+func (s *Schedule) addTaskList(t *Task) {
+	s.Tasks = append(s.Tasks, t)
+}
+
+//GetTaskById根据传入的id查找Tasks中对应的Task，没有则返回nil。
+func (s *Schedule) GetTaskById(id int64) *Task {
+	for _, v := range s.Tasks {
+		if v.Id == id {
+			return v
+		}
+	}
+	return nil
+}
 
 //打印Schedule结构信息
 func (s *Schedule) String() string { // {{{

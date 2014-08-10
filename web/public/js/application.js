@@ -26152,13 +26152,16 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/task.list": function(exports, require, module) {(function() {
-  var $, Eve, Job, Raphael, Spine, Style, Task, TaskManager, TaskShape,
+  var $, Ajax, Eve, Job, Raphael, Spine, Style, Task, TaskManager, TaskShape,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
+    __slice = [].slice;
 
   Spine = require('spineify');
+
+  Ajax = Spine.Ajax.Base;
 
   Raphael = require('raphaelify');
 
@@ -26212,17 +26215,23 @@ Released under the MIT License
       this.item = item;
       this.w = w;
       this.h = h;
-      this.startConnect = __bind(this.startConnect, this);
+      this.connectFinish = __bind(this.connectFinish, this);
+      this.connectStart = __bind(this.connectStart, this);
+      this.showTaskRel = __bind(this.showTaskRel, this);
       this.addTaskAndRefresh = __bind(this.addTaskAndRefresh, this);
       this.updateTaskAndRefresh = __bind(this.updateTaskAndRefresh, this);
       this.refreshTaskList = __bind(this.refreshTaskList, this);
       TaskManager.__super__.constructor.apply(this, arguments);
-      Spine.bind("connectTask", this.startConnect);
+      Spine.bind("connectTaskStart", this.connectStart);
+      Spine.bind("connectTaskFinish", this.connectFinish);
+      Spine.bind("deleteTaskRelStart", this.showTaskRel);
       this.setpp = this.paper.set();
       this.isRefresh = true;
       this.isMove = false;
       this.jobList = [];
       this.taskList = [];
+      this.currentTask;
+      this.relTask;
       top = 80;
       if (this.item.Jobs) {
         this.refreshTaskList(top);
@@ -26264,6 +26273,7 @@ Released under the MIT License
           }
           tk.JobNo = i;
           t = new TaskShape(this.paper, left, top, tk, this.color[i], 25);
+          t.conn.drag(t.connMove, t.connDragger, t.connUp, this);
           this.taskList.push(t);
           this.setpp.push(t.sp);
           this.setpp.push(t.text);
@@ -26573,36 +26583,197 @@ Released under the MIT License
       return $('.jobbl').css("background-color", this.$(e.target).css("background-color"));
     };
 
-    TaskManager.prototype.startConnect = function(task) {
-      var e, i, s, s1, t, _i, _len, _ref, _results;
-      s = Raphael.animation({
-        "fill-opacity": 1,
-        "stroke-width": 6
-      }, 500, function() {
-        return this.animate(e);
-      });
-      e = Raphael.animation({
-        "fill-opacity": .6,
-        "stroke-width": 6
-      }, 300);
+    TaskManager.prototype.showTaskRel = function(ts, e) {
+      var i, r, s1, so, t, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       s1 = Raphael.animation({
-        "fill-opacity": .2,
+        "fill-opacity": .05,
         "stroke-width": 0
-      }, 800);
+      }, 200);
+      this.currentTask = ts;
+      so = ["stroke-opacity", 0];
       _ref = this.taskList;
-      _results = [];
       for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
         t = _ref[i];
         t.sp.unhover(t.hoveron, t.hoverout);
-        t.sp.undrag(t.move, t.dragger, t.up);
-        if (t.task.JobNo < task.JobNo) {
-          _results.push(t.sp.animate(s));
-        } else if (t.task.Id !== task.Id) {
+        if (t !== ts && __indexOf.call(ts.pre, t) < 0) {
           t.sp.animate(s1);
-          _results.push(t.text.animate(s1));
-        } else {
-          _results.push(void 0);
+          t.text.animate(s1);
+          _ref1 = t.preRel;
+          for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
+            r = _ref1[i];
+            [(_ref2 = r.bg).attr.apply(_ref2, so), (_ref3 = r.line).attr.apply(_ref3, so)];
+          }
+          _ref4 = t.nextRel;
+          for (i = _k = 0, _len2 = _ref4.length; _k < _len2; i = ++_k) {
+            r = _ref4[i];
+            [(_ref5 = r.bg).attr.apply(_ref5, so), (_ref6 = r.line).attr.apply(_ref6, so)];
+          }
+        } else if (t === ts) {
+          _ref7 = t.preRel;
+          for (i = _l = 0, _len3 = _ref7.length; _l < _len3; i = ++_l) {
+            r = _ref7[i];
+            r.line.animate({
+              "stroke-opacity": 0.05,
+              "stroke-width": 12
+            }, 500);
+            r.bg.animate({
+              "stroke-width": 2
+            }, 500);
+            r.line.hover(r.mouseover = function() {
+              return this.animate({
+                "stroke-opacity": 0.8
+              }, 100);
+            }, r.mouseout = function() {
+              return this.animate({
+                "stroke-opacity": 0.05,
+                "stroke-width": 12
+              }, 200);
+            });
+            r.line.click(r.click = function() {
+              this.bg.animate({
+                "stroke-opacity": 0.05
+              }, 500);
+              this.line.animate({
+                "stroke-opacity": 0.05
+              }, 500);
+              return this.line.unhover(this.mouseover, this.mouseout);
+            }, r);
+          }
         }
+      }
+      ts.toolset.show();
+      ts.toolset.attr({
+        "fill-opacity": 0.1,
+        "stroke-width": 0.5
+      });
+      ts.showTool();
+      return $("svg").css("cursor", "url('img/scissors.cur'),auto");
+    };
+
+    TaskManager.prototype.connectStart = function(ts, e) {
+      var c, cnt, i, j, r, rts, s1, so, so2, t, tmp, tpre, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref10, _ref11, _ref12, _ref13, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9, _results;
+      s1 = Raphael.animation({
+        "fill-opacity": .05,
+        "stroke-width": 0
+      }, 200);
+      this.currentTask = ts;
+      c = ts.conn;
+      so = ["stroke-opacity", 0];
+      so2 = ["stroke-opacity", 0.2];
+      cnt = [c, ts.sp, ts.sp.attr("fill"), "" + (ts.sp.attr('fill')) + "|4"];
+      c.rel = (_ref = ts.paper).connection.apply(_ref, cnt);
+      [(_ref1 = c.rel.bg).attr.apply(_ref1, so2), (_ref2 = c.rel.line).attr.apply(_ref2, so2)];
+      c.toFront();
+      _ref3 = this.taskList;
+      for (i = _i = 0, _len = _ref3.length; _i < _len; i = ++_i) {
+        t = _ref3[i];
+        t.sp.unhover(t.hoveron, t.hoverout);
+        if (t.task.Id !== ts.task.Id && t.task.JobNo >= ts.task.JobNo) {
+          t.sp.animate(s1);
+          t.text.animate(s1);
+          _ref4 = t.preRel;
+          for (i = _j = 0, _len1 = _ref4.length; _j < _len1; i = ++_j) {
+            r = _ref4[i];
+            [(_ref5 = r.bg).attr.apply(_ref5, so), (_ref6 = r.line).attr.apply(_ref6, so)];
+          }
+          _ref7 = t.nextRel;
+          for (i = _k = 0, _len2 = _ref7.length; _k < _len2; i = ++_k) {
+            r = _ref7[i];
+            [(_ref8 = r.bg).attr.apply(_ref8, so), (_ref9 = r.line).attr.apply(_ref9, so)];
+          }
+        }
+      }
+      tpre = ts.pre;
+      _results = [];
+      while (tpre.length > 0) {
+        tmp = [];
+        for (i = _l = 0, _len3 = tpre.length; _l < _len3; i = ++_l) {
+          rts = tpre[i];
+          [rts.sp.animate(s1), rts.text.animate(s1)];
+          _ref10 = rts.nextRel;
+          for (i = _m = 0, _len4 = _ref10.length; _m < _len4; i = ++_m) {
+            r = _ref10[i];
+            [(_ref11 = r.bg).attr.apply(_ref11, so), (_ref12 = r.line).attr.apply(_ref12, so)];
+          }
+          if (rts.pre.length > 0) {
+            _ref13 = rts.pre;
+            for (j = _n = 0, _len5 = _ref13.length; _n < _len5; j = ++_n) {
+              r = _ref13[j];
+              tmp.push(r);
+            }
+          }
+        }
+        _results.push(tpre = tmp);
+      }
+      return _results;
+    };
+
+    TaskManager.prototype.connectFinish = function(ts, e) {
+      var ajax, cr, i, j, param, r, rts, s1, so, t, tmp, tpre, txt, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref10, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9, _results;
+      s1 = Raphael.animation({
+        "fill-opacity": .2,
+        "stroke-width": 1
+      }, 300);
+      txt = Raphael.animation({
+        "fill-opacity": 1,
+        "stroke-width": 1
+      }, 300);
+      cr = ts.conn.rel;
+      cr.line.remove();
+      cr.bg.remove();
+      cr = null;
+      if (this.relTask) {
+        ajax = new Ajax();
+        param = "tasks/" + ts.task.Id + "/reltask/" + this.relTask.task.Id;
+        ajax.ajaxQueue({}, {
+          type: 'POST',
+          contentType: 'application/json',
+          data: "",
+          url: "/schedules/" + this.item.Id + "/jobs/" + ts.task.JobId + "/" + param,
+          parallel: {}
+        });
+        this.relTask.addNext(ts);
+      }
+      so = ["stroke-opacity", 1];
+      _ref = this.taskList;
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        t = _ref[i];
+        t.sp.hover(t.hoveron, t.hoverout);
+        if (t.task.Id !== ts.task.Id && t.task.JobNo >= ts.task.JobNo) {
+          [t.sp.animate(s1), t.text.animate(txt)];
+          _ref1 = t.preRel;
+          for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
+            r = _ref1[i];
+            [(_ref2 = r.bg).attr.apply(_ref2, so), (_ref3 = r.line).attr.apply(_ref3, so)];
+          }
+          _ref4 = t.nextRel;
+          for (i = _k = 0, _len2 = _ref4.length; _k < _len2; i = ++_k) {
+            r = _ref4[i];
+            [(_ref5 = r.bg).attr.apply(_ref5, so), (_ref6 = r.line).attr.apply(_ref6, so)];
+          }
+        }
+      }
+      tpre = ts.pre;
+      _results = [];
+      while (tpre.length > 0) {
+        tmp = [];
+        for (i = _l = 0, _len3 = tpre.length; _l < _len3; i = ++_l) {
+          rts = tpre[i];
+          [rts.sp.animate(s1), rts.text.animate(txt)];
+          _ref7 = rts.nextRel;
+          for (i = _m = 0, _len4 = _ref7.length; _m < _len4; i = ++_m) {
+            r = _ref7[i];
+            [(_ref8 = r.bg).attr.apply(_ref8, so), (_ref9 = r.line).attr.apply(_ref9, so)];
+          }
+          if (rts.pre.length > 0) {
+            _ref10 = rts.pre;
+            for (j = _n = 0, _len5 = _ref10.length; _n < _len5; j = ++_n) {
+              r = _ref10[j];
+              tmp.push(r);
+            }
+          }
+        }
+        _results.push(tpre = tmp);
       }
       return _results;
     };
@@ -26640,21 +26811,45 @@ Released under the MIT License
     }
 
     TaskShape.prototype.draw = function() {
+      var hh, imgStyle, mm, nn, _ref, _ref1, _ref2, _ref3;
       this.toolset = this.paper.set();
-      this.edit = this.paper.circle(this.cx, this.cy, 14);
-      this.edit.click(this.showEdit, this);
-      this["delete"] = this.paper.circle(this.cx, this.cy, 14);
-      this["delete"].click(this.deleteTask, this);
-      this.conn = this.paper.circle(this.cx, this.cy, 14);
-      this.conn.tc = this;
-      this.conn.refresh = function() {};
-      this.conn.mousedown(this.connClick, this);
-      this.conn.drag(this.move, this.dragger, this.up);
-      this.editImg = this.paper.image("img/edit.png", this.cx, this.cy, 15, 15);
-      this.deleteImg = this.paper.image("img/delete.png", this.cx, this.cy, 15, 15);
-      this.connImg = this.paper.image("img/conn.png", this.cx, this.cy, 15, 15);
+      imgStyle = [this.cx, this.cy, 15, 15];
+      this.editImg = (_ref = this.paper).image.apply(_ref, ["img/edit.png"].concat(__slice.call(imgStyle)));
+      this.deleteRelImg = (_ref1 = this.paper).image.apply(_ref1, ["img/delrel.png"].concat(__slice.call(imgStyle)));
+      this.deleteImg = (_ref2 = this.paper).image.apply(_ref2, ["img/delete.png"].concat(__slice.call(imgStyle)));
+      this.connImg = (_ref3 = this.paper).image.apply(_ref3, ["img/conn.png"].concat(__slice.call(imgStyle)));
       this.connImg.toBack();
-      this.toolset.push(this.editImg, this.deleteImg, this.connImg, this.edit, this["delete"], this.conn);
+      this.edit = this.paper.circle(this.cx, this.cy, 14);
+      this.edit.click(mm = function(e) {
+        this.sp.flg = true;
+        this.showTool();
+        this.task.opt = "edit";
+        return Spine.trigger("addTaskRender", this.task);
+      }, this);
+      this.deleteRel = this.paper.circle(this.cx, this.cy, 14);
+      this.deleteRel.click(mm = function(e) {
+        return Spine.trigger("deleteTaskRelStart", this, e || window.event);
+      }, this);
+      this["delete"] = this.paper.circle(this.cx, this.cy, 14);
+      this["delete"].click(mm = function(e) {
+        e = e || window.event;
+        return this.task.opt = "delete";
+      }, this);
+      this.conn = this.paper.circle(this.cx, this.cy, 14);
+      this.conn.refresh = (function(_this) {
+        return function() {
+          if (_this.conn.rel) {
+            return _this.paper.connection(_this.conn.rel);
+          }
+        };
+      })(this);
+      this.conn.mousedown(mm = function(e) {
+        return Spine.trigger("connectTaskStart", this, e || window.event);
+      }, this);
+      this.conn.mouseup(mm = function(e) {
+        return Spine.trigger("connectTaskFinish", this, e || window.event);
+      }, this);
+      this.toolset.push(this.editImg, this.deleteRelImg, this.deleteImg, this.connImg, this.edit, this.deleteRel, this["delete"], this.conn);
       this.toolset.attr({
         fill: this.color,
         stroke: this.color,
@@ -26662,11 +26857,21 @@ Released under the MIT License
         "stroke-width": .5,
         cursor: "hand"
       });
-      this.toolset.hover(this.hlight, this.nlight);
+      this.toolset.hover(hh = function() {
+        return this.animate({
+          "fill-opacity": 0.5
+        }, 200);
+      }, nn = function() {
+        return this.animate({
+          "fill-opacity": 0.1
+        }, 200);
+      });
       this.toolset.hide();
       this.sp = this.paper.circle(this.cx, this.cy, this.r);
       this.sp.ts = this;
-      this.sp.mousedown(this.setShowFlg, this);
+      this.sp.mousedown(function() {
+        return this.sp.flg = true;
+      }, this);
       this.sp.mouseup(this.showTool, this);
       this.sp.hover(this.hoveron, this.hoverout);
       this.sp.attr({
@@ -26677,19 +26882,19 @@ Released under the MIT License
         cursor: "move"
       });
       this.sp.refresh = function() {
-        var i, r, _i, _j, _len, _len1, _ref, _ref1, _results;
+        var i, r, _i, _j, _len, _len1, _ref4, _ref5, _results;
         if (this.ts.nextRel) {
-          _ref = this.ts.nextRel;
-          for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-            r = _ref[i];
+          _ref4 = this.ts.nextRel;
+          for (i = _i = 0, _len = _ref4.length; _i < _len; i = ++_i) {
+            r = _ref4[i];
             this.paper.connection(r);
           }
         }
         if (this.ts.preRel) {
-          _ref1 = this.ts.preRel;
+          _ref5 = this.ts.preRel;
           _results = [];
-          for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
-            r = _ref1[i];
+          for (i = _j = 0, _len1 = _ref5.length; _j < _len1; i = ++_j) {
+            r = _ref5[i];
             _results.push(this.paper.connection(r));
           }
           return _results;
@@ -26708,22 +26913,6 @@ Released under the MIT License
       });
     };
 
-    TaskShape.prototype.hlight = function() {
-      var a;
-      a = Raphael.animation({
-        "fill-opacity": 0.5
-      }, 200);
-      return this.animate(a);
-    };
-
-    TaskShape.prototype.nlight = function() {
-      var a;
-      a = Raphael.animation({
-        "fill-opacity": 0.1
-      }, 200);
-      return this.animate(a);
-    };
-
     TaskShape.prototype.addNext = function(taskShape) {
       var r;
       this.next.push(taskShape);
@@ -26733,70 +26922,61 @@ Released under the MIT License
       return taskShape.preRel.push(r);
     };
 
-    TaskShape.prototype.showEdit = function(e) {
-      e = e || window.event;
-      this.showTool();
-      this.task.opt = "edit";
-      Spine.trigger("addTaskRender", this.task);
-      return e;
-    };
-
-    TaskShape.prototype.deleteTask = function(e) {
-      e = e || window.event;
-      this.task.opt = "delete";
-      return e;
-    };
-
-    TaskShape.prototype.connClick = function(e) {
-      e = e || window.event;
-      Spine.trigger("connectTask", this.task);
-      return e;
-    };
-
-    TaskShape.prototype.setShowFlg = function() {
-      return this.sp.flg = true;
-    };
-
     TaskShape.prototype.showTool = function() {
+      var mc, mc1, ms, ms1, s, x, y, _ref;
       if (!this.sp.flg) {
         return;
       }
+      s = this.sp.ts;
+      mc = Math.cos(45 * Math.PI / 180);
+      ms = Math.sin(45 * Math.PI / 180);
+      mc1 = Math.cos(90 * Math.PI / 180);
+      ms1 = Math.sin(90 * Math.PI / 180);
       if (this.sp.isShowTool) {
-        this.sp.ts.toolset.animate({
-          "x": this.sp.ox,
-          "y": this.sp.oy,
-          "cx": this.sp.ox,
-          "cy": this.sp.oy
-        }, 100, "backin", function() {
+        _ref = [this.sp.attr("cx"), this.sp.attr("cy")], x = _ref[0], y = _ref[1];
+        s.toolset.animate({
+          "x": x,
+          "y": y,
+          "cx": x,
+          "cy": y
+        }, 80, "backin", function() {
           return this.hide();
         });
         return this.sp.isShowTool = false;
       } else {
-        this.sp.ts.editImg.animate({
-          "x": this.sp.ts.editImg.ox + 50,
-          "y": this.sp.ts.editImg.oy - 7.5
+        s.editImg.animate({
+          "x": s.editImg.ox + 50,
+          "y": s.editImg.oy - 7.5
         }, 600, "elastic");
-        this.sp.ts.deleteImg.animate({
-          "x": this.sp.ts.deleteImg.ox + 50 * Math.cos(45 * Math.PI / 180),
-          "y": this.sp.ts.deleteImg.oy + 50 * Math.sin(45 * Math.PI / 180) - 7.5
+        s.deleteImg.animate({
+          "x": s.deleteImg.ox + 50 * mc,
+          "y": s.deleteImg.oy + 50 * ms - 7.5
         }, 600, "elastic");
-        this.sp.ts.connImg.animate({
-          "x": this.sp.ts.connImg.ox + 50 * Math.cos(45 * Math.PI / 180),
-          "y": this.sp.ts.connImg.oy - 50 * Math.sin(45 * Math.PI / 180) - 7.5
+        s.connImg.animate({
+          "x": s.connImg.ox + 50 * mc,
+          "y": s.connImg.oy - 50 * ms - 7.5
         }, 600, "elastic");
-        this.sp.ts.edit.animate({
-          "cx": this.sp.ts.edit.ox + 57,
+        s.deleteRelImg.animate({
+          "x": s.deleteRelImg.ox + 50 * mc1,
+          "y": s.deleteRelImg.oy - 50 * ms1 - 7.5
+        }, 600, "elastic");
+        s.edit.animate({
+          "cx": s.edit.ox + 57,
           "cy": this.sp.ts.edit.oy
         }, 600, "elastic");
-        this.sp.ts["delete"].animate({
-          "cx": this.sp.ts["delete"].ox + 60 * Math.cos(45 * Math.PI / 180),
-          "cy": this.sp.ts["delete"].oy + 50 * Math.sin(45 * Math.PI / 180)
+        s["delete"].animate({
+          "cx": s["delete"].ox + 60 * mc,
+          "cy": s["delete"].oy + 50 * ms
         }, 600, "elastic");
-        this.sp.ts.conn.animate({
-          "cx": this.sp.ts.conn.ox + 60 * Math.cos(45 * Math.PI / 180),
-          "cy": this.sp.ts.conn.oy - 50 * Math.sin(45 * Math.PI / 180)
+        s.deleteRel.animate({
+          "cx": s.deleteRel.ox + 60 * mc1 + 7,
+          "cy": s.deleteRel.oy - 50 * ms1
         }, 600, "elastic");
-        this.sp.ts.toolset.show();
+        s.conn.animate({
+          "cx": s.conn.ox + 60 * mc,
+          "cy": s.conn.oy - 50 * ms
+        }, 600, "elastic");
+        s.toolset.show();
         return this.sp.isShowTool = true;
       }
     };
@@ -26864,35 +27044,27 @@ Released under the MIT License
     };
 
     TaskShape.prototype.dragger = function() {
-      var el, _i, _len, _ref, _ref1, _ref2;
+      var el, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
       _ref = [this.attr("cx"), this.attr("cy")], this.ox = _ref[0], this.oy = _ref[1];
       if (this.type !== "text") {
         this.animate({
           "fill-opacity": .5
         }, 500);
       }
-      if (this.tc) {
-        this.tc.connImg.ox = this.tc.connImg.attr("x");
-        this.tc.connImg.oy = this.tc.connImg.attr("y");
+      _ref1 = this.ts.toolset;
+      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+        el = _ref1[_i];
+        if (el.type === "image") {
+          _ref2 = [el.attr("x"), el.attr("y")], el.ox = _ref2[0], el.oy = _ref2[1];
+        } else {
+          _ref3 = [el.attr("cx"), el.attr("cy")], el.ox = _ref3[0], el.oy = _ref3[1];
+        }
       }
-      if (this.ts) {
-        _ref1 = this.ts.toolset;
-        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-          el = _ref1[_i];
-          if (el.type === "image") {
-            el.ox = el.attr("x");
-            el.oy = el.attr("y");
-          } else {
-            el.ox = el.attr("cx");
-            el.oy = el.attr("cy");
-          }
-        }
-        _ref2 = [this.attr("x"), this.attr("y")], this.ts.text.ox = _ref2[0], this.ts.text.oy = _ref2[1];
-        if (this.ts.text.type !== "text") {
-          return this.ts.text.animate({
-            "fill-opacity": .2
-          }, 500);
-        }
+      _ref4 = [this.attr("x"), this.attr("y")], this.ts.text.ox = _ref4[0], this.ts.text.oy = _ref4[1];
+      if (this.ts.text.type !== "text") {
+        return this.ts.text.animate({
+          "fill-opacity": .2
+        }, 500);
       }
     };
 
@@ -26905,58 +27077,145 @@ Released under the MIT License
           cy: this.oy + dy
         }
       ]);
-      if (this.tc) {
-        this.tc.connImg.attr([
-          {
-            x: this.tc.connImg.ox + dx,
-            y: this.tc.connImg.oy + dy
-          }
-        ]);
-      }
-      if (this.ts) {
-        _ref = this.ts.toolset;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          el = _ref[_i];
-          if (el.attr("cx")) {
-            el.attr([
-              {
-                cx: el.ox + dx,
-                cy: el.oy + dy
-              }
-            ]);
-          }
-          if (el.attr("x")) {
-            el.attr([
-              {
-                x: el.ox + dx,
-                y: el.oy + dy
-              }
-            ]);
-          }
+      _ref = this.ts.toolset;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        el = _ref[_i];
+        if (el.attr("cx")) {
+          el.attr([
+            {
+              cx: el.ox + dx,
+              cy: el.oy + dy
+            }
+          ]);
         }
-        this.ts.text.attr([
-          {
-            x: this.ox + dx,
-            y: this.oy + dy
-          }
-        ]);
+        if (el.attr("x")) {
+          el.attr([
+            {
+              x: el.ox + dx,
+              y: el.oy + dy
+            }
+          ]);
+        }
       }
+      this.ts.text.attr([
+        {
+          x: this.ox + dx,
+          y: this.oy + dy
+        }
+      ]);
       return this.refresh();
     };
 
     TaskShape.prototype.up = function() {
-      if (this.type !== "text") {
-        this.animate({
+      var a, _ref;
+      a = [
+        {
           "fill-opacity": 0.2
-        }, 500);
+        }, 500
+      ];
+      if (this.type !== "text") {
+        this.animate.apply(this, a);
       }
-      if (this.ts) {
-        if (this.ts.text.type !== "text") {
-          return this.ts.text.animate({
-            "fill-opacity": 0.2
-          }, 500);
+      if (this.ts.text.type !== "text") {
+        return (_ref = this.ts.text).animate.apply(_ref, a);
+      }
+    };
+
+    TaskShape.prototype.connDragger = function() {
+      var c, _ref;
+      c = this.currentTask;
+      _ref = [c.conn.attr("cx"), c.conn.attr("cy")], c.conn.ox = _ref[0], c.conn.oy = _ref[1];
+      c.conn.animate({
+        "fill-opacity": .5
+      }, 500);
+      c.connImg.ox = c.connImg.attr("x");
+      c.connImg.oy = c.connImg.attr("y");
+      c.connImg.hide();
+      c.editImg.hide();
+      c.deleteRelImg.hide();
+      c.deleteImg.hide();
+      return c.toolset.attr({
+        "fill-opacity": 0,
+        "stroke-width": 0
+      });
+    };
+
+    TaskShape.prototype.connMove = function(dx, dy) {
+      var c, flg, i, t, _i, _len, _ref;
+      flg = false;
+      c = this.currentTask;
+      c.sp.flg = true;
+      c.conn.attr([
+        {
+          cx: c.conn.ox + dx,
+          cy: c.conn.oy + dy
+        }
+      ]);
+      c.connImg.attr([
+        {
+          x: c.connImg.ox + dx,
+          y: c.connImg.oy + dy
+        }
+      ]);
+      _ref = this.taskList;
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        t = _ref[i];
+        if (t.sp.attr("fill-opacity") !== .05) {
+          if (t.sp.isPointInside(c.conn.attr("cx"), c.conn.attr("cy"))) {
+            this.relTask = t;
+            c.conn.animate({
+              fill: t.sp.attr("fill"),
+              "fill-opacity": 1,
+              stroke: t.sp.attr("fill"),
+              "stroke-width": 4
+            }, 100);
+            c.conn.rel.line.animate({
+              "stroke": t.sp.attr("fill"),
+              "stroke-width": 6
+            }, 100);
+            c.conn.rel.bg.animate({
+              "stroke": t.sp.attr("fill"),
+              "stroke-width": 6
+            }, 100);
+            flg = true;
+          }
         }
       }
+      if (!flg) {
+        this.relTask = null;
+        c.conn.animate({
+          fill: c.sp.attr("fill"),
+          stroke: c.sp.attr("fill"),
+          "stroke-width": 1
+        }, 50);
+        c.conn.rel.line.animate({
+          "stroke": c.sp.attr("fill"),
+          "stroke-width": 2
+        }, 50);
+        c.conn.rel.bg.animate({
+          "stroke": c.sp.attr("fill"),
+          "stroke-width": 2
+        }, 50);
+      }
+      return c.conn.refresh();
+    };
+
+    TaskShape.prototype.connUp = function() {
+      var c;
+      c = this.currentTask;
+      c.conn.animate({
+        fill: c.sp.attr("fill"),
+        stroke: c.sp.attr("fill"),
+        "fill-opacity": 0.2
+      }, 500);
+      c.toolset.show();
+      c.toolset.attr({
+        "fill-opacity": 0.1,
+        "stroke-width": 0.5
+      });
+      c.showTool();
+      this.currentTask = null;
+      return this.relTask = null;
     };
 
     return TaskShape;
