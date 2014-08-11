@@ -62,6 +62,7 @@ class ScheduleInfo extends Spine.Controller
       paper = Raphael(@pant.get(0),'100%','100%')
       @ssl = new ScheduleSymbol(paper,@width,@height,@item) 
 
+    @append (@ssl.taskManager.el)
     @ssl
 
   renderSchedule: (x, y, schedule) =>

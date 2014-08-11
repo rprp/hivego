@@ -1,0 +1,16 @@
+<div id="confirmdeltaskrel" class="popover bottom fdin" style="display: block; width: 250px;">
+      <div class="arrow"></div>
+      <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">删除任务依赖
+          <button id="delrelclose" type="button" class="close pull-right">
+              <span aria-hidden="true">&times;</span>
+              <span class="sr-only">Close</span>
+          </button>
+      </h3>
+      <div class="popover-content" style="background-color: #f5f5f5;" >
+          删除
+            <span id="delcnt" class="label label-warning">1</span>
+          个依赖&nbsp;&nbsp;
+          <button id="deltaskrel" type="button" class="btn btn-success " >&nbsp;确认&nbsp;</button>
+          <br>
+      </div>
+</div>

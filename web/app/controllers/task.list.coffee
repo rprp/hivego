@@ -19,10 +19,14 @@ class TaskManager extends Spine.Controller
     ".startList":"startList"
     ".taskParamList":"taskParamList"
     "#jobid": "JobId"
+    "#confirmdeltaskrel": "confirmdeltaskrel"
+    #"#deltaskrel": "confirmdeltaskrel"
 
   events:
-    "click .tclose"        :  "hideTask"
-    "click .tparam"        :  "editParam"
+    "click .tclose"       :  "hideTask"
+    "click #delrelclose"  :  "hideDelTaskRel"
+    "click #deltaskrel"   :  "postDelTaskRel"
+    "click .tparam"       :  "editParam"
     "click .addParam"     :  "appendParam"
     "click .delParam"     :  "delParam"
     "click #submitTask": "postTask"
@@ -43,12 +47,14 @@ class TaskManager extends Spine.Controller
     super
     Spine.bind("connectTaskStart", @connectStart)
     Spine.bind("connectTaskFinish", @connectFinish)
-    Spine.bind("deleteTaskRelStart", @showTaskRel)
+    Spine.bind("deleteTaskRelStart", @delTaskRelStart)
+    Spine.bind("deleteTaskRel", @addRemoveTaskRel)
     @setpp = @paper.set()
     @isRefresh = true
     @isMove = false
     @jobList = []
     @taskList = []
+    @delTaskRels = []
     @currentTask
     @relTask
     top = 80
@@ -285,24 +291,36 @@ class TaskManager extends Spine.Controller
     $('.jobbl').css("background-color",@$(e.target).css("background-color"))
   # }}}
   
-  showTaskRel: (ts, e) =>
-    s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 200)
-
+  delTaskRelStart: (ts, e) =>
+    s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 800)
     @currentTask = ts
+    @delTaskRelFlg = true
 
     so = ["stroke-opacity",0]
 
     for t,i in @taskList
       t.sp.unhover(t.hoveron,t.hoverout)
+      t.sp.unmousedown(t.sp.md,t)
+      t.sp.unmouseup(t.showTool,t)
       if t isnt ts and t not in ts.pre
         t.sp.animate(s1)
         t.text.animate(s1)
         [r.bg.attr(so...), r.line.attr(so...)] for r,i in t.preRel
         [r.bg.attr(so...), r.line.attr(so...)] for r,i in t.nextRel
       else if t is ts
+        t.sp.click(t.sp.ck = ->
+            if @delTaskRelFlg
+              @delTaskRelEnd()
+              @delTaskRelFlg = false
+              @confirmdeltaskrel.css("display","none")
+          ,@)
+        t.sp.attr("cursor","pointer")
+
         for r,i in t.preRel
+          r.head = t.pre[i]
+          r.tail = t
           r.line.animate({"stroke-opacity": 0.05, "stroke-width": 12}, 500)
-          r.bg.animate({"stroke-width": 2}, 500)
+          r.bg.animate({"stroke-opacity": 1, "stroke-width": 2}, 500)
           r.line.hover(r.mouseover = ->
               @animate({"stroke-opacity": 0.8}, 100)
             ,r.mouseout = ->
@@ -312,12 +330,87 @@ class TaskManager extends Spine.Controller
               @bg.animate({"stroke-opacity": 0.05}, 500)
               @line.animate({"stroke-opacity": 0.05}, 500)
               @line.unhover(@.mouseover,@.mouseout)
+              Spine.trigger("deleteTaskRel",@)
             ,r)
+
+          #cc = @paper.circle(0, 0, 3)
+          #cc.attr({fill: '#00FF00', stroke:  '#00FF00', "fill-opacity": 1, "stroke-width": 0})
+          #$(cc.node).html("<animateMotion fill='freeze' begin='2s' dur='2s' repeatCount='8' path='#{r.line.getSubpath().end}' rotate='auto' />")
 
     ts.toolset.show()
     ts.toolset.attr({"fill-opacity": 0.1, "stroke-width": 0.5})
     ts.showTool()
     $("svg").css("cursor","url('img/scissors.cur'),auto")
+
+  postDelTaskRel: =>
+    ajax = new Ajax()
+    for r,i in @delTaskRels
+      param = "tasks/#{r.tail.task.Id}/reltask/#{r.head.task.Id}"
+      ajax.ajaxQueue(
+        {}, {
+        type: 'DELETE'
+        contentType: 'application/json'
+        data: ""
+        url: "/schedules/#{@item.Id}/jobs/#{r.tail.task.JobId}/#{param}"
+        parallel:{}
+        }
+      )
+      r.head.removeNext(r)
+
+    @delTaskRelEnd()
+    @delTaskRelFlg = false
+    @confirmdeltaskrel.css("display","none")
+
+  delTaskRelEnd: =>
+    s1 = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 1200)
+    txt = Raphael.animation({"fill-opacity": 1, "stroke-width": 1}, 1200)
+
+    @delTaskRelFlg = false
+    ts = @currentTask
+    ts.sp.unclick(ts.sp.ck)
+    ts.sp.attr("cursor","move")
+
+    so = [{"stroke-opacity":1},1200]
+
+    for t,i in @taskList
+      t.sp.hover(t.hoveron,t.hoverout)
+      t.sp.mousedown(t.sp.md,t)
+      t.sp.mouseup(t.showTool,t)
+      if t isnt ts and t not in ts.pre
+        t.sp.animate(s1)
+        t.text.animate(txt)
+        [r.bg.animate(so...), r.line.animate(so...)] for r,i in t.preRel
+        [r.bg.animate(so...), r.line.animate(so...)] for r,i in t.nextRel
+      else if t is ts
+        for r,i in t.preRel
+          r.head = t.pre[i]
+          r.tail = t
+          r.line.animate({"stroke-opacity": 1, "stroke-width": 1}, 800)
+          r.bg.animate({"stroke-width": 1}, 800)
+          r.line.unhover(r.mouseover, r.mouseout)
+
+          r.line.unclick(r.click)
+
+    ts.toolset.attr({"fill-opacity": 0.1, "stroke-width": 0.5})
+    @delTaskRels = []
+    $("svg").css("cursor","auto")
+
+  addRemoveTaskRel: (r) =>
+    @delTaskRels.push(r)
+    $("#delcnt").text(@delTaskRels.length)
+    
+    if @confirmdeltaskrel.length < 1
+      @html(require('views/taskrel')())
+      @el.css("position","absolute")
+      @el.css("left",r.tail.sp.ox)
+      @el.css("top",r.tail.sp.oy+92)
+    else
+      @confirmdeltaskrel.css("display","block")
+
+  hideDelTaskRel: (e) =>
+    @confirmdeltaskrel.css("display","none")
+    if @delTaskRelFlg
+      @delTaskRelEnd()
 
   connectStart: (ts, e) =>
     s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 200)
@@ -457,7 +550,7 @@ class TaskShape
 
     @sp=@paper.circle(@cx, @cy, @r)
     @sp.ts=@
-    @sp.mousedown( ->
+    @sp.mousedown(@sp.md = ->
             @sp.flg = true
         ,@)
 
@@ -484,6 +577,17 @@ class TaskShape
 
     taskShape.pre.push(@)
     taskShape.preRel.push(r)
+
+  removeNext: (rel) ->
+    @next = (t for t,i in @next when t isnt rel.tail)
+    @nextRel = (r for r,i in @nextRel when r isnt rel)
+
+    rel.tail.pre = (t for t,i in rel.tail.pre when t isnt rel.head)
+    rel.tail.preRel = (r for r,i in rel.tail.preRel when r isnt rel)
+
+    rel.bg.remove()
+    rel.line.remove()
+    rel = null
 
   showTool: ->
     return unless @sp.flg

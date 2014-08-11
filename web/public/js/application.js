@@ -25477,6 +25477,7 @@ Released under the MIT License
         paper = Raphael(this.pant.get(0), '100%', '100%');
         this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
       }
+      this.append(this.ssl.taskManager.el);
       return this.ssl;
     };
 
@@ -26188,11 +26189,14 @@ Released under the MIT License
       ".tcyclbl": "cycGroup",
       ".startList": "startList",
       ".taskParamList": "taskParamList",
-      "#jobid": "JobId"
+      "#jobid": "JobId",
+      "#confirmdeltaskrel": "confirmdeltaskrel"
     };
 
     TaskManager.prototype.events = {
       "click .tclose": "hideTask",
+      "click #delrelclose": "hideDelTaskRel",
+      "click #deltaskrel": "postDelTaskRel",
       "click .tparam": "editParam",
       "click .addParam": "appendParam",
       "click .delParam": "delParam",
@@ -26217,19 +26221,25 @@ Released under the MIT License
       this.h = h;
       this.connectFinish = __bind(this.connectFinish, this);
       this.connectStart = __bind(this.connectStart, this);
-      this.showTaskRel = __bind(this.showTaskRel, this);
+      this.hideDelTaskRel = __bind(this.hideDelTaskRel, this);
+      this.addRemoveTaskRel = __bind(this.addRemoveTaskRel, this);
+      this.delTaskRelEnd = __bind(this.delTaskRelEnd, this);
+      this.postDelTaskRel = __bind(this.postDelTaskRel, this);
+      this.delTaskRelStart = __bind(this.delTaskRelStart, this);
       this.addTaskAndRefresh = __bind(this.addTaskAndRefresh, this);
       this.updateTaskAndRefresh = __bind(this.updateTaskAndRefresh, this);
       this.refreshTaskList = __bind(this.refreshTaskList, this);
       TaskManager.__super__.constructor.apply(this, arguments);
       Spine.bind("connectTaskStart", this.connectStart);
       Spine.bind("connectTaskFinish", this.connectFinish);
-      Spine.bind("deleteTaskRelStart", this.showTaskRel);
+      Spine.bind("deleteTaskRelStart", this.delTaskRelStart);
+      Spine.bind("deleteTaskRel", this.addRemoveTaskRel);
       this.setpp = this.paper.set();
       this.isRefresh = true;
       this.isMove = false;
       this.jobList = [];
       this.taskList = [];
+      this.delTaskRels = [];
       this.currentTask;
       this.relTask;
       top = 80;
@@ -26583,18 +26593,21 @@ Released under the MIT License
       return $('.jobbl').css("background-color", this.$(e.target).css("background-color"));
     };
 
-    TaskManager.prototype.showTaskRel = function(ts, e) {
+    TaskManager.prototype.delTaskRelStart = function(ts, e) {
       var i, r, s1, so, t, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       s1 = Raphael.animation({
         "fill-opacity": .05,
         "stroke-width": 0
-      }, 200);
+      }, 800);
       this.currentTask = ts;
+      this.delTaskRelFlg = true;
       so = ["stroke-opacity", 0];
       _ref = this.taskList;
       for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
         t = _ref[i];
         t.sp.unhover(t.hoveron, t.hoverout);
+        t.sp.unmousedown(t.sp.md, t);
+        t.sp.unmouseup(t.showTool, t);
         if (t !== ts && __indexOf.call(ts.pre, t) < 0) {
           t.sp.animate(s1);
           t.text.animate(s1);
@@ -26609,14 +26622,25 @@ Released under the MIT License
             [(_ref5 = r.bg).attr.apply(_ref5, so), (_ref6 = r.line).attr.apply(_ref6, so)];
           }
         } else if (t === ts) {
+          t.sp.click(t.sp.ck = function() {
+            if (this.delTaskRelFlg) {
+              this.delTaskRelEnd();
+              this.delTaskRelFlg = false;
+              return this.confirmdeltaskrel.css("display", "none");
+            }
+          }, this);
+          t.sp.attr("cursor", "pointer");
           _ref7 = t.preRel;
           for (i = _l = 0, _len3 = _ref7.length; _l < _len3; i = ++_l) {
             r = _ref7[i];
+            r.head = t.pre[i];
+            r.tail = t;
             r.line.animate({
               "stroke-opacity": 0.05,
               "stroke-width": 12
             }, 500);
             r.bg.animate({
+              "stroke-opacity": 1,
               "stroke-width": 2
             }, 500);
             r.line.hover(r.mouseover = function() {
@@ -26636,7 +26660,8 @@ Released under the MIT License
               this.line.animate({
                 "stroke-opacity": 0.05
               }, 500);
-              return this.line.unhover(this.mouseover, this.mouseout);
+              this.line.unhover(this.mouseover, this.mouseout);
+              return Spine.trigger("deleteTaskRel", this);
             }, r);
           }
         }
@@ -26648,6 +26673,111 @@ Released under the MIT License
       });
       ts.showTool();
       return $("svg").css("cursor", "url('img/scissors.cur'),auto");
+    };
+
+    TaskManager.prototype.postDelTaskRel = function() {
+      var ajax, i, param, r, _i, _len, _ref;
+      ajax = new Ajax();
+      _ref = this.delTaskRels;
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        r = _ref[i];
+        param = "tasks/" + r.tail.task.Id + "/reltask/" + r.head.task.Id;
+        ajax.ajaxQueue({}, {
+          type: 'DELETE',
+          contentType: 'application/json',
+          data: "",
+          url: "/schedules/" + this.item.Id + "/jobs/" + r.tail.task.JobId + "/" + param,
+          parallel: {}
+        });
+        r.head.removeNext(r);
+      }
+      this.delTaskRelEnd();
+      this.delTaskRelFlg = false;
+      return this.confirmdeltaskrel.css("display", "none");
+    };
+
+    TaskManager.prototype.delTaskRelEnd = function() {
+      var i, r, s1, so, t, ts, txt, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
+      s1 = Raphael.animation({
+        "fill-opacity": .2,
+        "stroke-width": 1
+      }, 1200);
+      txt = Raphael.animation({
+        "fill-opacity": 1,
+        "stroke-width": 1
+      }, 1200);
+      this.delTaskRelFlg = false;
+      ts = this.currentTask;
+      ts.sp.unclick(ts.sp.ck);
+      ts.sp.attr("cursor", "move");
+      so = [
+        {
+          "stroke-opacity": 1
+        }, 1200
+      ];
+      _ref = this.taskList;
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        t = _ref[i];
+        t.sp.hover(t.hoveron, t.hoverout);
+        t.sp.mousedown(t.sp.md, t);
+        t.sp.mouseup(t.showTool, t);
+        if (t !== ts && __indexOf.call(ts.pre, t) < 0) {
+          t.sp.animate(s1);
+          t.text.animate(txt);
+          _ref1 = t.preRel;
+          for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
+            r = _ref1[i];
+            [(_ref2 = r.bg).animate.apply(_ref2, so), (_ref3 = r.line).animate.apply(_ref3, so)];
+          }
+          _ref4 = t.nextRel;
+          for (i = _k = 0, _len2 = _ref4.length; _k < _len2; i = ++_k) {
+            r = _ref4[i];
+            [(_ref5 = r.bg).animate.apply(_ref5, so), (_ref6 = r.line).animate.apply(_ref6, so)];
+          }
+        } else if (t === ts) {
+          _ref7 = t.preRel;
+          for (i = _l = 0, _len3 = _ref7.length; _l < _len3; i = ++_l) {
+            r = _ref7[i];
+            r.head = t.pre[i];
+            r.tail = t;
+            r.line.animate({
+              "stroke-opacity": 1,
+              "stroke-width": 1
+            }, 800);
+            r.bg.animate({
+              "stroke-width": 1
+            }, 800);
+            r.line.unhover(r.mouseover, r.mouseout);
+            r.line.unclick(r.click);
+          }
+        }
+      }
+      ts.toolset.attr({
+        "fill-opacity": 0.1,
+        "stroke-width": 0.5
+      });
+      this.delTaskRels = [];
+      return $("svg").css("cursor", "auto");
+    };
+
+    TaskManager.prototype.addRemoveTaskRel = function(r) {
+      this.delTaskRels.push(r);
+      $("#delcnt").text(this.delTaskRels.length);
+      if (this.confirmdeltaskrel.length < 1) {
+        this.html(require('views/taskrel')());
+        this.el.css("position", "absolute");
+        this.el.css("left", r.tail.sp.ox);
+        return this.el.css("top", r.tail.sp.oy + 92);
+      } else {
+        return this.confirmdeltaskrel.css("display", "block");
+      }
+    };
+
+    TaskManager.prototype.hideDelTaskRel = function(e) {
+      this.confirmdeltaskrel.css("display", "none");
+      if (this.delTaskRelFlg) {
+        return this.delTaskRelEnd();
+      }
     };
 
     TaskManager.prototype.connectStart = function(ts, e) {
@@ -26869,7 +26999,7 @@ Released under the MIT License
       this.toolset.hide();
       this.sp = this.paper.circle(this.cx, this.cy, this.r);
       this.sp.ts = this;
-      this.sp.mousedown(function() {
+      this.sp.mousedown(this.sp.md = function() {
         return this.sp.flg = true;
       }, this);
       this.sp.mouseup(this.showTool, this);
@@ -26920,6 +27050,61 @@ Released under the MIT License
       this.nextRel.push(r);
       taskShape.pre.push(this);
       return taskShape.preRel.push(r);
+    };
+
+    TaskShape.prototype.removeNext = function(rel) {
+      var i, r, t;
+      this.next = (function() {
+        var _i, _len, _ref, _results;
+        _ref = this.next;
+        _results = [];
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          t = _ref[i];
+          if (t !== rel.tail) {
+            _results.push(t);
+          }
+        }
+        return _results;
+      }).call(this);
+      this.nextRel = (function() {
+        var _i, _len, _ref, _results;
+        _ref = this.nextRel;
+        _results = [];
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          r = _ref[i];
+          if (r !== rel) {
+            _results.push(r);
+          }
+        }
+        return _results;
+      }).call(this);
+      rel.tail.pre = (function() {
+        var _i, _len, _ref, _results;
+        _ref = rel.tail.pre;
+        _results = [];
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          t = _ref[i];
+          if (t !== rel.head) {
+            _results.push(t);
+          }
+        }
+        return _results;
+      })();
+      rel.tail.preRel = (function() {
+        var _i, _len, _ref, _results;
+        _ref = rel.tail.preRel;
+        _results = [];
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          r = _ref[i];
+          if (r !== rel) {
+            _results.push(r);
+          }
+        }
+        return _results;
+      })();
+      rel.bg.remove();
+      rel.line.remove();
+      return rel = null;
     };
 
     TaskShape.prototype.showTool = function() {
@@ -28285,6 +28470,53 @@ module.exports = content;}, "views/task": function(exports, require, module) {va
       __out.push(__sanitize(this.Id));
     
       __out.push('" />\n    </div>\n</div>\n');
+    
+    }).call(this);
+    
+  }).call(__obj);
+  __obj.safe = __objSafe, __obj.escape = __escape;
+  return __out.join('');
+};
+module.exports = content;}, "views/taskrel": function(exports, require, module) {var content = function(__obj) {
+  if (!__obj) __obj = {};
+  var __out = [], __capture = function(callback) {
+    var out = __out, result;
+    __out = [];
+    callback.call(this);
+    result = __out.join('');
+    __out = out;
+    return __safe(result);
+  }, __sanitize = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else if (typeof value !== 'undefined' && value != null) {
+      return __escape(value);
+    } else {
+      return '';
+    }
+  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
+  __safe = __obj.safe = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else {
+      if (!(typeof value !== 'undefined' && value != null)) value = '';
+      var result = new String(value);
+      result.ecoSafe = true;
+      return result;
+    }
+  };
+  if (!__escape) {
+    __escape = __obj.escape = function(value) {
+      return ('' + value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+  }
+  (function() {
+    (function() {
+      __out.push('<div id="confirmdeltaskrel" class="popover bottom fdin" style="display: block; width: 250px;">\n      <div class="arrow"></div>\n      <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">删除任务依赖\n          <button id="delrelclose" type="button" class="close pull-right">\n              <span aria-hidden="true">&times;</span>\n              <span class="sr-only">Close</span>\n          </button>\n      </h3>\n      <div class="popover-content" style="background-color: #f5f5f5;" >\n          删除\n            <span id="delcnt" class="label label-warning">1</span>\n          个依赖&nbsp;&nbsp;\n          <button id="deltaskrel" type="button" class="btn btn-success " >&nbsp;确认&nbsp;</button>\n          <br>\n      </div>\n</div>\n');
     
     }).call(this);
     
