@@ -20,7 +20,6 @@ class TaskManager extends Spine.Controller
     ".taskParamList":"taskParamList"
     "#jobid": "JobId"
     "#confirmdeltaskrel": "confirmdeltaskrel"
-    #"#deltaskrel": "confirmdeltaskrel"
 
   events:
     "click .tclose"       :  "hideTask"
@@ -49,6 +48,7 @@ class TaskManager extends Spine.Controller
     Spine.bind("connectTaskFinish", @connectFinish)
     Spine.bind("deleteTaskRelStart", @delTaskRelStart)
     Spine.bind("deleteTaskRel", @addRemoveTaskRel)
+    Spine.bind("deleteTask", @deleteTask)
     @setpp = @paper.set()
     @isRefresh = true
     @isMove = false
@@ -412,6 +412,17 @@ class TaskManager extends Spine.Controller
     if @delTaskRelFlg
       @delTaskRelEnd()
 
+  deleteTask: (ts,e) =>
+    @taskList = (t for t,i in @taskList when t isnt ts)
+    tk = new Task()
+    tk.destroy({url:"/schedules/#{@item.Id}/jobs/#{ts.task.JobId}/tasks/#{ts.task.Id}"})
+    ts.remove()
+    #jb = Job.find(@.data("Id"))
+    #ts = @.data("this")
+    #jb.bind("change",ts?.delJobAndRefresh)
+
+
+
   connectStart: (ts, e) =>
     s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 200)
 
@@ -524,6 +535,7 @@ class TaskShape
     @delete.click(mm = (e) ->
         e = e||window.event
         @.task.opt = "delete"
+        Spine.trigger("deleteTask", @, e||window.event)
       ,@)
 
     @conn=@paper.circle(@cx, @cy, 14)
@@ -588,6 +600,30 @@ class TaskShape
     rel.bg.remove()
     rel.line.remove()
     rel = null
+
+  remove: ->
+    for r,j in @nextRel
+      r.bg.remove()
+      r.line.remove()
+      r = null
+
+    for t,j in @next
+      t.pre = (p for p,i in t.pre when p isnt @)
+      t.preRel = (r for r,i in t.preRel when r.bg.id isnt null)
+
+    for r,j in @preRel
+      r.bg.remove()
+      r.line.remove()
+      r = null
+
+    for t,j in @pre
+      t.next = (n for n,i in t.next when n isnt @)
+      t.nextRel = (r for r,i in t.nextRel when r.bg.id isnt null)
+
+    for key, value of @
+      unless value is @paper
+        value.remove?()
+    
 
   showTool: ->
     return unless @sp.flg

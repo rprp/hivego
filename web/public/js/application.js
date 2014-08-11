@@ -26221,6 +26221,7 @@ Released under the MIT License
       this.h = h;
       this.connectFinish = __bind(this.connectFinish, this);
       this.connectStart = __bind(this.connectStart, this);
+      this.deleteTask = __bind(this.deleteTask, this);
       this.hideDelTaskRel = __bind(this.hideDelTaskRel, this);
       this.addRemoveTaskRel = __bind(this.addRemoveTaskRel, this);
       this.delTaskRelEnd = __bind(this.delTaskRelEnd, this);
@@ -26234,6 +26235,7 @@ Released under the MIT License
       Spine.bind("connectTaskFinish", this.connectFinish);
       Spine.bind("deleteTaskRelStart", this.delTaskRelStart);
       Spine.bind("deleteTaskRel", this.addRemoveTaskRel);
+      Spine.bind("deleteTask", this.deleteTask);
       this.setpp = this.paper.set();
       this.isRefresh = true;
       this.isMove = false;
@@ -26780,6 +26782,27 @@ Released under the MIT License
       }
     };
 
+    TaskManager.prototype.deleteTask = function(ts, e) {
+      var i, t, tk;
+      this.taskList = (function() {
+        var _i, _len, _ref, _results;
+        _ref = this.taskList;
+        _results = [];
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          t = _ref[i];
+          if (t !== ts) {
+            _results.push(t);
+          }
+        }
+        return _results;
+      }).call(this);
+      tk = new Task();
+      tk.destroy({
+        url: "/schedules/" + this.item.Id + "/jobs/" + ts.task.JobId + "/tasks/" + ts.task.Id
+      });
+      return ts.remove();
+    };
+
     TaskManager.prototype.connectStart = function(ts, e) {
       var c, cnt, i, j, r, rts, s1, so, so2, t, tmp, tpre, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref10, _ref11, _ref12, _ref13, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9, _results;
       s1 = Raphael.animation({
@@ -26963,7 +26986,8 @@ Released under the MIT License
       this["delete"] = this.paper.circle(this.cx, this.cy, 14);
       this["delete"].click(mm = function(e) {
         e = e || window.event;
-        return this.task.opt = "delete";
+        this.task.opt = "delete";
+        return Spine.trigger("deleteTask", this, e || window.event);
       }, this);
       this.conn = this.paper.circle(this.cx, this.cy, 14);
       this.conn.refresh = (function(_this) {
@@ -27105,6 +27129,90 @@ Released under the MIT License
       rel.bg.remove();
       rel.line.remove();
       return rel = null;
+    };
+
+    TaskShape.prototype.remove = function() {
+      var i, j, key, n, p, r, t, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
+      _ref = this.nextRel;
+      for (j = _i = 0, _len = _ref.length; _i < _len; j = ++_i) {
+        r = _ref[j];
+        r.bg.remove();
+        r.line.remove();
+        r = null;
+      }
+      _ref1 = this.next;
+      for (j = _j = 0, _len1 = _ref1.length; _j < _len1; j = ++_j) {
+        t = _ref1[j];
+        t.pre = (function() {
+          var _k, _len2, _ref2, _results;
+          _ref2 = t.pre;
+          _results = [];
+          for (i = _k = 0, _len2 = _ref2.length; _k < _len2; i = ++_k) {
+            p = _ref2[i];
+            if (p !== this) {
+              _results.push(p);
+            }
+          }
+          return _results;
+        }).call(this);
+        t.preRel = (function() {
+          var _k, _len2, _ref2, _results;
+          _ref2 = t.preRel;
+          _results = [];
+          for (i = _k = 0, _len2 = _ref2.length; _k < _len2; i = ++_k) {
+            r = _ref2[i];
+            if (r.bg.id !== null) {
+              _results.push(r);
+            }
+          }
+          return _results;
+        })();
+      }
+      _ref2 = this.preRel;
+      for (j = _k = 0, _len2 = _ref2.length; _k < _len2; j = ++_k) {
+        r = _ref2[j];
+        r.bg.remove();
+        r.line.remove();
+        r = null;
+      }
+      _ref3 = this.pre;
+      for (j = _l = 0, _len3 = _ref3.length; _l < _len3; j = ++_l) {
+        t = _ref3[j];
+        t.next = (function() {
+          var _len4, _m, _ref4, _results;
+          _ref4 = t.next;
+          _results = [];
+          for (i = _m = 0, _len4 = _ref4.length; _m < _len4; i = ++_m) {
+            n = _ref4[i];
+            if (n !== this) {
+              _results.push(n);
+            }
+          }
+          return _results;
+        }).call(this);
+        t.nextRel = (function() {
+          var _len4, _m, _ref4, _results;
+          _ref4 = t.nextRel;
+          _results = [];
+          for (i = _m = 0, _len4 = _ref4.length; _m < _len4; i = ++_m) {
+            r = _ref4[i];
+            if (r.bg.id !== null) {
+              _results.push(r);
+            }
+          }
+          return _results;
+        })();
+      }
+      _results = [];
+      for (key in this) {
+        value = this[key];
+        if (value !== this.paper) {
+          _results.push(typeof value.remove === "function" ? value.remove() : void 0);
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
     };
 
     TaskShape.prototype.showTool = function() {

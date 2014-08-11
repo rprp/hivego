@@ -157,8 +157,17 @@ func (j *Job) UpdateTask(task *Task) (err error) {
 
 //删除作业任务映射关系至元数据库
 func (j *Job) DeleteTask(taskid int64) (err error) { // {{{
+	if err = j.deleteTask(taskid); err != nil {
+		return err
+	}
+	delete(j.Tasks, string(taskid))
+	j.TaskCnt--
 
-	sql := `DELETE scd_job_task WHERE job_id=? and task_id=?`
+	return nil
+} // }}}
+
+func (j *Job) deleteTask(taskid int64) (err error) { // {{{
+	sql := `DELETE FROM scd_job_task WHERE job_id=? and task_id=?`
 
 	_, err = g.HiveConn.Exec(sql, &j.Id, &taskid)
 

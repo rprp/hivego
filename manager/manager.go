@@ -57,7 +57,7 @@ func controller(m *martini.ClassicMartini) { // {{{
 		r.Get("/:sid/jobs/:jid/tasks", getJobsForSchedule)
 		r.Post("/:sid/jobs/:jid/tasks", binding.Bind(schedule.Task{}), addTask)
 		r.Put("/:sid/jobs/:jid/tasks/:id", binding.Bind(schedule.Task{}), updateTask)
-		r.Delete("/:sid/jobs/:jid/tasks/:id", deleteJob)
+		r.Delete("/:sid/jobs/:jid/tasks/:id", deleteTask)
 
 		r.Post("/:sid/jobs/:jid/tasks/:id/reltask/:relid", addRelTask)
 		r.Delete("/:sid/jobs/:jid/tasks/:id/reltask/:relid", deleteRelTask)
@@ -204,6 +204,29 @@ func addTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sched
 		}
 		r.JSON(200, task)
 	}
+} // }}}
+
+//deleteTask从调度结构中删除指定的Task，并持久化。
+func deleteTask(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager) { // {{{
+	sid, _ := strconv.Atoi(params["sid"])
+	jid, _ := strconv.Atoi(params["jid"])
+	id, _ := strconv.Atoi(params["id"])
+
+	if sid == 0 || jid == 0 || id == 0 {
+		ctx.WriteHeader(500)
+		return
+	}
+
+	if s := Ss.GetScheduleById(int64(sid)); s != nil {
+		if err := s.DeleteTask(int64(id)); err != nil {
+			ctx.WriteHeader(500)
+			fmt.Println(err)
+			return
+		} else {
+			r.JSON(200, nil)
+		}
+	}
+
 } // }}}
 
 //updateTask获取客户端发送的Task信息，并调用Job的UpdateTask方法将其

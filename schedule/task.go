@@ -270,16 +270,17 @@ func (t *Task) Update() (err error) { // {{{
 	return err
 } // }}}
 
+//
+func (t *Task) Delete() (err error) {
+	if err = t.DelParam(); err != nil {
+		return err
+	}
+	return t.deleteTask()
+}
+
 //删除任务至元数据库
-func (t *Task) Delete() (err error) { // {{{
-
-	sql := `DELETE scd_task_param WHERE task_id=?`
-	_, err = g.HiveConn.Exec(sql, &t.Id)
-
-	sql = `DELETE scd_task_rel WHERE task_id=?`
-	_, err = g.HiveConn.Exec(sql, &t.Id)
-
-	sql = `DELETE scd_task WHERE task_id=?`
+func (t *Task) deleteTask() (err error) { // {{{
+	sql := `DELETE FROM scd_task WHERE task_id=?`
 	_, err = g.HiveConn.Exec(sql, &t.Id)
 
 	return err

@@ -317,6 +317,36 @@ func (s *Schedule) UpdateSchedule(scd *Schedule) (err error) {
 	return s.Update()
 }
 
+//DeleteTask方法用来删除指定id的Task。首先会根据传入参数在Schedule的Tasks列
+//表中查出对应的Task。然后将其从Tasks列表中去除，将其从所属Job中去除，调用
+//Task的Delete方法删除Task的依赖关系，完成后删除元数据库的信息。
+//没找到对应Task或删除失败，返回error信息。
+func (s *Schedule) DeleteTask(id int64) (err error) {
+	var i int
+	for k, task := range s.Tasks {
+		if task.Id == id {
+			i = k
+		}
+
+		if _, ok := task.RelTasks[string(id)]; ok {
+			err = task.DeleteRelTask(id)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	t := s.Tasks[i]
+	s.Tasks = append(s.Tasks[0:i], s.Tasks[i+1:]...)
+	s.TaskCnt--
+
+	j := s.GetJobById(t.JobId)
+	if err = j.DeleteTask(t.Id); err != nil {
+		return err
+	}
+
+	return t.Delete()
+}
+
 //GetJobById遍历Jobs列表，返回调度中指定Id的Job，若没找到返回nil
 func (s *Schedule) GetJobById(Id int64) *Job {
 	for _, j := range s.Jobs {
