@@ -25581,7 +25581,8 @@ Released under the MIT License
       "mouseleave .nextstart": "nextstartmouseout",
       "click .cyc": "showcyc",
       "click .sname": "showschedule",
-      "click .sstart": "ck"
+      "click .sstart": "ck",
+      "click .sdelete": "deleteSchedule"
     };
 
     function ScheduleItem() {
@@ -25726,6 +25727,14 @@ Released under the MIT License
       return this.nextstart.css("background-color", "transparent");
     };
 
+    ScheduleItem.prototype.deleteSchedule = function(e) {
+      var s;
+      s = Schedule.find(this.item.Id);
+      s.bind("refresh", ScheduleList.addAll);
+      this.el.remove();
+      return s.destroy();
+    };
+
     return ScheduleItem;
 
   })(Spine.Controller);
@@ -25756,7 +25765,8 @@ Released under the MIT License
     };
 
     ScheduleList.prototype.addAll = function() {
-      return Schedule.each(this.addOne);
+      Schedule.each(this.addOne);
+      return this.append(require("views/schedule-add"));
     };
 
     return ScheduleList;
@@ -25970,8 +25980,7 @@ Released under the MIT License
     ScheduleManager.prototype.setMoveFlg = function(e) {
       this.isMove = true;
       this.preLeft = e.clientX;
-      this.preTop = e.clientY;
-      return this.el.css("opacity", 0.4);
+      return this.preTop = e.clientY;
     };
 
     ScheduleManager.prototype.clearMoveFlg = function(e) {
@@ -26422,7 +26431,7 @@ Released under the MIT License
     };
 
     TaskManager.prototype.addTaskAndRefresh = function(task, status, xhr) {
-      var ci, i, j, t, _i, _len, _ref;
+      var ci, el, i, j, t, _i, _j, _len, _len1, _ref, _ref1;
       if (xhr === "success") {
         Spine.Module.extend.call(task, Task);
         _ref = this.item.Jobs;
@@ -26432,7 +26441,9 @@ Released under the MIT License
             ci = i;
           }
         }
+        task.JobNo = ci;
         t = new TaskShape(this.paper, 150, 0, task, Style.getRgbColor()[ci], 25);
+        t.conn.drag(t.connMove, t.connDragger, t.connUp, this);
         t.sp.animate({
           "cx": 150,
           "cy": ci * 100 + 80
@@ -26441,6 +26452,24 @@ Released under the MIT License
           "x": 150,
           "y": ci * 100 + 80
         }, 2000, "elastic");
+        _ref1 = t.toolset;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          el = _ref1[_j];
+          if (el.attr("cx")) {
+            el.attr([
+              {
+                cy: ci * 100 + 80
+              }
+            ]);
+          }
+          if (el.attr("x")) {
+            el.attr([
+              {
+                y: ci * 100 + 80
+              }
+            ]);
+          }
+        }
         this.taskList.push(t);
         this.setpp.push(t.sp);
         this.setpp.push(t.text);
@@ -26543,8 +26572,7 @@ Released under the MIT License
     TaskManager.prototype.setMoveFlg = function(e) {
       this.isMove = true;
       this.preLeft = e.clientX;
-      this.preTop = e.clientY;
-      return this.el.css("opacity", 0.4);
+      return this.preTop = e.clientY;
     };
 
     TaskManager.prototype.clearMoveFlg = function(e) {
@@ -28280,6 +28308,53 @@ module.exports = content;}, "views/main-list": function(exports, require, module
       __out.push(__sanitize(gnext));
     
       __out.push('</h5>\n        </div>\n\n\t</div>\n    <div class="panel-footer" style="padding: 5px 15px 24px; background:transparent; border: 0; opacity: 0;">\n      <div>\n            <span class="slog pull-right label label-default" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-time"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="sdelete pull-right label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-trash"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="scopy pull-right label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-edit"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="srun pull-left label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-play"></span>\n            </span>\n      </div>\n\n\t</div>\n</div>\n');
+    
+    }).call(this);
+    
+  }).call(__obj);
+  __obj.safe = __objSafe, __obj.escape = __escape;
+  return __out.join('');
+};
+module.exports = content;}, "views/schedule-add": function(exports, require, module) {var content = function(__obj) {
+  if (!__obj) __obj = {};
+  var __out = [], __capture = function(callback) {
+    var out = __out, result;
+    __out = [];
+    callback.call(this);
+    result = __out.join('');
+    __out = out;
+    return __safe(result);
+  }, __sanitize = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else if (typeof value !== 'undefined' && value != null) {
+      return __escape(value);
+    } else {
+      return '';
+    }
+  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
+  __safe = __obj.safe = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else {
+      if (!(typeof value !== 'undefined' && value != null)) value = '';
+      var result = new String(value);
+      result.ecoSafe = true;
+      return result;
+    }
+  };
+  if (!__escape) {
+    __escape = __obj.escape = function(value) {
+      return ('' + value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+  }
+  (function() {
+    (function() {
+      __out.push('<div class="scheduleitem col-sm-3">\n<div class="panel panel-default fdin" style="border: 0px; box-shadow: rgb(119, 119, 119) 0px 0px 0px 0px; background: transparent;">\n    <div class="panel-heading" style="border: 0px; background: rgba(0, 0, 0, 0);">\n        <!-- 标题 -->\n        <div class="panel-title title" style="background:transparent; border: 0;">\n            <span class="sname h4" style="cursor: pointer; opacity: 0; color: rgba(51, 51, 51, 0);">\n            &nbsp;    \n            </span>\n        </div>\n    </div>\n        \n\t<div class="pbmask" style="border: 0px; position: absolute; z-index: 1000; width: 263px; height: 138px; background: transparent;">\n        <h1>数据市场调度</h1>\n    </div>\n\n\t<div class="panel-body row container-fluid" style="border: 0px; opacity: 0; background: transparent;">\n        <div class="sstart col-sm-12" style="background:transparent; border: 0;">\n            <!-- 启动时间 -->\n                <span href="#" id="drops2" role="button" class="dropdown-toggle" data-toggle="dropdown" style="cursor: pointer;">\n                    <h5>\n                        <span class="glyphicon glyphicon-dashboard"></span>&nbsp;\n                        &nbsp;\n                        <span class="caret"></span>\n                    </h5>\n                </span>\n            \n        </div>\n        <div class="jobcnt col-sm-12" style="background:transparent; border: 0;">\n            <h5 style="background:transparent; border: 0;">任务数量：<span class="badge">12</span></h5>\n        </div>\n        <div class="nextstart col-sm-12" style="background:transparent; border: 0;">\n            <h5>下次执行：2014年8月29日</h5>\n        </div>\n\n\t</div>\n    <div class="panel-footer" style="padding: 5px 15px 24px; border: 0px; opacity: 0; background: transparent;">\n      <div>\n            <span class="slog pull-right label label-default" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-time"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="sdelete pull-right label label-white" style="cursor: pointer; background-color: rgba(245, 245, 245, 0);">\n               <span class="glyphicon glyphicon-trash"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="scopy pull-right label label-white" style="cursor: pointer; background-color: rgba(245, 245, 245, 0);">\n               <span class="glyphicon glyphicon-edit"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="srun pull-left label label-white" style="cursor: pointer; background-color: rgba(245, 245, 245, 0);">\n               <span class="glyphicon glyphicon-play"></span>\n            </span>\n      </div>\n\n\t</div>\n</div>\n</div>\n');
     
     }).call(this);
     

@@ -200,6 +200,7 @@ func addTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sched
 				j.Tasks[string(task.Id)] = &task
 				j.TaskCnt++
 			}
+			s.Tasks = append(s.Tasks, &task)
 		}
 		r.JSON(200, task)
 	}
@@ -325,12 +326,14 @@ func addRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sc
 
 		if t == nil || rt == nil {
 			ctx.WriteHeader(500)
+			fmt.Println("task or reltask is null")
 			return
 		}
 
 		err := t.AddRelTask(rt)
 		if err != nil {
 			ctx.WriteHeader(500)
+			fmt.Println(err)
 			return
 		}
 		r.JSON(200, t)
@@ -360,6 +363,7 @@ func deleteRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss 
 		err := t.DeleteRelTask(int64(relid))
 		if err != nil {
 			ctx.WriteHeader(500)
+			fmt.Println(err)
 			return
 		}
 		r.JSON(200, t)

@@ -345,7 +345,7 @@ func (s *Schedule) UpdateSchedule(scd *Schedule) (err error) {
 //Task的Delete方法删除Task的依赖关系，完成后删除元数据库的信息。
 //没找到对应Task或删除失败，返回error信息。
 func (s *Schedule) DeleteTask(id int64) (err error) {
-	var i int
+	i := -1
 	for k, task := range s.Tasks {
 		if task.Id == id {
 			i = k
@@ -358,6 +358,11 @@ func (s *Schedule) DeleteTask(id int64) (err error) {
 			}
 		}
 	}
+	if i == -1 {
+		err = errors.New(fmt.Sprintf("not found task by id %d", id))
+		return err
+	}
+
 	t := s.Tasks[i]
 	s.Tasks = append(s.Tasks[0:i], s.Tasks[i+1:]...)
 	s.TaskCnt--

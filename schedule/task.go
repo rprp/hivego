@@ -167,7 +167,6 @@ func (t *Task) AddRelJob() (err error) {
 }
 
 func (t *Task) DeleteRelTask(relid int64) (err error) {
-	t.RelTasksId = append(t.RelTasksId, relid)
 	var i int
 	for k, v := range t.RelTasksId {
 		if v == relid {
@@ -217,6 +216,9 @@ func (t *Task) Add() (err error) { // {{{
 			VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err = g.HiveConn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.TaskType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
 
+	t.RelTasksId = make([]int64, 0)
+	t.RelTasks = make(map[string]*Task)
+	t.Attr = make(map[string]string)
 	return err
 } // }}}
 

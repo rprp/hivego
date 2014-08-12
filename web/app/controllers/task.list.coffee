@@ -171,9 +171,15 @@ class TaskManager extends Spine.Controller
 
       ci = i for j,i in @item.Jobs when j.Id is task.JobId
 
+      task.JobNo = ci
       t= new TaskShape(@paper,150,0,task,Style.getRgbColor()[ci],25)
+      t.conn.drag(t.connMove, t.connDragger, t.connUp,@)
       t.sp.animate({"cx": 150, "cy": ci*100+80}, 2000, "elastic")
       t.text.animate({"x": 150, "y": ci*100+80}, 2000, "elastic")
+
+      for el in t.toolset
+        el.attr([cy:ci*100+80]) if el.attr("cx")
+        el.attr([y:ci*100+80]) if el.attr("x")
 
       @taskList.push(t)
       
@@ -243,7 +249,6 @@ class TaskManager extends Spine.Controller
     @isMove = true
     @preLeft = e.clientX
     @preTop = e.clientY
-    @el.css("opacity", 0.4)
   # }}}
 
   clearMoveFlg: (e) -># {{{

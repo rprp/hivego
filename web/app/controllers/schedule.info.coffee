@@ -177,7 +177,6 @@ class ScheduleManager extends Spine.Controller
     @isMove = true
     @preLeft = e.clientX
     @preTop = e.clientY
-    @el.css("opacity", 0.4)
   # }}}
 
   clearMoveFlg: (e) -># {{{

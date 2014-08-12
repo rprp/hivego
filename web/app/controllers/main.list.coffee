@@ -40,6 +40,7 @@ class ScheduleItem extends Spine.Controller
    "click .cyc":       "showcyc"
    "click .sname":       "showschedule"
    "click .sstart":       "ck"
+   "click .sdelete":       "deleteSchedule"
 
   constructor: ->
     super
@@ -115,6 +116,12 @@ class ScheduleItem extends Spine.Controller
   nextstartmouseout: (e)->
       @nextstart.css("background-color","transparent")
 
+  deleteSchedule: (e) ->
+    s = Schedule.find(@item.Id)
+    s.bind("refresh",ScheduleList.addAll)
+    @el.remove()
+    s.destroy()
+
 class ScheduleList extends Spine.Controller
   className: 'schedulelist'
 
@@ -134,6 +141,7 @@ class ScheduleList extends Spine.Controller
 
   addAll: =>
     Schedule.each(@addOne)
+    @append(require("views/schedule-add"))
 
 module.exports = ScheduleItem
 module.exports = ScheduleList
