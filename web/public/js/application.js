@@ -28253,7 +28253,7 @@ module.exports = content;}, "views/main-list": function(exports, require, module
         __out.push(__sanitize(this.Id));
         __out.push('" role="button" class="dropdown-toggle" data-toggle="dropdown" style="cursor: pointer;">\n                    <h5>\n                        <span class="glyphicon glyphicon-dashboard"></span>&nbsp;\n                        ');
         __out.push(__sanitize(gs[0]));
-        __out.push('\n                        <span class="caret"></span>\n\n                        <span class="addstart pull-right label label-default" style="cursor: pointer;">\n                            <span class="glyphicon glyphicon-plus" style="color: #f5f5f5;"></span>\n                        </span>\n                    </h5>\n                </span>\n                <ul class="dropdown-menu" role="menu" aria-labelledby="drops');
+        __out.push('\n                        <span class="caret"></span>\n                    </h5>\n                </span>\n                <ul class="dropdown-menu" role="menu" aria-labelledby="drops');
         __out.push(__sanitize(this.Id));
         __out.push('">\n                ');
         for (_i = 0, _len = gs.length; _i < _len; _i++) {
@@ -28268,7 +28268,7 @@ module.exports = content;}, "views/main-list": function(exports, require, module
         __out.push(__sanitize(this.Id));
         __out.push('" >\n                    <h5>\n                        <span class="glyphicon glyphicon-dashboard"></span>&nbsp;\n                        ');
         __out.push(__sanitize(gs[0]));
-        __out.push('\n                        <span class="addstart pull-right label label-default" style="cursor: pointer;">\n                            <span class="glyphicon glyphicon-plus" style="color: #f5f5f5;"></span>\n                        </span>\n                    </h5>\n                </span>\n            ');
+        __out.push('\n                    </h5>\n                </span>\n            ');
       }
     
       __out.push('\n        </div>\n        <div class="jobcnt col-sm-12" style="background:transparent; border: 0;">\n            <h5 style="background:transparent; border: 0;">任务数量：<span class="badge">');

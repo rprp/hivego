@@ -54,7 +54,6 @@ func controller(m *martini.ClassicMartini) { // {{{
 		r.Put("/:sid/jobs/:id", binding.Bind(schedule.Job{}), updateJob)
 		r.Delete("/:sid/jobs/:id", deleteJob)
 
-		r.Get("/:sid/jobs/:jid/tasks", getJobsForSchedule)
 		r.Post("/:sid/jobs/:jid/tasks", binding.Bind(schedule.Task{}), addTask)
 		r.Put("/:sid/jobs/:jid/tasks/:id", binding.Bind(schedule.Task{}), updateTask)
 		r.Delete("/:sid/jobs/:jid/tasks/:id", deleteTask)
@@ -272,10 +271,19 @@ func getJobsForSchedule(ctx *web.Context, params martini.Params, r render.Render
 	return
 } // }}}
 
-func deleteSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
-	for _, s := range Ss.ScheduleList {
-		res.Write([]byte(s.String()))
+func deleteSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager) { // {{{
+	id, _ := strconv.Atoi(params["id"])
+
+	if id == 0 {
+		ctx.WriteHeader(500)
+		return
 	}
+
+	if err := Ss.DeleteSchedule(int64(id)); err != nil {
+		ctx.WriteHeader(500)
+		return
+	}
+	r.JSON(200, nil)
 
 } // }}}
 

@@ -55,6 +55,29 @@ func (sl *ScheduleManager) GetScheduleById(id int64) *Schedule { // {{{
 	return nil
 } // }}}
 
+func (sl *ScheduleManager) DeleteSchedule(id int64) error { // {{{
+	i := -1
+	for k, ss := range sl.ScheduleList {
+		if ss.Id == id {
+			i = k
+		}
+	}
+
+	if i == -1 {
+		return errors.New(fmt.Sprintf("delete error. not found schedule by id %d", id))
+	}
+
+	s := sl.ScheduleList[i]
+	sl.ScheduleList = append(sl.ScheduleList[0:i], sl.ScheduleList[i+1:]...)
+
+	err := s.Delete()
+	if err != nil {
+		return err
+	}
+
+	return nil
+} // }}}
+
 //从元数据库获取Schedule列表
 //StartSchedule方法，会遍历列表中的Schedule并启动goroutine调用它的Timer方法。
 func (sl *ScheduleManager) StartSchedule() { // {{{
@@ -357,8 +380,32 @@ func (s *Schedule) GetJobById(Id int64) *Job {
 	return nil
 }
 
-//Delete方法，删除元数据库中的调度信息
+//Delete方法删除Schedule下的Job、Task信息并持久化。
 func (s *Schedule) Delete() error { // {{{
+	for _, t := range s.Tasks {
+		err := s.DeleteTask(t.Id)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, j := range s.Jobs {
+		err := s.DeleteJob(j.Id)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := s.delStart()
+	if err != nil {
+		return err
+	}
+
+	return s.deleteSchedule()
+} // }}}
+
+//Delete方法，删除元数据库中的调度信息
+func (s *Schedule) deleteSchedule() error { // {{{
 	sql := `Delete FROM scd_schedule WHERE scd_id=?`
 	_, err := g.HiveConn.Exec(sql, &s.Id)
 	g.L.Debugln("schedule", s.Name, " was deleted.")

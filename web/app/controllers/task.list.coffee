@@ -417,11 +417,6 @@ class TaskManager extends Spine.Controller
     tk = new Task()
     tk.destroy({url:"/schedules/#{@item.Id}/jobs/#{ts.task.JobId}/tasks/#{ts.task.Id}"})
     ts.remove()
-    #jb = Job.find(@.data("Id"))
-    #ts = @.data("this")
-    #jb.bind("change",ts?.delJobAndRefresh)
-
-
 
   connectStart: (ts, e) =>
     s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 200)

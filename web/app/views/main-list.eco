@@ -33,10 +33,6 @@
                         <span class="glyphicon glyphicon-dashboard"></span>&nbsp;
                         <%= gs[0] %>
                         <span class="caret"></span>
-
-                        <span class="addstart pull-right label label-default" style="cursor: pointer;">
-                            <span class="glyphicon glyphicon-plus" style="color: #f5f5f5;"></span>
-                        </span>
                     </h5>
                 </span>
                 <ul class="dropdown-menu" role="menu" aria-labelledby="drops<%= @Id %>">
@@ -49,9 +45,6 @@
                     <h5>
                         <span class="glyphicon glyphicon-dashboard"></span>&nbsp;
                         <%= gs[0] %>
-                        <span class="addstart pull-right label label-default" style="cursor: pointer;">
-                            <span class="glyphicon glyphicon-plus" style="color: #f5f5f5;"></span>
-                        </span>
                     </h5>
                 </span>
             <% end %>
