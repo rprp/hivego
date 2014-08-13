@@ -404,11 +404,12 @@ class TaskManager extends Spine.Controller
     @delTaskRels.push(r)
     $("#delcnt").text(@delTaskRels.length)
     
-    if @confirmdeltaskrel.length < 1
+    if @delTaskRels.length is 1
       @html(require('views/taskrel')())
       @el.css("position","absolute")
       @el.css("left",r.tail.sp.ox)
       @el.css("top",r.tail.sp.oy+92)
+      @el.css("display","block")
     else
       @confirmdeltaskrel.css("display","block")
 

@@ -26793,11 +26793,12 @@ Released under the MIT License
     TaskManager.prototype.addRemoveTaskRel = function(r) {
       this.delTaskRels.push(r);
       $("#delcnt").text(this.delTaskRels.length);
-      if (this.confirmdeltaskrel.length < 1) {
+      if (this.delTaskRels.length === 1) {
         this.html(require('views/taskrel')());
         this.el.css("position", "absolute");
         this.el.css("left", r.tail.sp.ox);
-        return this.el.css("top", r.tail.sp.oy + 92);
+        this.el.css("top", r.tail.sp.oy + 92);
+        return this.el.css("display", "block");
       } else {
         return this.confirmdeltaskrel.css("display", "block");
       }
