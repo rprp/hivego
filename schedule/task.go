@@ -31,7 +31,6 @@ type Task struct { // {{{
 
 //refreshTask方法用来从元数据库刷新Task的信息
 func (t *Task) refreshTask(jobid int64) { // {{{
-	g.L.Println("refresh task", t.Name)
 	tt := getTask(t.Id)
 	t.Address = tt.Address
 	t.Name = tt.Name
@@ -54,8 +53,6 @@ func (t *Task) refreshTask(jobid int64) { // {{{
 		t.RelTasks[string(rtid)] = g.Tasks[string(rtid)]
 		t.RelTaskCnt++
 	}
-
-	g.L.Println("task refreshed", t)
 
 } // }}}
 

@@ -26,9 +26,8 @@ type Job struct { // {{{
 } // }}}
 
 //refreshJob方法用来从元数据库刷新作业信息
-func (j *Job) refreshJob() { // {{{
-	g.L.Println("refresh job", j.Name)
-	if tj := getJob(j.Id); tj != nil {
+func (j *Job) initJob() error { // {{{
+	if tj, err := getJob(j.Id); tj != nil {
 		j.Name = tj.Name
 		j.Desc = tj.Desc
 		j.PreJobId = tj.PreJobId
@@ -37,7 +36,13 @@ func (j *Job) refreshJob() { // {{{
 		j.Tasks = make(map[string]*Task)
 		j.TaskCnt = 0
 
-		pj := getJob(j.PreJobId)
+		pj, err := getJob(j.PreJobId)
+		if err != nil {
+			e := fmt.Sprintf("init job [%d] error %s.\n", j.PreJobId, err.Error())
+			g.L.Warningln(e)
+			return errors.New(e)
+		}
+
 		j.PreJob = pj
 
 		t := getTasks(j.Id)
@@ -50,14 +55,28 @@ func (j *Job) refreshJob() { // {{{
 		}
 
 		//获取下级任务
-		if nj := getJob(j.NextJobId); nj != nil && nj.Id != 0 {
+		if nj, err := getJob(j.NextJobId); nj != nil && nj.Id != 0 {
 			nj.ScheduleId = j.ScheduleId
 			nj.ScheduleCyc = j.ScheduleCyc
-			nj.refreshJob()
+			if err := nj.initJob(); err != nil {
+				e := fmt.Sprintf("init job [%d] error %s.\n", nj.Id, err.Error())
+				g.L.Warningln(e)
+				return errors.New(e)
+			}
 			j.NextJob = nj
+		} else if err != nil {
+			e := fmt.Sprintf("init job [%d] error %s.\n", j.NextJobId, err.Error())
+			g.L.Warningln(e)
+			return errors.New(e)
 		}
+	} else if err != nil {
+		e := fmt.Sprintf("init job [%d] error %s.\n", j.Id, err.Error())
+		g.L.Warningln(e)
+		return errors.New(e)
+
 	}
-	g.L.Println("job refreshed", j)
+
+	return nil
 } // }}}
 
 //打印job结构信息
@@ -98,7 +117,7 @@ func (j *Job) String() string { // {{{
 } // }}}
 
 //增加作业信息至元数据库
-func (j *Job) Add() (err error) { // {{{
+func (j *Job) add() (err error) { // {{{
 	j.SetNewId()
 	j.Tasks = make(map[string]*Task)
 	j.CreateTime = time.Now()
@@ -175,7 +194,7 @@ func (j *Job) deleteTask(taskid int64) (err error) { // {{{
 } // }}}
 
 //修改作业信息至元数据库
-func (j *Job) Update() (err error) { // {{{
+func (j *Job) update() (err error) { // {{{
 	sql := `UPDATE scd_job
 		SET job_name=?, 
 			job_desc=?,
@@ -189,7 +208,7 @@ func (j *Job) Update() (err error) { // {{{
 } // }}}
 
 //删除作业信息至元数据库
-func (j *Job) Delete() (err error) { // {{{
+func (j *Job) deleteJob() (err error) { // {{{
 	sql := `DELETE FROM scd_job WHERE job_id=?`
 	_, err = g.HiveConn.Exec(sql, &j.Id)
 	return err
@@ -234,8 +253,8 @@ func (j *Job) GetNewJobTaskId() (id int64, err error) { // {{{
 } // }}}
 
 //从元数据库获取Job信息。
-func getJob(id int64) (job *Job) { // {{{
-
+func getJob(id int64) (*Job, error) { // {{{
+	j := &Job{}
 	//查询全部Job列表
 	sql := `SELECT job.job_id,
 			   job.job_name,
@@ -247,7 +266,6 @@ func getJob(id int64) (job *Job) { // {{{
 	rows, err := g.HiveConn.Query(sql, id)
 	CheckErr("getJob run Sql "+sql, err)
 
-	j := &Job{}
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
 		err = rows.Scan(&j.Id, &j.Name, &j.Desc, &j.PreJobId, &j.NextJobId)
@@ -259,10 +277,8 @@ func getJob(id int64) (job *Job) { // {{{
 
 	if j.Id == 0 {
 		j = nil
-	} else {
-		job = j
 	}
-	return
+	return j, err
 } // }}}
 
 //从元数据库获取Schedule下的Job列表。

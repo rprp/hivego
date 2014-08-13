@@ -110,8 +110,10 @@ func main() {
 		global.LogConn = cnn
 		defer global.LogConn.Close()
 
+		//初始化
+		global.Schedules.InitScheduleList()
 		//启动调度
-		go global.Schedules.StartSchedule()
+		go global.Schedules.StartListener()
 
 		//启动管理模块
 		go manager.StartManager(global.Schedules)
