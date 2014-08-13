@@ -222,7 +222,7 @@ func (s *Schedule) InitSchedule() error { // {{{
 
 	if tj, err := getJob(s.JobId); tj != nil {
 		tj.ScheduleId, tj.ScheduleCyc = s.Id, s.Cyc
-		if err = tj.initJob(); err != nil {
+		if err = tj.InitJob(); err != nil {
 			e := fmt.Sprintf("[s.InitSchedule] init job [%d] error %s.\n", s.JobId, err.Error())
 			g.L.Warningln(e)
 			return errors.New(e)

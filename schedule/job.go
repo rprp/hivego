@@ -25,154 +25,101 @@ type Job struct { // {{{
 	ModifyTime   time.Time        //修改时间
 } // }}}
 
-//refreshJob方法用来从元数据库刷新作业信息
-func (j *Job) initJob() error { // {{{
-	if tj, err := getJob(j.Id); tj != nil {
-		j.Name = tj.Name
-		j.Desc = tj.Desc
-		j.PreJobId = tj.PreJobId
-		j.NextJobId = tj.NextJobId
-		j.NextJob = tj.NextJob
-		j.Tasks = make(map[string]*Task)
-		j.TaskCnt = 0
-
-		pj, err := getJob(j.PreJobId)
-		if err != nil {
-			e := fmt.Sprintf("init job [%d] error %s.\n", j.PreJobId, err.Error())
-			g.L.Warningln(e)
-			return errors.New(e)
-		}
-
-		j.PreJob = pj
-
-		t := getTasks(j.Id)
-		j.Tasks = t
-		for _, tt := range t {
-			tt.ScheduleCyc = j.ScheduleCyc
-			j.TaskCnt++
-			g.L.Infoln("create task", tt.Name)
-			tt.refreshTask(j.Id)
-		}
-
-		//获取下级任务
-		if nj, err := getJob(j.NextJobId); nj != nil && nj.Id != 0 {
-			nj.ScheduleId = j.ScheduleId
-			nj.ScheduleCyc = j.ScheduleCyc
-			if err := nj.initJob(); err != nil {
-				e := fmt.Sprintf("init job [%d] error %s.\n", nj.Id, err.Error())
-				g.L.Warningln(e)
-				return errors.New(e)
-			}
-			j.NextJob = nj
-		} else if err != nil {
-			e := fmt.Sprintf("init job [%d] error %s.\n", j.NextJobId, err.Error())
-			g.L.Warningln(e)
-			return errors.New(e)
-		}
-	} else if err != nil {
-		e := fmt.Sprintf("init job [%d] error %s.\n", j.Id, err.Error())
-		g.L.Warningln(e)
+//根据Job.Id初始化Job结构，从元数据库获取Job的基本信息初始化后
+//继续初始化Job所属的Task列表，同时递归调用自身，初始化下级Job结构
+//失败返回error信息。
+func (j *Job) InitJob() error { // {{{
+	tj, err := getJob(j.Id)
+	if err != nil {
+		e := fmt.Sprintf("[j.InitJob] init job [%d] error %s.\n", j.Id, err.Error())
 		return errors.New(e)
-
 	}
+
+	j.Name, j.Desc, j.PreJobId = tj.Name, tj.Desc, tj.PreJobId
+	j.NextJobId, j.NextJob, j.Tasks, j.TaskCnt = tj.NextJobId, tj.NextJob, make(map[string]*Task), 0
+
+	if j.PreJobId != 0 {
+		j.PreJob, err = getJob(j.PreJobId)
+		if err != nil {
+			e := fmt.Sprintf("[j.InitJob] get pre job [%d] error %s.\n", j.PreJobId, err.Error())
+			return errors.New(e)
+		}
+	}
+
+	err = j.InitTasksForJob()
+	if err != nil {
+		e := fmt.Sprintf("[j.InitJob] init task for job [%d] error %s.\n", j.Id, err.Error())
+		return errors.New(e)
+	}
+
+	//获取下级作业
+	if j.NextJobId == 0 {
+		return nil
+	}
+
+	nj, err := getJob(j.NextJobId)
+	if err != nil {
+		e := fmt.Sprintf("[j.InitJob] init job [%d] error %s.\n", j.NextJobId, err.Error())
+		return errors.New(e)
+	}
+
+	nj.ScheduleId, nj.ScheduleCyc = j.ScheduleId, j.ScheduleCyc
+	if err := nj.InitJob(); err != nil {
+		e := fmt.Sprintf("[j.InitJob] init job [%d] error %s.\n", nj.Id, err.Error())
+		return errors.New(e)
+	}
+	j.NextJob = nj
 
 	return nil
 } // }}}
 
-//打印job结构信息
-func (j *Job) String() string { // {{{
-	var preName, nextName string
-	if j.PreJob != nil {
-		preName = j.PreJob.Name
-	}
-
-	if j.NextJob != nil {
-		nextName = j.NextJob.Name
-	}
-
-	t1 := make([]string, 1)
-	for _, t := range j.Tasks {
-		t1 = append(t1, t.Name)
-	}
-
-	return fmt.Sprintf("{id=%d"+
-		" name=%s"+
-		" desc=%s"+
-		" preJobname=%s"+
-		" nextJobname=%s"+
-		" taskList=%v"+
-		" taskCnt=%d"+
-		" createTime=%v"+
-		" modifyTime=%v}\n",
-		j.Id,
-		j.Name,
-		j.Desc,
-		preName,
-		nextName,
-		t1,
-		j.TaskCnt,
-		j.CreateTime,
-		j.ModifyTime)
-
-} // }}}
-
-//增加作业信息至元数据库
-func (j *Job) add() (err error) { // {{{
-	j.SetNewId()
+//初始化Job下的Tasks信息，从元数据库取到Job下所有的TaskId后
+//调用方法初始化Task并加至Job的Tasks成员中，同时也添加到全局Tasks列表
+//出错返回错误信息
+func (j *Job) InitTasksForJob() error { // {{{
 	j.Tasks = make(map[string]*Task)
-	j.CreateTime = time.Now()
-	j.ModifyTime = time.Now()
-	sql := `INSERT INTO scd_job
-            (job_id, job_name, job_desc, prev_job_id,
-             next_job_id, create_user_id, create_time,
-             modify_user_id, modify_time)
-		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = g.HiveConn.Exec(sql, &j.Id, &j.Name, &j.Desc, &j.PreJobId, &j.NextJobId, &j.CreateUserId, &j.CreateTime, &j.ModifyUserId, &j.ModifyTime)
 
-	return err
-} // }}}
+	tasksId, err := j.getTasksId()
+	if err != nil {
+		e := fmt.Sprintf("[j.GetTasks] getTasksId error %s.\n", err.Error())
+		g.L.Warningln(e)
+		return errors.New(e)
+	}
 
-//增加作业任务映射关系至元数据库
-func (j *Job) AddTask(taskid int64, taskno int64) (err error) { // {{{
-	jobtaskid, _ := j.GetNewJobTaskId()
+	for _, taskid := range tasksId {
+		if task := getTask(taskid); task.Id != 0 {
+			j.Tasks[string(taskid)] = task
+			g.Tasks[string(taskid)] = task
 
-	sql := `INSERT INTO scd_job_task
-            (job_task_id, job_id, task_id, job_task_no,
-             create_user_id, create_time)
-		VALUES      (?, ?, ?, ?, ?, ?)`
-
-	_, err = g.HiveConn.Exec(sql, &jobtaskid, &j.Id, &taskid, &taskno, &j.CreateUserId, &j.CreateTime)
-
-	return err
+			task.ScheduleCyc = j.ScheduleCyc
+			j.TaskCnt++
+			task.refreshTask(j.Id)
+		}
+	}
+	return nil
 } // }}}
 
 //UpdateTask更新Job中指定Task的信息。
 //它会根据参数查找本Job下符合的Task，找到后更新信息
-//并调用Task的Add方法进行持久化操作。
-func (j *Job) UpdateTask(task *Task) (err error) {
+//并调用Task的add方法进行持久化操作。
+func (j *Job) UpdateTask(task *Task) (err error) { // {{{
 	t, ok := j.Tasks[string(task.Id)]
 	if !ok {
-		return errors.New(fmt.Sprintf("update error. not found task by id %d", task.Id))
+		e := fmt.Sprintf("[j.UpdateTask] update error. not found task by id %d", task.Id)
+		return errors.New(e)
 	}
-	t.Name = task.Name
-	t.Desc = task.Desc
-	t.Address = task.Address
-	t.TaskType = task.TaskType
-	t.TaskCyc = task.TaskCyc
-	t.StartSecond = task.StartSecond
-	t.Cmd = task.Cmd
-	t.TimeOut = task.TimeOut
-	t.Param = task.Param
-	t.Attr = task.Attr
-	t.ModifyUserId = task.ModifyUserId
-	t.ModifyTime = time.Now()
+	t.Name, t.Desc, t.Address = task.Name, task.Desc, task.Address
+	t.TaskType, t.TaskCyc, t.StartSecond = task.TaskType, task.TaskCyc, task.StartSecond
+	t.Cmd, t.TimeOut, t.Param = task.Cmd, task.TimeOut, task.Param
+	t.Attr, t.ModifyUserId, t.ModifyTime = task.Attr, task.ModifyUserId, time.Now()
 
 	if err := t.UpdateTask(); err != nil {
-		return err
+		e := fmt.Sprintf("[j.UpdateTask] UpdateTask error %s.\n", err.Error())
+		return errors.New(e)
 	}
 
 	return nil
-}
+} // }}}
 
 //删除作业任务映射关系至元数据库
 func (j *Job) DeleteTask(taskid int64) (err error) { // {{{
@@ -183,128 +130,4 @@ func (j *Job) DeleteTask(taskid int64) (err error) { // {{{
 	j.TaskCnt--
 
 	return nil
-} // }}}
-
-func (j *Job) deleteTask(taskid int64) (err error) { // {{{
-	sql := `DELETE FROM scd_job_task WHERE job_id=? and task_id=?`
-
-	_, err = g.HiveConn.Exec(sql, &j.Id, &taskid)
-
-	return err
-} // }}}
-
-//修改作业信息至元数据库
-func (j *Job) update() (err error) { // {{{
-	sql := `UPDATE scd_job
-		SET job_name=?, 
-			job_desc=?,
-			prev_job_id=?,
-            next_job_id=?, 
-            modify_user_id=?, 
-			modify_time=?
-	    WHERE job_id=?`
-	_, err = g.HiveConn.Exec(sql, &j.Name, &j.Desc, &j.PreJobId, &j.NextJobId, &j.ModifyUserId, &j.ModifyTime, &j.Id)
-	return err
-} // }}}
-
-//删除作业信息至元数据库
-func (j *Job) deleteJob() (err error) { // {{{
-	sql := `DELETE FROM scd_job WHERE job_id=?`
-	_, err = g.HiveConn.Exec(sql, &j.Id)
-	return err
-} // }}}
-
-//获取新Id
-func (j *Job) SetNewId() (err error) { // {{{
-	var id int64
-
-	//查询全部schedule列表
-	sql := `SELECT max(job.job_id) as job_id
-			FROM scd_job job`
-	rows, err := g.HiveConn.Query(sql)
-	CheckErr("job SetNewId run Sql "+sql, err)
-
-	//循环读取记录，格式化后存入变量ｂ
-	for rows.Next() {
-		err = rows.Scan(&id)
-	}
-	j.Id = id + 1
-
-	return err
-
-} // }}}
-
-//获取新JobTaskId
-func (j *Job) GetNewJobTaskId() (id int64, err error) { // {{{
-
-	//查询全部schedule列表
-	sql := `SELECT max(jt.job_task_id) as job_task_id
-			FROM scd_job_task jt`
-	rows, err := g.HiveConn.Query(sql)
-	CheckErr("GetNewJobTaskId run Sql "+sql, err)
-
-	//循环读取记录，格式化后存入变量ｂ
-	for rows.Next() {
-		err = rows.Scan(&id)
-	}
-
-	return id + 1, err
-
-} // }}}
-
-//从元数据库获取Job信息。
-func getJob(id int64) (*Job, error) { // {{{
-	j := &Job{}
-	//查询全部Job列表
-	sql := `SELECT job.job_id,
-			   job.job_name,
-			   job.job_desc,
-			   job.prev_job_id,
-			   job.next_job_id
-			FROM scd_job job
-			WHERE job.job_id=?`
-	rows, err := g.HiveConn.Query(sql, id)
-	CheckErr("getJob run Sql "+sql, err)
-
-	//循环读取记录，格式化后存入变量ｂ
-	for rows.Next() {
-		err = rows.Scan(&j.Id, &j.Name, &j.Desc, &j.PreJobId, &j.NextJobId)
-		CheckErr("getJob ", err)
-		//初始化Task内存
-		j.Tasks = make(map[string]*Task)
-		g.L.Debugln("get job", j)
-	}
-
-	if j.Id == 0 {
-		j = nil
-	}
-	return j, err
-} // }}}
-
-//从元数据库获取Schedule下的Job列表。
-func getAllJobs() (jobs map[string]*Job, err error) { // {{{
-
-	jobs = make(map[string]*Job)
-
-	//查询全部Job列表
-	sql := `SELECT job.job_id,
-			   job.job_name,
-			   job.job_desc,
-			   job.prev_job_id,
-			   job.next_job_id
-			FROM scd_job job`
-	rows, err := g.HiveConn.Query(sql)
-	CheckErr("getAllJobs run Sql "+sql, err)
-
-	//循环读取记录，格式化后存入变量ｂ
-	for rows.Next() {
-		job := &Job{}
-		err = rows.Scan(&job.Id, &job.Name, &job.Desc, &job.PreJobId, &job.NextJobId)
-
-		//初始化Task内存
-		job.Tasks = make(map[string]*Task)
-		jobs[string(job.Id)] = job
-	}
-
-	return jobs, err
 } // }}}

@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	//"errors"
 	"fmt"
 	"time"
 )
@@ -471,53 +472,6 @@ func getAllTasks() (tasks map[string]*Task, err error) { // {{{
 		tasks[string(task.Id)] = task
 	}
 	return tasks, err
-} // }}}
-
-//从元数据库获取Job下的Task列表。
-func getTasks(jobId int64) (tasks map[string]*Task) { // {{{
-
-	tasks = make(map[string]*Task)
-
-	//查询Job中全部Task列表
-	sql := `SELECT jt.task_id
-			FROM scd_job_task jt
-			WHERE jt.job_id=?`
-	rows, err := g.HiveConn.Query(sql, jobId)
-	CheckErr("getTasks run sql"+sql, err)
-
-	//循环读取记录
-	for rows.Next() {
-		var taskid int64
-		err = rows.Scan(&taskid)
-		CheckErr("getTasks", err)
-		if task := getTask(taskid); task.Id != 0 {
-			tasks[string(taskid)] = task
-			g.Tasks[string(taskid)] = task
-		}
-	}
-	g.L.Debugln("get task", tasks)
-	return tasks
-} // }}}
-
-//从元数据库获取Job下的Task列表。
-func getJobTaskid() (jobtask map[string]int64, err error) { // {{{
-
-	jobtask = make(map[string]int64)
-
-	//查询Job中全部Task列表
-	sql := `SELECT jt.job_id,
-				jt.task_id
-			FROM scd_job_task jt`
-	rows, err := g.HiveConn.Query(sql)
-	CheckErr("getJobTaskid run sql"+sql, err)
-
-	//循环读取记录
-	for rows.Next() {
-		var jobid, taskid int64
-		err = rows.Scan(&jobid, &taskid)
-		jobtask[string(taskid)] = jobid
-	}
-	return jobtask, err
 } // }}}
 
 //从元数据库获取Task的依赖列表。
