@@ -84,16 +84,14 @@ func (sl *ScheduleManager) StartListener() { // {{{
 func (sl *ScheduleManager) StartScheduleById(id int64) error { // {{{
 	s := sl.GetScheduleById(id)
 	if s == nil {
-		e := fmt.Sprintf("[sl.StartScheduleById] start schedule. not found schedule by id %d\n", id)
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[sl.StartScheduleById] start schedule. not found schedule by id %d", id)
 		return errors.New(e)
 	}
 
 	//从元数据库初始化调度链信息
 	err := s.InitSchedule()
 	if err != nil {
-		e := fmt.Sprintf("[sl.StartScheduleById] init schedule [%d] error %s.\n", id, err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[sl.StartScheduleById] init schedule [%d] error %s.", id, err.Error())
 		return errors.New(e)
 	}
 
@@ -126,8 +124,7 @@ func (sl *ScheduleManager) DeleteSchedule(id int64) error { // {{{
 	}
 
 	if i == -1 {
-		e := fmt.Sprintf("[sl.DeleteSchedule] delete error. not found schedule by id %d\n", id)
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[sl.DeleteSchedule] delete error. not found schedule by id %d", id)
 		return errors.New(e)
 	}
 
@@ -136,8 +133,7 @@ func (sl *ScheduleManager) DeleteSchedule(id int64) error { // {{{
 
 	err := s.Delete()
 	if err != nil {
-		e := fmt.Sprintf("[sl.DeleteSchedule] delete schedule [%d %s] error. %s\n", id, s.Name, err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[sl.DeleteSchedule] delete schedule [%d %s] error. %s", id, s.Name, err.Error())
 		return errors.New(e)
 	}
 
@@ -213,8 +209,7 @@ func (s *Schedule) Timer() { // {{{
 func (s *Schedule) InitSchedule() error { // {{{
 	ts, err := getSchedule(s.Id)
 	if err != nil {
-		e := fmt.Sprintf("[s.InitSchedule] get schedule [%d] error %s.\n", s.Id, err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.InitSchedule] get schedule [%d] error %s.", s.Id, err.Error())
 		return errors.New(e)
 	}
 	s.Name, s.Count, s.Cyc, s.Desc = ts.Name, ts.Count, ts.Cyc, ts.Desc
@@ -223,8 +218,7 @@ func (s *Schedule) InitSchedule() error { // {{{
 	if tj, err := getJob(s.JobId); tj != nil {
 		tj.ScheduleId, tj.ScheduleCyc = s.Id, s.Cyc
 		if err = tj.InitJob(); err != nil {
-			e := fmt.Sprintf("[s.InitSchedule] init job [%d] error %s.\n", s.JobId, err.Error())
-			g.L.Warningln(e)
+			e := fmt.Sprintf("\n[s.InitSchedule] init job [%d] error %s.", s.JobId, err.Error())
 			return errors.New(e)
 		}
 		s.Job = tj
@@ -240,8 +234,7 @@ func (s *Schedule) InitSchedule() error { // {{{
 			j = j.NextJob
 		}
 	} else if err != nil {
-		e := fmt.Sprintf("[s.InitSchedule] get job [%d] error %s.\n", s.JobId, err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.InitSchedule] get job [%d] error %s.", s.JobId, err.Error())
 		return errors.New(e)
 	}
 	return nil
@@ -270,16 +263,14 @@ func (s *Schedule) AddJob(job *Job) (err error) { // {{{
 		if len(s.Jobs) == 0 {
 			s.JobId, s.Job = job.Id, job
 			if err = s.update(); err != nil {
-				e := fmt.Sprintf("[s.AddJob] update schedule [%d] error %s.\n", s.Id, err.Error())
-				g.L.Warningln(e)
+				e := fmt.Sprintf("\n[s.AddJob] update schedule [%d] error %s.", s.Id, err.Error())
 				return errors.New(e)
 			}
 		} else {
 			j := s.Jobs[len(s.Jobs)-1]
 			j.NextJob, j.NextJobId, job.PreJob = job, job.Id, j
 			if err = j.update(); err != nil {
-				e := fmt.Sprintf("[s.AddJob] update job [%d] error %s.\n", job.Id, err.Error())
-				g.L.Warningln(e)
+				e := fmt.Sprintf("\n[s.AddJob] update job [%d] error %s.", job.Id, err.Error())
 				return errors.New(e)
 			}
 		}
@@ -300,8 +291,7 @@ func (s *Schedule) DeleteJob(id int64) (err error) { // {{{
 
 			pj.NextJob, pj.NextJobId = nil, 0
 			if err = pj.update(); err != nil {
-				e := fmt.Sprintf("[s.DeleteJob] update job [%d] to schedule [%d] error %s.\n", j.Id, s.Id, err.Error())
-				g.L.Warningln(e)
+				e := fmt.Sprintf("\n[s.DeleteJob] update job [%d] to schedule [%d] error %s.", j.Id, s.Id, err.Error())
 				return errors.New(e)
 			}
 		}
@@ -309,8 +299,7 @@ func (s *Schedule) DeleteJob(id int64) (err error) { // {{{
 		if len(s.Jobs) == 1 {
 			s.Jobs, s.Job, s.JobId = make([]*Job, 0), nil, 0
 			if err = s.update(); err != nil {
-				e := fmt.Sprintf("[s.DeleteJob] update schedule [%d] error %s.\n", s.Id, err.Error())
-				g.L.Warningln(e)
+				e := fmt.Sprintf("\n[s.DeleteJob] update schedule [%d] error %s.", s.Id, err.Error())
 				return errors.New(e)
 			}
 		} else {
@@ -320,13 +309,11 @@ func (s *Schedule) DeleteJob(id int64) (err error) { // {{{
 		s.JobCnt--
 		err = j.deleteJob()
 		if err != nil {
-			e := fmt.Sprintf("[s.DeleteJob] delete job [%d] error %s.\n", j.Id, err.Error())
-			g.L.Warningln(e)
+			e := fmt.Sprintf("\n[s.DeleteJob] delete job [%d] error %s.", j.Id, err.Error())
 			return errors.New(e)
 		}
 	} else {
-		e := fmt.Sprintf("[s.DeleteJob] not found job by id %d", id)
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.DeleteJob] not found job by id %d", id)
 		err = errors.New(e)
 	}
 	return err
@@ -341,13 +328,11 @@ func (s *Schedule) UpdateJob(job *Job) (err error) { // {{{
 		j.ModifyTime, j.ModifyUserId = time.Now(), job.ModifyUserId
 		err = j.update()
 		if err != nil {
-			e := fmt.Sprintf("[s.UpdateJob] update job [%d] error %s.\n", j.Id, err.Error())
-			g.L.Warningln(e)
+			e := fmt.Sprintf("\n[s.UpdateJob] update job [%d] error %s.", j.Id, err.Error())
 			return errors.New(e)
 		}
 	} else {
-		e := fmt.Sprintf("[s.UpdateJob] not found job by id %d", job.Id)
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.UpdateJob] not found job by id %d", job.Id)
 		err = errors.New(e)
 	}
 	return err
@@ -359,14 +344,12 @@ func (s *Schedule) UpdateSchedule(scd *Schedule) (err error) { // {{{
 	s.Name, s.Desc, s.Cyc, s.StartMonth = scd.Name, scd.Desc, scd.Cyc, scd.StartMonth
 	s.StartSecond, s.ModifyTime, s.ModifyUserId = scd.StartSecond, time.Now(), scd.ModifyUserId
 	if err = s.AddStart(); err != nil {
-		e := fmt.Sprintf("[s.UpdateSchedule] addstart error %s.\n", err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.UpdateSchedule] addstart error %s.", err.Error())
 		return errors.New(e)
 	}
 
 	if err = s.update(); err != nil {
-		e := fmt.Sprintf("[s.UpdateSchedule] update schedule [%d] error %s.\n", s.Id, err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.UpdateSchedule] update schedule [%d] error %s.", s.Id, err.Error())
 		return errors.New(e)
 	}
 
@@ -383,20 +366,9 @@ func (s *Schedule) DeleteTask(id int64) (err error) { // {{{
 		if task.Id == id {
 			i = k
 		}
-
-		if _, ok := task.RelTasks[string(id)]; ok {
-			err = task.DeleteRelTask(id)
-			if err != nil {
-				e := fmt.Sprintf("[s.DeleteTask] schedule [%d] DeleteRelTask taskid reltaskid [%d %d] error %s.\n", s.Id,
-					task.Id, id, err.Error())
-				g.L.Warningln(e)
-				return errors.New(e)
-			}
-		}
 	}
 	if i == -1 {
-		e := fmt.Sprintf("[s.DeleteTask] not found task by id %d", id)
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.DeleteTask] not found task by id %d", id)
 		return errors.New(e)
 	}
 
@@ -406,15 +378,13 @@ func (s *Schedule) DeleteTask(id int64) (err error) { // {{{
 
 	j := s.GetJobById(t.JobId)
 	if err = j.DeleteTask(t.Id); err != nil {
-		e := fmt.Sprintf("[s.DeleteTask] DeleteTask error %s", err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.DeleteTask] DeleteTask error %s", err.Error())
 		return errors.New(e)
 	}
 
 	err = t.Delete()
 	if err != nil {
-		e := fmt.Sprintf("[s.DeleteTask] schedule [%d] Delete error %s.\n", err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.DeleteTask] schedule [%d] Delete error %s.", err.Error())
 		return errors.New(e)
 	}
 
@@ -436,8 +406,7 @@ func (s *Schedule) Delete() error { // {{{
 	for _, t := range s.Tasks {
 		err := s.DeleteTask(t.Id)
 		if err != nil {
-			e := fmt.Sprintf("[s.Delete] DeleteTask [%d] error %s.\n", t.Id, err.Error())
-			g.L.Warningln(e)
+			e := fmt.Sprintf("\n[s.Delete] DeleteTask [%d] error %s.", t.Id, err.Error())
 			return errors.New(e)
 		}
 	}
@@ -445,23 +414,20 @@ func (s *Schedule) Delete() error { // {{{
 	for _, j := range s.Jobs {
 		err := s.DeleteJob(j.Id)
 		if err != nil {
-			e := fmt.Sprintf("[s.Delete] DeleteJob [%d] error %s.\n", j.Id, err.Error())
-			g.L.Warningln(e)
+			e := fmt.Sprintf("\n[s.Delete] DeleteJob [%d] error %s.", j.Id, err.Error())
 			return errors.New(e)
 		}
 	}
 
 	err := s.delStart()
 	if err != nil {
-		e := fmt.Sprintf("[s.Delete] delStart error %s.\n", err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.Delete] delStart error %s.", err.Error())
 		return errors.New(e)
 	}
 
 	err = s.deleteSchedule()
 	if err != nil {
-		e := fmt.Sprintf("[s.Delete] deleteSchedule [%d] error %s.\n", s.Id, err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.Delete] deleteSchedule [%d] error %s.", s.Id, err.Error())
 		return errors.New(e)
 	}
 	return nil
@@ -476,14 +442,13 @@ func (s *Schedule) AddStart() (err error) { // {{{
 		for i, st := range s.StartSecond {
 			err = s.addStart(time.Duration(st)/time.Second, s.StartMonth[i])
 			if err != nil {
-				e := fmt.Sprintf("[s.AddStart] error %s.\n", err.Error())
-				g.L.Warningln(e)
+				e := fmt.Sprintf("\n[s.AddStart] error %s.", err.Error())
 				return errors.New(e)
 			}
 		}
 	} else {
-		e := fmt.Sprintf("[s.AddStart] delStart error %s.\n", err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[s.AddStart] delStart error %s.", err.Error())
+		return errors.New(e)
 	}
 	return err
 } // }}}

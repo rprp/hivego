@@ -31,7 +31,7 @@ type Job struct { // {{{
 func (j *Job) InitJob() error { // {{{
 	tj, err := getJob(j.Id)
 	if err != nil {
-		e := fmt.Sprintf("[j.InitJob] init job [%d] error %s.\n", j.Id, err.Error())
+		e := fmt.Sprintf("\n[j.InitJob] init job [%d] error %s.", j.Id, err.Error())
 		return errors.New(e)
 	}
 
@@ -41,14 +41,14 @@ func (j *Job) InitJob() error { // {{{
 	if j.PreJobId != 0 {
 		j.PreJob, err = getJob(j.PreJobId)
 		if err != nil {
-			e := fmt.Sprintf("[j.InitJob] get pre job [%d] error %s.\n", j.PreJobId, err.Error())
+			e := fmt.Sprintf("\n[j.InitJob] get pre job [%d] error %s.", j.PreJobId, err.Error())
 			return errors.New(e)
 		}
 	}
 
 	err = j.InitTasksForJob()
 	if err != nil {
-		e := fmt.Sprintf("[j.InitJob] init task for job [%d] error %s.\n", j.Id, err.Error())
+		e := fmt.Sprintf("\n[j.InitJob] init task for job [%d] error %s.", j.Id, err.Error())
 		return errors.New(e)
 	}
 
@@ -59,13 +59,13 @@ func (j *Job) InitJob() error { // {{{
 
 	nj, err := getJob(j.NextJobId)
 	if err != nil {
-		e := fmt.Sprintf("[j.InitJob] init job [%d] error %s.\n", j.NextJobId, err.Error())
+		e := fmt.Sprintf("\n[j.InitJob] init job [%d] error %s.", j.NextJobId, err.Error())
 		return errors.New(e)
 	}
 
 	nj.ScheduleId, nj.ScheduleCyc = j.ScheduleId, j.ScheduleCyc
 	if err := nj.InitJob(); err != nil {
-		e := fmt.Sprintf("[j.InitJob] init job [%d] error %s.\n", nj.Id, err.Error())
+		e := fmt.Sprintf("\n[j.InitJob] init job [%d] error %s.", nj.Id, err.Error())
 		return errors.New(e)
 	}
 	j.NextJob = nj
@@ -81,20 +81,23 @@ func (j *Job) InitTasksForJob() error { // {{{
 
 	tasksId, err := j.getTasksId()
 	if err != nil {
-		e := fmt.Sprintf("[j.GetTasks] getTasksId error %s.\n", err.Error())
-		g.L.Warningln(e)
+		e := fmt.Sprintf("\n[j.GetTasks] getTasksId error %s.", err.Error())
 		return errors.New(e)
 	}
 
 	for _, taskid := range tasksId {
-		if task := getTask(taskid); task.Id != 0 {
-			j.Tasks[string(taskid)] = task
-			g.Tasks[string(taskid)] = task
-
-			task.ScheduleCyc = j.ScheduleCyc
-			j.TaskCnt++
-			task.refreshTask(j.Id)
+		task := &Task{Id: taskid}
+		err := task.InitTask()
+		if err != nil {
+			e := fmt.Sprintf("\n[t.InitTaskForJob] %s.", err.Error())
+			return errors.New(e)
 		}
+		j.Tasks[string(taskid)] = task
+		g.Tasks[string(taskid)] = task
+
+		task.ScheduleCyc = j.ScheduleCyc
+		j.TaskCnt++
+		task.JobId = j.Id
 	}
 	return nil
 } // }}}
@@ -105,7 +108,7 @@ func (j *Job) InitTasksForJob() error { // {{{
 func (j *Job) UpdateTask(task *Task) (err error) { // {{{
 	t, ok := j.Tasks[string(task.Id)]
 	if !ok {
-		e := fmt.Sprintf("[j.UpdateTask] update error. not found task by id %d", task.Id)
+		e := fmt.Sprintf("\n[j.UpdateTask] update error. not found task by id %d", task.Id)
 		return errors.New(e)
 	}
 	t.Name, t.Desc, t.Address = task.Name, task.Desc, task.Address
@@ -114,7 +117,7 @@ func (j *Job) UpdateTask(task *Task) (err error) { // {{{
 	t.Attr, t.ModifyUserId, t.ModifyTime = task.Attr, task.ModifyUserId, time.Now()
 
 	if err := t.UpdateTask(); err != nil {
-		e := fmt.Sprintf("[j.UpdateTask] UpdateTask error %s.\n", err.Error())
+		e := fmt.Sprintf("\n[j.UpdateTask] UpdateTask error %s.", err.Error())
 		return errors.New(e)
 	}
 
@@ -123,9 +126,6 @@ func (j *Job) UpdateTask(task *Task) (err error) { // {{{
 
 //删除作业任务映射关系至元数据库
 func (j *Job) DeleteTask(taskid int64) (err error) { // {{{
-	if err = j.deleteTask(taskid); err != nil {
-		return err
-	}
 	delete(j.Tasks, string(taskid))
 	j.TaskCnt--
 

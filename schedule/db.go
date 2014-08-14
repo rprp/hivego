@@ -322,17 +322,6 @@ func (j *Job) setNewId() (err error) { // {{{
 
 } // }}}
 
-func (j *Job) deleteTask(taskid int64) (err error) { // {{{
-	sql := `DELETE FROM scd_job_task WHERE job_id=? and task_id=?`
-	_, err = g.HiveConn.Exec(sql, &j.Id, &taskid)
-	if err != nil {
-		e := fmt.Sprintf("[j.deleteTask] Query sql [%s] error %s.\n", sql, err.Error())
-		err = errors.New(e)
-	}
-
-	return err
-} // }}}
-
 //修改作业信息至元数据库
 func (j *Job) update() (err error) { // {{{
 	sql := `UPDATE scd_job
@@ -391,4 +380,374 @@ func getAllJobs() (jobs map[string]*Job, err error) { // {{{
 	}
 
 	return jobs, err
+} // }}}
+
+//从元数据库获取Task信息。
+func (t *Task) getTask() error { // {{{
+	var td, id int64
+	//查询全部Task列表
+	sql := `SELECT task.task_id,
+               task.task_address,
+			   task.task_name,
+			   task.task_time_out,
+			   task.task_type_id,
+			   task.task_cyc,
+			   task.task_desc,
+			   task.task_start,
+			   task.task_cmd
+			FROM scd_task task
+			WHERE task.task_id=?`
+	rows, err := g.HiveConn.Query(sql, t.Id)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.getTask] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id, &t.Address, &t.Name, &t.TimeOut, &t.TaskType, &t.TaskCyc, &t.Desc, &td, &t.Cmd)
+		if err != nil {
+			e := fmt.Sprintf("\n[t.getTask] %s.", err.Error())
+			return errors.New(e)
+		}
+
+		t.StartSecond = time.Duration(td) * time.Second
+		//初始化relTask、param的内存
+		t.RelTasksId = make([]int64, 0)
+		t.RelTasks = make(map[string]*Task)
+		t.Param = make([]string, 0)
+		t.Attr = make(map[string]string)
+	}
+
+	if id == 0 {
+		e := fmt.Sprintf("\n[t.getTask] task [%d] not found.", t.Id)
+		err = errors.New(e)
+	}
+
+	return err
+} // }}}
+
+//从元数据库获取任务参数信息
+func (t *Task) getTaskParam() error { // {{{
+	//查询指定的Task属性列表
+	sql := `SELECT pm.scd_param_name,
+				   pm.scd_param_value
+			FROM   scd_task_param pm
+			WHERE pm.task_id=?`
+
+	rows, err := g.HiveConn.Query(sql, t.Id)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.getTaskParam] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		var name, value string
+		err = rows.Scan(&name, &value)
+		if err != nil {
+			e := fmt.Sprintf("\n[t.getTaskParam] %s.", err.Error())
+			return errors.New(e)
+		}
+		t.Param = append(t.Param, value)
+	}
+	return err
+} // }}}
+
+//从元数据库获取Job下的Task列表。
+func (t *Task) getTaskAttr() error { // {{{
+
+	//查询指定的Task属性列表
+	sql := `SELECT ta.task_attr_name,
+			   ta.task_attr_value
+			FROM   scd_task_attr ta
+			WHERE  task_id = ?`
+	rows, err := g.HiveConn.Query(sql, t.Id)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.getTaskAttr] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		var name, value string
+		err = rows.Scan(&name, &value)
+		if err != nil {
+			e := fmt.Sprintf("\n[t.getTaskAttr] %s.", err.Error())
+			return errors.New(e)
+		}
+		t.Attr[name] = value
+	}
+	return err
+} // }}}
+
+//从元数据库获取Task的依赖列表。
+func (t *Task) getRelTaskId() error { // {{{
+	//查询Task的依赖列表
+	sql := `SELECT tr.rel_task_id
+			FROM scd_task_rel tr
+			Where tr.task_id=?`
+	rows, err := g.HiveConn.Query(sql, t.Id)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.getRelTaskId] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	//循环读取记录
+	for rows.Next() {
+		var rtid int64
+		err = rows.Scan(&rtid)
+		if err != nil {
+			e := fmt.Sprintf("\n[t.getRelTaskId] %s.", err.Error())
+			return errors.New(e)
+		}
+		t.RelTasksId = append(t.RelTasksId, rtid)
+	}
+	return err
+} // }}}
+
+//更新任务至元数据库
+func (t *Task) update() error { // {{{
+	sql := `UPDATE scd_task
+			SET task_address=?,
+				task_name=?,
+				task_cyc=?,
+				task_time_out=?,
+				task_start=?,
+				task_type_id=?,
+				task_cmd=?,
+				task_desc=?,
+				modify_user_id=?,
+				modify_time=?
+			WHERE task_id=?`
+	_, err := g.HiveConn.Exec(sql, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.TaskType, &t.Cmd, &t.Desc, &t.ModifyUserId, &t.ModifyTime, &t.Id)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.update] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+	return err
+} // }}}
+
+//DelParam方法从元数据库删除Task的Param信息
+func (t *Task) delParam() error { // {{{
+	sql := `DELETE FROM scd_task_param
+			WHERE task_id=?`
+	_, err := g.HiveConn.Exec(sql, &t.Id)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.delParam] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	return err
+} // }}}
+
+//增加作业参数信息至元数据库
+func (t *Task) addParam(pvalue string) error { // {{{
+	pid, _ := t.getNewParamTaskId()
+	sql := `INSERT INTO scd_task_param
+            (scd_param_id,task_id, scd_param_name, scd_param_value,
+             create_user_id, create_time)
+			VALUES      (?, ?, ?, ?, ?, ?)`
+	_, err := g.HiveConn.Exec(sql, &pid, &t.Id, "0", &pvalue, &t.CreateUserId, &t.CreateTime)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.addParam] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	return err
+} // }}}
+
+//获取新TaskParamId
+func (t *Task) getNewParamTaskId() (int64, error) { // {{{
+
+	//查询全部schedule列表
+	sql := `SELECT max(p.scd_param_id) as scd_param_id
+			FROM scd_task_param p`
+
+	rows, err := g.HiveConn.Query(sql)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.getNewParamTaskId] sql %s error %s.", sql, err.Error())
+		return -1, errors.New(e)
+	}
+
+	var id int64
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			e := fmt.Sprintf("[t.getNewParamTaskId] %s.\n", err.Error())
+			return -1, errors.New(e)
+		}
+
+	}
+
+	return id + 1, err
+} // }}}
+
+//获取新JobTaskId
+func (t *Task) getNewRelTaskId() (int64, error) { // {{{
+
+	//查询全部schedule列表
+	sql := `SELECT max(rt.task_rel_id) as task_rel_id
+			FROM scd_task_rel rt`
+
+	rows, err := g.HiveConn.Query(sql)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.getNewRelTaskId] sql %s error %s.", sql, err.Error())
+		return -1, errors.New(e)
+	}
+
+	var id int64
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			e := fmt.Sprintf("[t.getNewRelTaskId] %s.\n", err.Error())
+			return -1, errors.New(e)
+		}
+	}
+
+	return id + 1, err
+} // }}}
+
+//获取新Id
+func (t *Task) setNewId() (err error) { // {{{
+	var id int64
+
+	//查询全部schedule列表
+	sql := `SELECT max(t.task_id) as task_id
+			FROM scd_task t`
+	rows, err := g.HiveConn.Query(sql)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.setNewId] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			e := fmt.Sprintf("[t.setNewId] %s.\n", err.Error())
+			return errors.New(e)
+		}
+	}
+	t.Id = id + 1
+
+	return err
+
+} // }}}
+
+//增加作业信息至元数据库
+func (t *Task) add() (err error) { // {{{
+	err = t.setNewId()
+	if err != nil {
+		e := fmt.Sprintf("[t.add] %s.\n", err.Error())
+		return errors.New(e)
+	}
+
+	sql := `INSERT INTO scd_task
+            (task_id, task_address, task_name, task_cyc,
+             task_time_out, task_start, task_type_id,
+             task_cmd, task_desc, create_user_id, create_time,
+             modify_user_id, modify_time)
+			VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err = g.HiveConn.Exec(sql, &t.Id, &t.Address, &t.Name, &t.TaskCyc, &t.TimeOut, &t.StartSecond, &t.TaskType, &t.Cmd, &t.Desc, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.add] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	t.RelTasksId = make([]int64, 0)
+	t.RelTasks = make(map[string]*Task)
+	t.Attr = make(map[string]string)
+	t.Param = make([]string, 0)
+	return err
+} // }}}
+
+//增加依赖任务至元数据库
+func (t *Task) addRelTask(id int64) error { // {{{
+	relid, _ := t.getNewRelTaskId()
+	sql := `INSERT INTO scd_task_rel
+            (task_rel_id, task_id, rel_task_id, create_user_id, create_time)
+			VALUES      (?, ?, ?, ?, ? )`
+	_, err := g.HiveConn.Exec(sql, &relid, &t.Id, &id, &t.CreateUserId, &t.CreateTime)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.addRelTask] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	return err
+} // }}}
+
+//GetRelJobId获取最大的Id
+func (t *Task) getRelJobId() (int64, error) { // {{{
+
+	//查询全部schedule列表
+	sql := `SELECT max(t.job_task_id) as job_task_id
+			FROM scd_job_task t`
+	rows, err := g.HiveConn.Query(sql)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.getRelJobId] sql %s error %s.", sql, err.Error())
+		return -1, errors.New(e)
+	}
+
+	var id int64
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			e := fmt.Sprintf("[t.getRelJobId] %s.\n", err.Error())
+			return -1, errors.New(e)
+		}
+	}
+
+	return id + 1, err
+} // }}}
+
+//AddRelJob将Task与Job的关系持久化。
+func (t *Task) addRelJob() (err error) { // {{{
+	var id int64
+	if id, err = t.getRelJobId(); err == nil {
+		sql := `INSERT INTO scd_job_task
+            (job_task_id,job_id,task_id,job_task_no,
+            create_user_id,create_time)
+            VALUES    (?, ?, ?, ?, ?, ?)`
+		_, err = g.HiveConn.Exec(sql, &id, &t.JobId, &t.Id, &t.Id, &t.CreateUserId, &t.CreateTime)
+	}
+	return err
+} // }}}
+
+//删除依赖任务至元数据库
+func (t *Task) deleteRelTask(id int64) error { // {{{
+	sql := `DELETE FROM scd_task_rel WHERE task_id=? and rel_task_id=?`
+	_, err := g.HiveConn.Exec(sql, &t.Id, &id)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.deleteRelTask] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	return err
+} // }}}
+
+func (t *Task) deleteJobTaskRel() (err error) { // {{{
+	sql := `DELETE FROM scd_job_task WHERE job_id=? and task_id=?`
+	_, err = g.HiveConn.Exec(sql, &t.JobId, &t.Id)
+	if err != nil {
+		e := fmt.Sprintf("[t.deleteJobTaskRel] Query sql [%s] error %s.\n", sql, err.Error())
+		err = errors.New(e)
+	}
+
+	return err
+} // }}}
+
+//删除任务至元数据库
+func (t *Task) deleteTask() error { // {{{
+	sql := `DELETE FROM scd_task WHERE task_id=?`
+	_, err := g.HiveConn.Exec(sql, &t.Id)
+	if err != nil {
+		e := fmt.Sprintf("\n[t.deleteTask] sql %s error %s.", sql, err.Error())
+		return errors.New(e)
+	}
+
+	return err
 } // }}}
