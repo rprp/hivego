@@ -23,17 +23,12 @@
     var exports = this;
     jQuery(function(){
       var App = require("index");
-      exports.app = new App({el: $("#article")});      
+      exports.app = new App({el: $("body")});      
     });
   </script>  
 </head>
 <body >
-<header id="header" style="height: 35px;"><a href="/"><h1 style="line-height: 35px; cursor: pointer;">HiveGo Manager</h1></a></header>
-<br>
-<div class="container" role="main">
-	<div id="article" class="row">
-	</div>
-</div>
+</body>
 <!-- Bootstrap core JavaScript
 	================================================== -->
 <!-- Placed at the end of the document so the pages load faster -->
@@ -41,5 +36,4 @@
 <script src="/js/jquery.animate-shadow.js"></script>
 <script src="/js/jquery-ui.js"></script>
 <script src="/js/bootstrap.js"></script>
-</body>
 </html>

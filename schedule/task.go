@@ -171,7 +171,7 @@ func (t *Task) AddRelTask(rt *Task) (err error) { // {{{
 	return err
 } // }}}
 
-//删除Task
+//删除Task,依次删除Param、RelTask关系、Task
 func (t *Task) Delete() (err error) { // {{{
 	err = t.delParam()
 	if err != nil {

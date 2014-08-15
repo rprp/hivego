@@ -5,6 +5,7 @@ Manager = require('spineify/lib/manager')
 Schedule = require('models/schedule')
 ScheduleList = require('controllers/main.list')
 ScheduleInfo = require('controllers/main.info')
+Navbar = require('controllers/navbar')
 
 class Main extends Spine.Stack
   className: 'smain'
@@ -13,16 +14,27 @@ class Main extends Spine.Stack
     scheduleList: ScheduleList
     scheduleInfo: ScheduleInfo
 
+
 class App extends Spine.Controller
+  events:
+    "keypress": "keypress"
+
+  keypress: (e) ->
+    e = e||window.event
+    console.log(e.keyCode)
 
   constructor: ->
     super
     Schedule.fetch()
 
-    Schedule.bind "ajaxError", (record, xhr, settings, error) -> 
+    Schedule.bind "ajaxError", (record, xhr, settings, error) ->
         console.log(error)
-    Schedule.bind "ajaxSuccess", (data,status,xhr) -> 
+    Schedule.bind "ajaxSuccess", (data,status,xhr) ->
         console.log("ajaxSuccess#{data}    #{xhr}   #{status}")
+
+
+    nv = new Navbar
+    @append nv.render()
 
     main = new Main
     @append main

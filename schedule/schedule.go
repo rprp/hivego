@@ -224,6 +224,10 @@ func (s *Schedule) InitSchedule() error { // {{{
 		return errors.New(e)
 	}
 
+	if s.JobId == 0 {
+		return nil
+	}
+
 	tj := &Job{Id: s.JobId}
 	err = tj.getJob()
 	if err != nil {

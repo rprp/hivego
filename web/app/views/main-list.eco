@@ -15,7 +15,7 @@
                 <% end %>
             </span>
             <!-- 周期 -->
-            <span class="cyc pull-right label <%= gstyle %> cyc" style="cursor: pointer; opacity: 0.1"><%= gcyc %></span>
+            <span class="cyc pull-right label <%= gstyle %> cyc" style="cursor: pointer; opacity: 0"><%= gcyc %></span>
         </div>
     </div>
         

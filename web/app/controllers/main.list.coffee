@@ -88,7 +88,7 @@ class ScheduleItem extends Spine.Controller
   mouseout: (e)->
     window.clearTimeout(@timout)
     @pbmask.fadeIn(200)
-    @cyc.stop().animate({opacity: 0.1},200)
+    @cyc.stop().animate({opacity: 0},200)
     @body.stop().animate({opacity: 0},800)
     @footer.stop().animate({opacity: 0},800)
     @sname.stop().animate({color:"transparent"},"fast")
@@ -129,10 +129,12 @@ class ScheduleList extends Spine.Controller
     super
     Schedule.bind("create",  @addOne)
     Schedule.bind("refresh", @addAll)
+    @html(require('views/main')())
 
   addOne: (it) =>
     view = new ScheduleItem(item: it)
-    @append(view.render())
+    #@append(view.render())
+    $('#smain').append(view.render().el)
 
     view.pbmask.css("position","absolute")
     view.pbmask.css("z-index","1000")
@@ -141,7 +143,6 @@ class ScheduleList extends Spine.Controller
 
   addAll: =>
     Schedule.each(@addOne)
-    @append(require("views/schedule-add"))
 
 module.exports = ScheduleItem
 module.exports = ScheduleList

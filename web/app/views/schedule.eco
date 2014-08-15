@@ -28,6 +28,7 @@
                 <li class="list-group-item" >
                     <span class="start glyphicon glyphicon-time"  style="cursor: pointer;">&nbsp;<%= ssd %>&nbsp; </span>
                     <input type="text" class="startInput form-control" 
+                        placeholder="如： <%= @ %>"
                         style="display:none;" value="<%= ssd %>"/>
                     <span class="delStart pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>
                     <input class="startSecond " type="hidden" value="<%= @StartSecond[i] %>" />

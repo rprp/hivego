@@ -25669,7 +25669,7 @@ Released under the MIT License
       window.clearTimeout(this.timout);
       this.pbmask.fadeIn(200);
       this.cyc.stop().animate({
-        opacity: 0.1
+        opacity: 0
       }, 200);
       this.body.stop().animate({
         opacity: 0
@@ -25750,6 +25750,7 @@ Released under the MIT License
       ScheduleList.__super__.constructor.apply(this, arguments);
       Schedule.bind("create", this.addOne);
       Schedule.bind("refresh", this.addAll);
+      this.html(require('views/main')());
     }
 
     ScheduleList.prototype.addOne = function(it) {
@@ -25757,7 +25758,7 @@ Released under the MIT License
       view = new ScheduleItem({
         item: it
       });
-      this.append(view.render());
+      $('#smain').append(view.render().el);
       view.pbmask.css("position", "absolute");
       view.pbmask.css("z-index", "1000");
       view.pbmask.css("width", view.sstart.css("width"));
@@ -25765,8 +25766,7 @@ Released under the MIT License
     };
 
     ScheduleList.prototype.addAll = function() {
-      Schedule.each(this.addOne);
-      return this.append(require("views/schedule-add"));
+      return Schedule.each(this.addOne);
     };
 
     return ScheduleList;
@@ -25776,6 +25776,54 @@ Released under the MIT License
   module.exports = ScheduleItem;
 
   module.exports = ScheduleList;
+
+}).call(this);
+}, "controllers/navbar": function(exports, require, module) {(function() {
+  var $, Navbar, Schedule, Spine,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Spine = require('spineify');
+
+  Schedule = require('models/schedule');
+
+  $ = Spine.$;
+
+  Navbar = (function(_super) {
+    __extends(Navbar, _super);
+
+    Navbar.prototype.className = 'hnavbar';
+
+    Navbar.prototype.events = {
+      "mouseenter h1": "mouseover",
+      "mouseleave h1": "mouseout"
+    };
+
+    function Navbar() {
+      Navbar.__super__.constructor.apply(this, arguments);
+    }
+
+    Navbar.prototype.render = function() {
+      return this.html(require('views/navbar')());
+    };
+
+    Navbar.prototype.mouseover = function(e) {
+      return $(e.target).stop().animate({
+        backgroundColor: '#777'
+      }, "fast");
+    };
+
+    Navbar.prototype.mouseout = function(e) {
+      return $(e.target).stop().animate({
+        backgroundColor: '#333'
+      }, "fast");
+    };
+
+    return Navbar;
+
+  })(Spine.Controller);
+
+  module.exports = Navbar;
 
 }).call(this);
 }, "controllers/schedule.info": function(exports, require, module) {(function() {
@@ -27548,7 +27596,7 @@ Released under the MIT License
 
 }).call(this);
 }, "index": function(exports, require, module) {(function() {
-  var App, Main, Manager, Schedule, ScheduleInfo, ScheduleList, Spine,
+  var App, Main, Manager, Navbar, Schedule, ScheduleInfo, ScheduleList, Spine,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -27563,6 +27611,8 @@ Released under the MIT License
   ScheduleList = require('controllers/main.list');
 
   ScheduleInfo = require('controllers/main.info');
+
+  Navbar = require('controllers/navbar');
 
   Main = (function(_super) {
     __extends(Main, _super);
@@ -27585,8 +27635,17 @@ Released under the MIT License
   App = (function(_super) {
     __extends(App, _super);
 
+    App.prototype.events = {
+      "keypress": "keypress"
+    };
+
+    App.prototype.keypress = function(e) {
+      e = e || window.event;
+      return console.log(e.keyCode);
+    };
+
     function App() {
-      var main;
+      var main, nv;
       App.__super__.constructor.apply(this, arguments);
       Schedule.fetch();
       Schedule.bind("ajaxError", function(record, xhr, settings, error) {
@@ -27595,6 +27654,8 @@ Released under the MIT License
       Schedule.bind("ajaxSuccess", function(data, status, xhr) {
         return console.log("ajaxSuccess" + data + "    " + xhr + "   " + status);
       });
+      nv = new Navbar;
+      this.append(nv.render());
       main = new Main;
       this.append(main);
       this.routes({
@@ -28267,7 +28328,7 @@ module.exports = content;}, "views/main-list": function(exports, require, module
     
       __out.push(__sanitize(gstyle));
     
-      __out.push(' cyc" style="cursor: pointer; opacity: 0.1">');
+      __out.push(' cyc" style="cursor: pointer; opacity: 0">');
     
       __out.push(__sanitize(gcyc));
     
@@ -28309,6 +28370,100 @@ module.exports = content;}, "views/main-list": function(exports, require, module
       __out.push(__sanitize(gnext));
     
       __out.push('</h5>\n        </div>\n\n\t</div>\n    <div class="panel-footer" style="padding: 5px 15px 24px; background:transparent; border: 0; opacity: 0;">\n      <div>\n            <span class="slog pull-right label label-default" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-time"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="sdelete pull-right label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-trash"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="scopy pull-right label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-edit"></span>\n            </span>\n\n            <span class="pull-right label"> </span>\n\n            <span class="srun pull-left label label-white" style="cursor: pointer;">\n               <span class="glyphicon glyphicon-play"></span>\n            </span>\n      </div>\n\n\t</div>\n</div>\n');
+    
+    }).call(this);
+    
+  }).call(__obj);
+  __obj.safe = __objSafe, __obj.escape = __escape;
+  return __out.join('');
+};
+module.exports = content;}, "views/main": function(exports, require, module) {var content = function(__obj) {
+  if (!__obj) __obj = {};
+  var __out = [], __capture = function(callback) {
+    var out = __out, result;
+    __out = [];
+    callback.call(this);
+    result = __out.join('');
+    __out = out;
+    return __safe(result);
+  }, __sanitize = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else if (typeof value !== 'undefined' && value != null) {
+      return __escape(value);
+    } else {
+      return '';
+    }
+  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
+  __safe = __obj.safe = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else {
+      if (!(typeof value !== 'undefined' && value != null)) value = '';
+      var result = new String(value);
+      result.ecoSafe = true;
+      return result;
+    }
+  };
+  if (!__escape) {
+    __escape = __obj.escape = function(value) {
+      return ('' + value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+  }
+  (function() {
+    (function() {
+      __out.push('<br>\n<div class="container" role="main">\n\t<div id="smain" class="row">\n\t</div>\n</div>\n');
+    
+    }).call(this);
+    
+  }).call(__obj);
+  __obj.safe = __objSafe, __obj.escape = __escape;
+  return __out.join('');
+};
+module.exports = content;}, "views/navbar": function(exports, require, module) {var content = function(__obj) {
+  if (!__obj) __obj = {};
+  var __out = [], __capture = function(callback) {
+    var out = __out, result;
+    __out = [];
+    callback.call(this);
+    result = __out.join('');
+    __out = out;
+    return __safe(result);
+  }, __sanitize = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else if (typeof value !== 'undefined' && value != null) {
+      return __escape(value);
+    } else {
+      return '';
+    }
+  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
+  __safe = __obj.safe = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else {
+      if (!(typeof value !== 'undefined' && value != null)) value = '';
+      var result = new String(value);
+      result.ecoSafe = true;
+      return result;
+    }
+  };
+  if (!__escape) {
+    __escape = __obj.escape = function(value) {
+      return ('' + value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+  }
+  (function() {
+    (function() {
+      __out.push('<header id="header" >\n    <a href="/">\n        <h1>HiveGo Manager</h1>\n    </a>\n\n    <h1>\n        <span id="btnRefreshAll" class="addStart glyphicon glyphicon-refresh" ></span>\n    </h1>\n\n    <h1>\n        <span class="addStart glyphicon glyphicon-plus" ></span>\n    </h1>\n    &nbsp;&nbsp;&nbsp;\n\n    <input type="text" class="sinput" placeholder="搜索..." value=""/>\n\n</header>\n\n\n');
     
     }).call(this);
     
@@ -28482,7 +28637,9 @@ module.exports = content;}, "views/schedule": function(exports, require, module)
         }
         __out.push('\n                <li class="list-group-item" >\n                    <span class="start glyphicon glyphicon-time"  style="cursor: pointer;">&nbsp;');
         __out.push(__sanitize(ssd));
-        __out.push('&nbsp; </span>\n                    <input type="text" class="startInput form-control" \n                        style="display:none;" value="');
+        __out.push('&nbsp; </span>\n                    <input type="text" class="startInput form-control" \n                        placeholder="如： ');
+        __out.push(__sanitize(this));
+        __out.push('"\n                        style="display:none;" value="');
         __out.push(__sanitize(ssd));
         __out.push('"/>\n                    <span class="delStart pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n                    <input class="startSecond " type="hidden" value="');
         __out.push(__sanitize(this.StartSecond[i]));

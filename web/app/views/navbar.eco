@@ -1,0 +1,19 @@
+<header id="header" >
+    <a href="/">
+        <h1>HiveGo Manager</h1>
+    </a>
+
+    <h1>
+        <span id="btnRefreshAll" class="addStart glyphicon glyphicon-refresh" ></span>
+    </h1>
+
+    <h1>
+        <span class="addStart glyphicon glyphicon-plus" ></span>
+    </h1>
+    &nbsp;&nbsp;&nbsp;
+
+    <input type="text" class="sinput" placeholder="搜索..." value=""/>
+
+</header>
+
+
