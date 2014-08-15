@@ -8,6 +8,7 @@ import (
 type HiveConfig struct {
 	Maxprocs        int                `toml:"maxprocs"`
 	Dbinfo          map[string]*dbinfo `toml:"dbinfo"`
+	ManagerPort     string             `toml:"managerport"`
 	Port            string             `toml:"port"`
 	Loglevel        uint8              `toml:"loglevel"`
 	SchedulePidFile string             `toml:"schedule_pid_file"`

@@ -13,7 +13,12 @@ import (
 	"time"
 )
 
+var (
+	g *schedule.GlobalConfigStruct
+)
+
 func StartManager(sl *schedule.ScheduleManager) { // {{{
+	g = sl.Global
 	m := martini.Classic()
 	m.Use(Logger)
 	m.Use(martini.Static("web/public"))
@@ -31,7 +36,8 @@ func StartManager(sl *schedule.ScheduleManager) { // {{{
 	m.Map(sl)
 	controller(m)
 
-	err := http.ListenAndServe(":3000", m)
+	g.L.Println("Web manager is running in ", g.ManagerPort)
+	err := http.ListenAndServe(g.ManagerPort, m)
 	if err != nil {
 		log.Fatal("Fail to start server: %v", err)
 	}
@@ -44,7 +50,7 @@ func controller(m *martini.ClassicMartini) { // {{{
 
 	m.Group("/schedules", func(r martini.Router) {
 		r.Get("", getSchedules)
-		r.Post("", addSchedule)
+		r.Post("", binding.Bind(schedule.Schedule{}), addSchedule)
 		r.Get("/:id", getScheduleById)
 		r.Put("/:id", binding.Bind(schedule.Schedule{}), updateSchedule)
 		r.Delete("/:id", deleteSchedule)
@@ -65,16 +71,7 @@ func controller(m *martini.ClassicMartini) { // {{{
 } // }}}
 
 func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
-	sl := make([]*schedule.Schedule, 0)
-	for _, s := range Ss.ScheduleList {
-		d := &schedule.Schedule{}
-		schedule.Copy(d, s)
-		d.Job = nil
-		d.Jobs = nil
-		sl = append(sl, d)
-	}
-	r.JSON(200, sl)
-
+	r.JSON(200, Ss.ScheduleList)
 } // }}}
 
 func getScheduleById(params martini.Params, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
@@ -90,10 +87,44 @@ func getScheduleById(params martini.Params, r render.Render, res http.ResponseWr
 	}
 } // }}}
 
-func addSchedule(ctx *web.Context, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
-	fmt.Println(ctx.Params)
-	fmt.Println(ctx.Request)
+func addSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, scd schedule.Schedule) { // {{{
+	if scd.Name == "" {
+		ctx.WriteHeader(500)
+		return
+	}
 
+	err := Ss.AddSchedule(&scd)
+	if err != nil {
+		e := fmt.Sprintf("\n[m.addSchedule] %s.", err.Error())
+		g.L.Warningln(e)
+		ctx.WriteHeader(500)
+		return
+	}
+
+	r.JSON(200, scd)
+	return
+} // }}}
+
+//updateSchedule获取客户端发送的Schedule信息，并调用Schedule的Update方法将其
+//持久化并更新至Schedule中。
+//成功返回更新后的Schedule信息
+func updateSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, scd schedule.Schedule) { // {{{
+	if scd.Name == "" {
+		ctx.WriteHeader(500)
+		return
+	}
+	if s := Ss.GetScheduleById(int64(scd.Id)); s != nil {
+		s.Name, s.Desc, s.Cyc, s.StartMonth = scd.Name, scd.Desc, scd.Cyc, scd.StartMonth
+		s.StartSecond, s.ModifyTime, s.ModifyUserId = scd.StartSecond, time.Now(), scd.ModifyUserId
+		if err := s.UpdateSchedule(); err != nil {
+			ctx.WriteHeader(500)
+			fmt.Println(err)
+		} else {
+			r.JSON(200, s)
+		}
+	} else {
+		ctx.WriteHeader(500)
+	}
 } // }}}
 
 func deleteJob(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager) { // {{{
@@ -113,12 +144,10 @@ func deleteJob(params martini.Params, ctx *web.Context, r render.Render, Ss *sch
 		if err := s.DeleteJob(int64(iid)); err != nil {
 			ctx.WriteHeader(500)
 			fmt.Println(err)
-			fmt.Println("-----------------------------------------")
 			ctx.WriteString("error:")
 		} else {
 			ctx.WriteHeader(204)
 			ctx.WriteString("success")
-			fmt.Println("-----------------ok------------------------")
 		}
 
 	}
@@ -240,9 +269,14 @@ func updateTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sc
 	}
 
 	if s := Ss.GetScheduleById(int64(ssid)); s != nil {
-		if j := s.GetJobById(task.JobId); j != nil {
-			err = j.UpdateTask(&task)
+		j, err := s.GetJobById(task.JobId)
+		if err != nil {
+			e := fmt.Sprintf("\n[s.AddTask] not found job by id %d", task.JobId)
+			log.Println(e)
+			return
 		}
+
+		err = j.UpdateTask(&task)
 	}
 
 	if err == nil {
@@ -283,26 +317,6 @@ func deleteSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss
 	}
 	r.JSON(200, nil)
 
-} // }}}
-
-//updateSchedule获取客户端发送的Schedule信息，并调用Schedule的Update方法将其
-//持久化并更新至Schedule中。
-//成功返回更新后的Schedule信息
-func updateSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, scd schedule.Schedule) { // {{{
-	if scd.Name == "" {
-		ctx.WriteHeader(500)
-		return
-	}
-	if s := Ss.GetScheduleById(int64(scd.Id)); s != nil {
-		if err := s.UpdateSchedule(&scd); err != nil {
-			ctx.WriteHeader(500)
-			fmt.Println(err)
-		} else {
-			r.JSON(200, s)
-		}
-	} else {
-		ctx.WriteHeader(500)
-	}
 } // }}}
 
 //addRelTask根据Url参数获取到要添加的Task关系

@@ -2,6 +2,7 @@
 
 maxprocs = 8
 port = "9527"
+managerport = "3000"
 
 #0.Panic 1.Fatal 2.Error 3.Warn 4.Info 5.Debug
 loglevel = 4

@@ -29,6 +29,7 @@ const (
 func setConfig(config *HiveConfig) (*schedule.GlobalConfigStruct, string, string) {
 	maxprocs := config.Maxprocs
 	port := config.Port
+	managerport := config.ManagerPort
 	loglevel := config.Loglevel
 	cpuProfName := config.CpuProfName
 	memProfName := config.MemProfName
@@ -38,6 +39,7 @@ func setConfig(config *HiveConfig) (*schedule.GlobalConfigStruct, string, string
 	dg := schedule.DefaultGlobal()
 	dg.L.Level = logrus.Level(loglevel)
 	dg.Port = ":" + port
+	dg.ManagerPort = ":" + managerport
 
 	return dg, cpuProfName, memProfName
 }

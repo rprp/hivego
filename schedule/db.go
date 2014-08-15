@@ -44,9 +44,11 @@ func (sl *ScheduleManager) getAllSchedules() error { // {{{
 } // }}}
 
 //Add方法会将Schedule对象增加到元数据库中。
-func (s *Schedule) add() (err error) { // {{{
-	if err = s.setNewId(); err != nil {
-		return err
+func (s *Schedule) add() error { // {{{
+	err := s.setNewId()
+	if err != nil {
+		e := fmt.Sprintf("\n[s.add] %s.", err.Error())
+		return errors.New(e)
 	}
 
 	sql := `INSERT INTO scd_schedule
@@ -56,6 +58,10 @@ func (s *Schedule) add() (err error) { // {{{
 		VALUES      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err = g.HiveConn.Exec(sql, &s.Id, &s.Name, &s.Count, &s.Cyc,
 		&s.TimeOut, &s.JobId, &s.Desc, &s.CreateUserId, &s.CreateTime, &s.ModifyUserId, &s.ModifyTime)
+	if err != nil {
+		e := fmt.Sprintf("[s.add] Query sql [%s] error %s.\n", sql, err.Error())
+		return errors.New(e)
+	}
 	g.L.Debugln("[s.add] schedule", s, "\nsql=", sql)
 
 	return err
@@ -77,6 +83,10 @@ func (s *Schedule) update() error { // {{{
 		 WHERE scd_id=?`
 	_, err := g.HiveConn.Exec(sql, &s.Name, &s.Count, &s.Cyc,
 		&s.TimeOut, &s.JobId, &s.Desc, &s.CreateUserId, &s.CreateTime, &s.ModifyUserId, &s.ModifyTime, &s.Id)
+	if err != nil {
+		e := fmt.Sprintf("[s.update] Query sql [%s] error %s.\n", sql, err.Error())
+		return errors.New(e)
+	}
 	g.L.Debugln("[s.update] schedule", s, "\nsql=", sql)
 
 	return err
@@ -86,6 +96,10 @@ func (s *Schedule) update() error { // {{{
 func (s *Schedule) deleteSchedule() error { // {{{
 	sql := `Delete FROM scd_schedule WHERE scd_id=?`
 	_, err := g.HiveConn.Exec(sql, &s.Id)
+	if err != nil {
+		e := fmt.Sprintf("[s.deleteSchedule] Query sql [%s] error %s.\n", sql, err.Error())
+		return errors.New(e)
+	}
 	g.L.Debugln("[s.deleteSchedule] schedule", s, "\nsql=", sql)
 
 	return err
