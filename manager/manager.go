@@ -191,19 +191,16 @@ func addTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sched
 	task.CreateTime = time.Now()
 	task.ModifyTime = time.Now()
 
-	if err := task.AddTask(); err != nil {
-		ctx.WriteHeader(500)
-		fmt.Println(err)
-	} else {
-		if s := Ss.GetScheduleById(int64(ssid)); s != nil {
-			if j := s.GetJobById(task.JobId); j != nil {
-				j.Tasks[string(task.Id)] = &task
-				j.TaskCnt++
-			}
-			s.Tasks = append(s.Tasks, &task)
+	if s := Ss.GetScheduleById(int64(ssid)); s != nil {
+		err := s.AddTask(&task)
+		if err != nil {
+			e := fmt.Sprintf("[addTask] %s.", err.Error())
+			log.Println(e)
+			return
 		}
-		r.JSON(200, task)
 	}
+	r.JSON(200, task)
+
 } // }}}
 
 //deleteTask从调度结构中删除指定的Task，并持久化。

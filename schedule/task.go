@@ -64,7 +64,7 @@ func (t *Task) InitTask() error { // {{{
 		ok := false
 		t.RelTasks[string(rtid)], ok = g.Tasks[string(rtid)]
 		if !ok {
-			e := fmt.Sprintf("[j.InitTask] Task [%d] not found RelTask [%d] .\n", t.Id, rtid)
+			e := fmt.Sprintf("[t.InitTask] Task [%d] not found RelTask [%d] .\n", t.Id, rtid)
 			g.L.Warningln(e)
 			continue
 		}

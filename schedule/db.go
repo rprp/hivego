@@ -6,6 +6,43 @@ import (
 	"time"
 )
 
+//从元数据库获取Schedule列表。
+func (sl *ScheduleManager) getAllSchedules() error { // {{{
+	sl.ScheduleList = make([]*Schedule, 0)
+	//查询全部schedule列表
+	sql := `SELECT scd.scd_id,
+				scd.scd_name,
+				scd.scd_num,
+				scd.scd_cyc,
+				scd.scd_timeout,
+				scd.scd_job_id,
+				scd.scd_desc,
+				scd.create_user_id,
+				scd.create_time,
+				scd.modify_user_id,
+				scd.modify_time
+			FROM scd_schedule scd`
+	rows, err := g.HiveConn.Query(sql)
+	if err != nil {
+		e := fmt.Sprintf("\n[sl.getAllSchedule] run Sql error %s %s", sql, err.Error())
+		return errors.New(e)
+	}
+	g.L.Debugln("[getAllSchedule] ", "\nsql=", sql)
+
+	for rows.Next() {
+		scd := &Schedule{}
+		scd.StartSecond = make([]time.Duration, 0)
+		err = rows.Scan(&scd.Id, &scd.Name, &scd.Count, &scd.Cyc, &scd.TimeOut,
+			&scd.JobId, &scd.Desc, &scd.CreateUserId, &scd.CreateTime, &scd.ModifyUserId,
+			&scd.ModifyTime)
+		scd.setStart()
+
+		sl.ScheduleList = append(sl.ScheduleList, scd)
+	}
+
+	return err
+} // }}}
+
 //Add方法会将Schedule对象增加到元数据库中。
 func (s *Schedule) add() (err error) { // {{{
 	if err = s.setNewId(); err != nil {
@@ -143,51 +180,7 @@ func (s *Schedule) setStart() error { // {{{
 } // }}}
 
 //getSchedule，从元数据库获取指定的Schedule信息。
-func getSchedule(id int64) (*Schedule, error) { // {{{
-	scd := &Schedule{}
-
-	//查询全部schedule列表
-	sql := `SELECT scd.scd_id,
-				scd.scd_name,
-				scd.scd_num,
-				scd.scd_cyc,
-				scd.scd_timeout,
-				scd.scd_job_id,
-				scd.scd_desc
-			FROM scd_schedule scd
-			WHERE scd.scd_id=?`
-	rows, err := g.HiveConn.Query(sql, id)
-	if err != nil {
-		e := fmt.Sprintf("getSchedule run Sql error %s %s\n", sql, err.Error())
-		return scd, errors.New(e)
-	}
-	g.L.Debugln("[s.getSchedule] ", "\nsql=", sql)
-
-	scd.StartSecond = make([]time.Duration, 0)
-	//循环读取记录，格式化后存入变量ｂ
-	for rows.Next() {
-		err = rows.Scan(&scd.Id, &scd.Name, &scd.Count, &scd.Cyc,
-			&scd.TimeOut, &scd.JobId, &scd.Desc)
-		scd.setStart()
-		if err != nil {
-			e := fmt.Sprintf("getSchedule error %s\n", err.Error())
-			return scd, errors.New(e)
-		}
-
-	}
-
-	if scd.Id == -1 {
-		e := fmt.Sprintf("not found schedule [%d] from db.\n", scd.Id)
-		err = errors.New(e)
-	}
-
-	return scd, err
-} // }}}
-
-//从元数据库获取Schedule列表。
-func getAllSchedules() ([]*Schedule, error) { // {{{
-	scds := make([]*Schedule, 0)
-
+func (s *Schedule) getSchedule() error { // {{{
 	//查询全部schedule列表
 	sql := `SELECT scd.scd_id,
 				scd.scd_name,
@@ -196,64 +189,81 @@ func getAllSchedules() ([]*Schedule, error) { // {{{
 				scd.scd_timeout,
 				scd.scd_job_id,
 				scd.scd_desc,
-				scd.create_user_id,
-				scd.create_time,
-				scd.modify_user_id,
-				scd.modify_time
-			FROM scd_schedule scd`
-	rows, err := g.HiveConn.Query(sql)
+                scd.create_user_id,
+                scd.create_time,
+                scd.modify_user_id,
+                scd.modify_time
+			FROM scd_schedule scd
+			WHERE scd.scd_id=?`
+	rows, err := g.HiveConn.Query(sql, s.Id)
 	if err != nil {
-		e := fmt.Sprintf("[getAllSchedule] run Sql error %s %s\n", sql, err.Error())
-		return scds, errors.New(e)
+		e := fmt.Sprintf("\n[s.getSchedule] run Sql %s error %s", sql, err.Error())
+		return errors.New(e)
 	}
-	g.L.Debugln("[getAllSchedule] ", "\nsql=", sql)
+	g.L.Debugln("[s.getSchedule] ", "\nsql=", sql)
 
+	id := -1
+	s.StartSecond = make([]time.Duration, 0)
+	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		scd := &Schedule{}
-		scd.StartSecond = make([]time.Duration, 0)
-		err = rows.Scan(&scd.Id, &scd.Name, &scd.Count, &scd.Cyc, &scd.TimeOut,
-			&scd.JobId, &scd.Desc, &scd.CreateUserId, &scd.CreateTime, &scd.ModifyUserId,
-			&scd.ModifyTime)
-		scd.setStart()
+		err = rows.Scan(&id, &s.Name, &s.Count, &s.Cyc,
+			&s.TimeOut, &s.JobId, &s.Desc, &s.CreateUserId, &s.CreateTime, &s.ModifyUserId, &s.ModifyTime)
+		s.setStart()
+		if err != nil {
+			e := fmt.Sprintf("getSchedule error %s\n", err.Error())
+			return errors.New(e)
+		}
 
-		scds = append(scds, scd)
 	}
 
-	return scds, err
+	if id == -1 {
+		e := fmt.Sprintf("not found schedule [%d] from db.\n", s.Id)
+		err = errors.New(e)
+	}
+
+	return err
 } // }}}
 
 //从元数据库获取Job信息。
-func getJob(id int64) (*Job, error) { // {{{
-	j := &Job{}
+func (j *Job) getJob() error { // {{{
 	//查询全部Job列表
 	sql := `SELECT job.job_id,
 			   job.job_name,
 			   job.job_desc,
 			   job.prev_job_id,
-			   job.next_job_id
+			   job.next_job_id,
+               job.create_user_id,
+               job.create_time,
+               job.modify_user_id,
+               job.modify_time
 			FROM scd_job job
 			WHERE job.job_id=?`
-	rows, err := g.HiveConn.Query(sql, id)
+	rows, err := g.HiveConn.Query(sql, j.Id)
 	if err != nil {
-		e := fmt.Sprintf("[getJob] run Sql error %s %s\n", sql, err.Error())
-		return nil, errors.New(e)
+		e := fmt.Sprintf("[\nj.getJob] run Sql %s error %s", sql, err.Error())
+		return errors.New(e)
 	}
 	g.L.Debugln("[getJob] ", "\nsql=", sql)
 
+	id := -1
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		err = rows.Scan(&j.Id, &j.Name, &j.Desc, &j.PreJobId, &j.NextJobId)
+		err = rows.Scan(&id, &j.Name, &j.Desc, &j.PreJobId, &j.NextJobId, &j.CreateUserId, &j.CreateTime, &j.ModifyUserId, &j.ModifyTime)
+		if err != nil {
+			e := fmt.Sprintf("\n[getJob] %s.", err.Error())
+			return errors.New(e)
+		}
+
 		//初始化Task内存
 		j.Tasks = make(map[string]*Task)
 	}
 
-	if j.Id == 0 {
-		j = nil
+	if id == -1 {
 		e := fmt.Sprintf("[getJob] job [%d] not found \n", id)
 		err = errors.New(e)
 	}
 
-	return j, err
+	return err
 } // }}}
 
 //增加作业信息至元数据库
@@ -351,37 +361,6 @@ func (j *Job) deleteJob() (err error) { // {{{
 	return err
 } // }}}
 
-//从元数据库获取Schedule下的Job列表。
-func getAllJobs() (jobs map[string]*Job, err error) { // {{{
-
-	jobs = make(map[string]*Job)
-
-	//查询全部Job列表
-	sql := `SELECT job.job_id,
-			   job.job_name,
-			   job.job_desc,
-			   job.prev_job_id,
-			   job.next_job_id
-			FROM scd_job job`
-	rows, err := g.HiveConn.Query(sql)
-	if err != nil {
-		e := fmt.Sprintf("[j.setNewId] Query sql [%s] error %s.\n", sql, err.Error())
-		err = errors.New(e)
-	}
-
-	//循环读取记录，格式化后存入变量ｂ
-	for rows.Next() {
-		job := &Job{}
-		err = rows.Scan(&job.Id, &job.Name, &job.Desc, &job.PreJobId, &job.NextJobId)
-
-		//初始化Task内存
-		job.Tasks = make(map[string]*Task)
-		jobs[string(job.Id)] = job
-	}
-
-	return jobs, err
-} // }}}
-
 //从元数据库获取Task信息。
 func (t *Task) getTask() error { // {{{
 	var td, id int64
@@ -394,7 +373,11 @@ func (t *Task) getTask() error { // {{{
 			   task.task_cyc,
 			   task.task_desc,
 			   task.task_start,
-			   task.task_cmd
+			   task.task_cmd,
+               task.create_user_id,
+               task.create_time,
+               task.modify_user_id,
+               task.modify_time
 			FROM scd_task task
 			WHERE task.task_id=?`
 	rows, err := g.HiveConn.Query(sql, t.Id)
@@ -405,7 +388,7 @@ func (t *Task) getTask() error { // {{{
 
 	//循环读取记录，格式化后存入变量ｂ
 	for rows.Next() {
-		err = rows.Scan(&id, &t.Address, &t.Name, &t.TimeOut, &t.TaskType, &t.TaskCyc, &t.Desc, &td, &t.Cmd)
+		err = rows.Scan(&id, &t.Address, &t.Name, &t.TimeOut, &t.TaskType, &t.TaskCyc, &t.Desc, &td, &t.Cmd, &t.CreateUserId, &t.CreateTime, &t.ModifyUserId, &t.ModifyTime)
 		if err != nil {
 			e := fmt.Sprintf("\n[t.getTask] %s.", err.Error())
 			return errors.New(e)
@@ -666,11 +649,12 @@ func (t *Task) add() (err error) { // {{{
 
 //增加依赖任务至元数据库
 func (t *Task) addRelTask(id int64) error { // {{{
+	tm := time.Now()
 	relid, _ := t.getNewRelTaskId()
 	sql := `INSERT INTO scd_task_rel
             (task_rel_id, task_id, rel_task_id, create_user_id, create_time)
 			VALUES      (?, ?, ?, ?, ? )`
-	_, err := g.HiveConn.Exec(sql, &relid, &t.Id, &id, &t.CreateUserId, &t.CreateTime)
+	_, err := g.HiveConn.Exec(sql, &relid, &t.Id, &id, &t.CreateUserId, &tm)
 	if err != nil {
 		e := fmt.Sprintf("\n[t.addRelTask] sql %s error %s.", sql, err.Error())
 		return errors.New(e)

@@ -49,19 +49,17 @@ type ScheduleManager struct { // {{{
 
 //初始化ScheduleList，设置全局变量g
 func (sl *ScheduleManager) InitScheduleList() { // {{{
-	var err error
 
 	g = sl.Global
 	//从元数据库读取调度信息,初始化调度列表
-	sl.ScheduleList, err = getAllSchedules()
+	err := sl.getAllSchedules()
 	if err != nil {
 		e := fmt.Sprintf("[sl.InitScheduleList] init scheduleList error %s.\n", err.Error())
 		g.L.Fatalln(e)
 	}
-
 } // }}}
 
-//遍历列表中的Schedule并启动它的Timer方法。
+//开始监听Schedule，遍历列表中的Schedule并启动它的Timer方法。
 func (sl *ScheduleManager) StartListener() { // {{{
 	for _, scd := range sl.ScheduleList {
 		//从元数据库初始化调度链信息
@@ -207,35 +205,35 @@ func (s *Schedule) Timer() { // {{{
 //根据其中的Jobid继续从元数据库读取job信息，并初始化。完成后继续初始化下级Job，
 //同时将初始化完成的Job和Task添加到Schedule的Jobs、Tasks成员中。
 func (s *Schedule) InitSchedule() error { // {{{
-	ts, err := getSchedule(s.Id)
+	err := s.getSchedule()
 	if err != nil {
 		e := fmt.Sprintf("\n[s.InitSchedule] get schedule [%d] error %s.", s.Id, err.Error())
 		return errors.New(e)
 	}
-	s.Name, s.Count, s.Cyc, s.Desc = ts.Name, ts.Count, ts.Cyc, ts.Desc
-	s.StartSecond, s.TimeOut, s.JobId = ts.StartSecond, ts.TimeOut, ts.JobId
 
-	if tj, err := getJob(s.JobId); tj != nil {
-		tj.ScheduleId, tj.ScheduleCyc = s.Id, s.Cyc
-		if err = tj.InitJob(); err != nil {
-			e := fmt.Sprintf("\n[s.InitSchedule] init job [%d] error %s.", s.JobId, err.Error())
-			return errors.New(e)
-		}
-		s.Job = tj
-		s.Jobs, s.Tasks = make([]*Job, 0), make([]*Task, 0)
-		s.JobCnt, s.TaskCnt = 0, 0
-		for j := s.Job; j != nil; {
-			s.Jobs = append(s.Jobs, j)
-			s.JobCnt++
-			s.TaskCnt += j.TaskCnt
-			for _, t := range j.Tasks {
-				s.addTaskList(t)
-			}
-			j = j.NextJob
-		}
-	} else if err != nil {
+	tj := &Job{Id: s.JobId}
+	err = tj.getJob()
+	if err != nil {
 		e := fmt.Sprintf("\n[s.InitSchedule] get job [%d] error %s.", s.JobId, err.Error())
 		return errors.New(e)
+	}
+
+	tj.ScheduleId, tj.ScheduleCyc = s.Id, s.Cyc
+	if err = tj.InitJob(); err != nil {
+		e := fmt.Sprintf("\n[s.InitSchedule] init job [%d] error %s.", s.JobId, err.Error())
+		return errors.New(e)
+	}
+	s.Job = tj
+	s.Jobs, s.Tasks = make([]*Job, 0), make([]*Task, 0)
+	s.JobCnt, s.TaskCnt = 0, 0
+	for j := s.Job; j != nil; {
+		s.Jobs = append(s.Jobs, j)
+		s.JobCnt++
+		s.TaskCnt += j.TaskCnt
+		for _, t := range j.Tasks {
+			s.addTaskList(t)
+		}
+		j = j.NextJob
 	}
 	return nil
 } // }}}
@@ -250,6 +248,72 @@ func (s *Schedule) GetTaskById(id int64) *Task { // {{{
 	for _, v := range s.Tasks {
 		if v.Id == id {
 			return v
+		}
+	}
+	return nil
+} // }}}
+
+//增加Task，将参数中的Task加入Schedule中，并调用其add方法持久化。
+func (s *Schedule) AddTask(task *Task) (err error) { // {{{
+	err = task.AddTask()
+	if err != nil {
+		e := fmt.Sprintf("\n[s.AddTask] %s.", err.Error())
+		return errors.New(e)
+	}
+
+	s.Tasks = append(s.Tasks, task)
+	g.Tasks[string(task.Id)] = task
+
+	if j := s.GetJobById(task.JobId); j != nil {
+		j.Tasks[string(task.Id)] = task
+		j.TaskCnt++
+	}
+
+	return err
+} // }}}
+
+//DeleteTask方法用来删除指定id的Task。首先会根据传入参数在Schedule的Tasks列
+//表中查出对应的Task。然后将其从Tasks列表中去除，将其从所属Job中去除，调用
+//Task的Delete方法删除Task的依赖关系，完成后删除元数据库的信息。
+//没找到对应Task或删除失败，返回error信息。
+func (s *Schedule) DeleteTask(id int64) (err error) { // {{{
+	i := -1
+	for k, task := range s.Tasks {
+		if task.Id == id {
+			i = k
+		}
+	}
+	if i == -1 {
+		e := fmt.Sprintf("\n[s.DeleteTask] not found task by id %d", id)
+		return errors.New(e)
+	}
+
+	t := s.Tasks[i]
+	s.Tasks = append(s.Tasks[0:i], s.Tasks[i+1:]...)
+	s.TaskCnt--
+
+	delete(g.Tasks, string(id))
+
+	j := s.GetJobById(t.JobId)
+	if err = j.DeleteTask(t.Id); err != nil {
+		e := fmt.Sprintf("\n[s.DeleteTask] DeleteTask error %s", err.Error())
+		return errors.New(e)
+	}
+
+	err = t.Delete()
+	if err != nil {
+		e := fmt.Sprintf("\n[s.DeleteTask] schedule [%d] Delete error %s.", err.Error())
+		return errors.New(e)
+	}
+
+	return err
+} // }}}
+
+//GetJobById遍历Jobs列表，返回调度中指定Id的Job，若没找到返回nil
+func (s *Schedule) GetJobById(Id int64) *Job { // {{{
+	for _, j := range s.Jobs {
+		if j.Id == Id {
+			return j
 		}
 	}
 	return nil
@@ -276,6 +340,25 @@ func (s *Schedule) AddJob(job *Job) (err error) { // {{{
 		}
 		s.Jobs = append(s.Jobs, job)
 		s.JobCnt += 1
+	}
+	return err
+} // }}}
+
+//UpdateJob用来在调度中添加一个Job
+//UpdateJob会接收传入的Job类型的参数，修改调度中对应的Job信息，完成后
+//调用Job自身的update方法进行持久化操作。
+func (s *Schedule) UpdateJob(job *Job) (err error) { // {{{
+	if j := s.GetJobById(job.Id); j != nil {
+		j.Name, j.Desc = job.Name, job.Desc
+		j.ModifyTime, j.ModifyUserId = time.Now(), job.ModifyUserId
+		err = j.update()
+		if err != nil {
+			e := fmt.Sprintf("\n[s.UpdateJob] update job [%d] error %s.", j.Id, err.Error())
+			return errors.New(e)
+		}
+	} else {
+		e := fmt.Sprintf("\n[s.UpdateJob] not found job by id %d", job.Id)
+		err = errors.New(e)
 	}
 	return err
 } // }}}
@@ -319,31 +402,12 @@ func (s *Schedule) DeleteJob(id int64) (err error) { // {{{
 	return err
 } // }}}
 
-//UpdateJob用来在调度中添加一个Job
-//UpdateJob会接收传入的Job类型的参数，修改调度中对应的Job信息，完成后
-//调用Job自身的update方法进行持久化操作。
-func (s *Schedule) UpdateJob(job *Job) (err error) { // {{{
-	if j := s.GetJobById(job.Id); j != nil {
-		j.Name, j.Desc = job.Name, job.Desc
-		j.ModifyTime, j.ModifyUserId = time.Now(), job.ModifyUserId
-		err = j.update()
-		if err != nil {
-			e := fmt.Sprintf("\n[s.UpdateJob] update job [%d] error %s.", j.Id, err.Error())
-			return errors.New(e)
-		}
-	} else {
-		e := fmt.Sprintf("\n[s.UpdateJob] not found job by id %d", job.Id)
-		err = errors.New(e)
-	}
-	return err
-} // }}}
-
 //UpdateSchedule方法会将传入参数的信息更新到Schedule结构并持久化到数据库中
 //在持久化之前会调用addStart方法将启动列表持久化
 func (s *Schedule) UpdateSchedule(scd *Schedule) (err error) { // {{{
 	s.Name, s.Desc, s.Cyc, s.StartMonth = scd.Name, scd.Desc, scd.Cyc, scd.StartMonth
 	s.StartSecond, s.ModifyTime, s.ModifyUserId = scd.StartSecond, time.Now(), scd.ModifyUserId
-	if err = s.AddStart(); err != nil {
+	if err = s.AddScheduleStart(); err != nil {
 		e := fmt.Sprintf("\n[s.UpdateSchedule] addstart error %s.", err.Error())
 		return errors.New(e)
 	}
@@ -354,51 +418,6 @@ func (s *Schedule) UpdateSchedule(scd *Schedule) (err error) { // {{{
 	}
 
 	return err
-} // }}}
-
-//DeleteTask方法用来删除指定id的Task。首先会根据传入参数在Schedule的Tasks列
-//表中查出对应的Task。然后将其从Tasks列表中去除，将其从所属Job中去除，调用
-//Task的Delete方法删除Task的依赖关系，完成后删除元数据库的信息。
-//没找到对应Task或删除失败，返回error信息。
-func (s *Schedule) DeleteTask(id int64) (err error) { // {{{
-	i := -1
-	for k, task := range s.Tasks {
-		if task.Id == id {
-			i = k
-		}
-	}
-	if i == -1 {
-		e := fmt.Sprintf("\n[s.DeleteTask] not found task by id %d", id)
-		return errors.New(e)
-	}
-
-	t := s.Tasks[i]
-	s.Tasks = append(s.Tasks[0:i], s.Tasks[i+1:]...)
-	s.TaskCnt--
-
-	j := s.GetJobById(t.JobId)
-	if err = j.DeleteTask(t.Id); err != nil {
-		e := fmt.Sprintf("\n[s.DeleteTask] DeleteTask error %s", err.Error())
-		return errors.New(e)
-	}
-
-	err = t.Delete()
-	if err != nil {
-		e := fmt.Sprintf("\n[s.DeleteTask] schedule [%d] Delete error %s.", err.Error())
-		return errors.New(e)
-	}
-
-	return err
-} // }}}
-
-//GetJobById遍历Jobs列表，返回调度中指定Id的Job，若没找到返回nil
-func (s *Schedule) GetJobById(Id int64) *Job { // {{{
-	for _, j := range s.Jobs {
-		if j.Id == Id {
-			return j
-		}
-	}
-	return nil
 } // }}}
 
 //Delete方法删除Schedule下的Job、Task信息并持久化。
@@ -437,17 +456,17 @@ func (s *Schedule) Delete() error { // {{{
 //添加前先调用delStart方法将Schedule中的原有启动列表清空
 //需要注意的是：内存中的启动列表单位为纳秒，存储前需要转成秒
 //若成功则开始添加，失败返回err信息
-func (s *Schedule) AddStart() (err error) { // {{{
+func (s *Schedule) AddScheduleStart() (err error) { // {{{
 	if err = s.delStart(); err == nil {
 		for i, st := range s.StartSecond {
 			err = s.addStart(time.Duration(st)/time.Second, s.StartMonth[i])
 			if err != nil {
-				e := fmt.Sprintf("\n[s.AddStart] error %s.", err.Error())
+				e := fmt.Sprintf("\n[s.AddScheduleStart] error %s.", err.Error())
 				return errors.New(e)
 			}
 		}
 	} else {
-		e := fmt.Sprintf("\n[s.AddStart] delStart error %s.", err.Error())
+		e := fmt.Sprintf("\n[s.AddScheduleStart] delStart error %s.", err.Error())
 		return errors.New(e)
 	}
 	return err

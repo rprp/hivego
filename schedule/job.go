@@ -29,17 +29,15 @@ type Job struct { // {{{
 //继续初始化Job所属的Task列表，同时递归调用自身，初始化下级Job结构
 //失败返回error信息。
 func (j *Job) InitJob() error { // {{{
-	tj, err := getJob(j.Id)
+	err := j.getJob()
 	if err != nil {
 		e := fmt.Sprintf("\n[j.InitJob] init job [%d] error %s.", j.Id, err.Error())
 		return errors.New(e)
 	}
 
-	j.Name, j.Desc, j.PreJobId = tj.Name, tj.Desc, tj.PreJobId
-	j.NextJobId, j.NextJob, j.Tasks, j.TaskCnt = tj.NextJobId, tj.NextJob, make(map[string]*Task), 0
-
 	if j.PreJobId != 0 {
-		j.PreJob, err = getJob(j.PreJobId)
+		j.PreJob = &Job{Id: j.PreJobId}
+		err = j.PreJob.getJob()
 		if err != nil {
 			e := fmt.Sprintf("\n[j.InitJob] get pre job [%d] error %s.", j.PreJobId, err.Error())
 			return errors.New(e)
@@ -57,7 +55,8 @@ func (j *Job) InitJob() error { // {{{
 		return nil
 	}
 
-	nj, err := getJob(j.NextJobId)
+	nj := &Job{Id: j.NextJobId}
+	err = nj.getJob()
 	if err != nil {
 		e := fmt.Sprintf("\n[j.InitJob] init job [%d] error %s.", j.NextJobId, err.Error())
 		return errors.New(e)
