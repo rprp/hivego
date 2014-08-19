@@ -135,6 +135,7 @@ class Schedule extends Spine.Model
     sc="#{sc}1秒"
 
   GetSecond: ->
+    return [] unless @StartSecond
     for t,i in @StartSecond
 
       startMonth = if @StartMonth[i] is 0 then 1 else @StartMonth[i]

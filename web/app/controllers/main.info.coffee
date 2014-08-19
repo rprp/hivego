@@ -55,7 +55,7 @@ class ScheduleInfo extends Spine.Controller
     [@width, @height] = [parseFloat(@pant.css("width")), parseFloat(@pant.css("height"))]
 
     if @ssl
-      @ssl.scheduleManager.refreshSchedule(20,10)
+      @ssl.ss.refreshSchedule(20,10)
       @ssl.jobManager.refreshJobList(70,10)
       @ssl.layout()
     else
@@ -66,7 +66,7 @@ class ScheduleInfo extends Spine.Controller
     @ssl
 
   renderSchedule: (x, y, schedule) =>
-    @append(@ssl.scheduleManager.render(x, y, schedule))
+    @append(@ssl.sf.render(x, y, schedule))
 
   renderJob: (x, y, job) =>
     @append(@ssl.jobManager.render(x, y, job))
@@ -82,7 +82,9 @@ class ScheduleSymbol
     slider = @paper.path("M #{@width-220},10L #{@width-220},#{@height}")
     slider.attr(Style.slider)
     
-    @scheduleManager = new ScheduleManager(@paper,@color,@item,220)
+    @ss = new ScheduleManager.Shape(@paper,@color,@item,220)
+    @sf = new ScheduleManager.SForm("c",@item)
+    @ss.titlerect.click(@sf.showSchedule,@sf)
     @newJobManager()
     @layout()
 
@@ -92,7 +94,7 @@ class ScheduleSymbol
     @layout()
 
   layout: =>
-    @scheduleManager.st.transform("t#{@width-220},10")
-    @jobManager.set.transform("t#{@width-220},#{@scheduleManager.height+10}")
+    @ss.st.transform("t#{@width-220},10")
+    @jobManager.set.transform("t#{@width-220},#{@ss.height+10}")
 
 module.exports = ScheduleInfo

@@ -25470,7 +25470,7 @@ Released under the MIT License
       this.pant.css("height", h);
       _ref2 = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref2[0], this.height = _ref2[1];
       if (this.ssl) {
-        this.ssl.scheduleManager.refreshSchedule(20, 10);
+        this.ssl.ss.refreshSchedule(20, 10);
         this.ssl.jobManager.refreshJobList(70, 10);
         this.ssl.layout();
       } else {
@@ -25482,7 +25482,7 @@ Released under the MIT License
     };
 
     ScheduleInfo.prototype.renderSchedule = function(x, y, schedule) {
-      return this.append(this.ssl.scheduleManager.render(x, y, schedule));
+      return this.append(this.ssl.sf.render(x, y, schedule));
     };
 
     ScheduleInfo.prototype.renderJob = function(x, y, job) {
@@ -25511,7 +25511,9 @@ Released under the MIT License
       this.taskManager = new TaskManager(this.paper, this.color, this.item, this.width, this.height);
       slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
       slider.attr(Style.slider);
-      this.scheduleManager = new ScheduleManager(this.paper, this.color, this.item, 220);
+      this.ss = new ScheduleManager.Shape(this.paper, this.color, this.item, 220);
+      this.sf = new ScheduleManager.SForm("c", this.item);
+      this.ss.titlerect.click(this.sf.showSchedule, this.sf);
       this.newJobManager();
       this.layout();
     }
@@ -25523,8 +25525,8 @@ Released under the MIT License
     };
 
     ScheduleSymbol.prototype.layout = function() {
-      this.scheduleManager.st.transform("t" + (this.width - 220) + ",10");
-      return this.jobManager.set.transform("t" + (this.width - 220) + "," + (this.scheduleManager.height + 10));
+      this.ss.st.transform("t" + (this.width - 220) + ",10");
+      return this.jobManager.set.transform("t" + (this.width - 220) + "," + (this.ss.height + 10));
     };
 
     return ScheduleSymbol;
@@ -25760,12 +25762,13 @@ Released under the MIT License
       });
       $('#smain').append(view.render().el);
       view.pbmask.css("position", "absolute");
-      view.pbmask.css("z-index", "1000");
+      view.pbmask.css("z-index", "100");
       view.pbmask.css("width", view.sstart.css("width"));
       return view.pbmask.css("height", view.body.css("height"));
     };
 
     ScheduleList.prototype.addAll = function() {
+      $('.scheduleitem').remove();
       return Schedule.each(this.addOne);
     };
 
@@ -25779,13 +25782,15 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/navbar": function(exports, require, module) {(function() {
-  var $, Navbar, Schedule, Spine,
+  var $, Navbar, Schedule, ScheduleManager, Spine,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Spine = require('spineify');
 
   Schedule = require('models/schedule');
+
+  ScheduleManager = require('controllers/schedule.info');
 
   $ = Spine.$;
 
@@ -25796,7 +25801,9 @@ Released under the MIT License
 
     Navbar.prototype.events = {
       "mouseenter h1": "mouseover",
-      "mouseleave h1": "mouseout"
+      "mouseleave h1": "mouseout",
+      "click #addSchedule": "showAddSchedule",
+      "click #addTask": "showAddTask"
     };
 
     function Navbar() {
@@ -25807,16 +25814,38 @@ Released under the MIT License
       return this.html(require('views/navbar')());
     };
 
+    Navbar.prototype.showAddTask = function(e) {
+      var s;
+      e = e || window.event;
+      s = new Schedule({
+        Id: -1
+      });
+      this.sf = new ScheduleManager.SForm("c", s);
+      this.append(this.sf.render(550, 100, s));
+      return this.sf.el.css("z-index", 1000);
+    };
+
+    Navbar.prototype.showAddSchedule = function(e) {
+      var s;
+      e = e || window.event;
+      s = new Schedule({
+        Id: -1
+      });
+      this.sf = new ScheduleManager.SForm("c", s);
+      this.append(this.sf.render(550, 100, s));
+      return this.sf.el.css("z-index", 1000);
+    };
+
     Navbar.prototype.mouseover = function(e) {
       return $(e.target).stop().animate({
         backgroundColor: '#777'
-      }, "fast");
+      }, 200);
     };
 
     Navbar.prototype.mouseout = function(e) {
       return $(e.target).stop().animate({
         backgroundColor: '#333'
-      }, "fast");
+      }, 200);
     };
 
     return Navbar;
@@ -25827,12 +25856,16 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedule.info": function(exports, require, module) {(function() {
-  var $, Eve, Raphael, Schedule, ScheduleManager, Spine, Style,
+  var $, Eve, Events, Module, Raphael, SForm, Schedule, ScheduleManager, Shape, Spine, Style,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Spine = require('spineify');
+
+  Events = Spine.Events;
+
+  Module = Spine.Module;
 
   Raphael = require('raphaelify');
 
@@ -25844,10 +25877,10 @@ Released under the MIT License
 
   $ = Spine.$;
 
-  ScheduleManager = (function(_super) {
-    __extends(ScheduleManager, _super);
+  SForm = (function(_super) {
+    __extends(SForm, _super);
 
-    ScheduleManager.prototype.elements = {
+    SForm.prototype.elements = {
       ".cyclbl": "cycGroup",
       ".startList": "startList",
       ".start": "start",
@@ -25856,7 +25889,7 @@ Released under the MIT License
       "#scheduleDesc": "scheduleDesc"
     };
 
-    ScheduleManager.prototype.events = {
+    SForm.prototype.events = {
       "click .close": "hideSchedule",
       "click .cyclbl": "setCyc",
       "click .addStart": "appendStart",
@@ -25873,22 +25906,189 @@ Released under the MIT License
       "mousemove .addScheduleHead": "movePanel"
     };
 
-    function ScheduleManager(paper, color, item, width) {
+    function SForm(c, item) {
+      this.c = c;
+      this.item = item;
+      this.render = __bind(this.render, this);
+      this.scheduleRefresh = __bind(this.scheduleRefresh, this);
+      SForm.__super__.constructor.apply(this, arguments);
+    }
+
+    SForm.prototype.showDelStart = function(e) {
+      return $(e.target).children(".delStart").css("display", "");
+    };
+
+    SForm.prototype.hideDelStart = function(e) {
+      return $(e.target).children(".delStart").css("display", "none");
+    };
+
+    SForm.prototype.delStart = function(e) {
+      return $(e.target).parent("li").remove();
+    };
+
+    SForm.prototype.appendStart = function() {
+      this.startList.append(require('views/schedule-start')(this.item.GetDefaultSecond()));
+      return $(".startInput").focus();
+    };
+
+    SForm.prototype.setStartVal = function(e) {
+      var m, t, _ref;
+      e = e || window.event;
+      $(e.target).css("display", "none");
+      $(e.target).siblings().not(".delStart").css("display", "");
+      $(e.target).siblings().not(".delStart").text(" " + ($(e.target).val()));
+      _ref = this.item.ParseSecond($(e.target).val()), m = _ref[0], t = _ref[1];
+      if (t === -1) {
+        return $(e.target).siblings().not(".delStart").addClass("alert-danger");
+      } else {
+        $(e.target).siblings().not(".delStart").removeClass("alert-danger");
+        $(e.target).siblings().filter(".startSecond").val(t);
+        return $(e.target).siblings().filter(".startMonth").val(m);
+      }
+    };
+
+    SForm.prototype.startKeypress = function(e) {
+      var _ref;
+      e = e || window.event;
+      if ((_ref = e.keyCode) === 13 || _ref === 10) {
+        return this.setStartVal();
+      }
+    };
+
+    SForm.prototype.editStart = function(e) {
+      $(e.target).siblings().not(".delStart").css("display", "");
+      $(e.target).siblings().focus();
+      return $(e.target).css("display", "none");
+    };
+
+    SForm.prototype.keypress = function(e) {
+      var _ref;
+      e = e || window.event;
+      if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
+        return this.addSchedule(e);
+      }
+    };
+
+    SForm.prototype.addSchedule = function(e) {
+      var i, li, sm, ss, _i, _len, _ref;
+      this.el.css("display", "none");
+      this.item.Name = this.scheduleName.val();
+      this.item.Desc = this.scheduleDesc.val();
+      this.item.StartMonth = [];
+      this.item.StartSecond = [];
+      _ref = this.startList.children("li");
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        li = _ref[i];
+        ss = $(li).children(".startSecond").val();
+        sm = $(li).children(".startMonth").val();
+        if (ss !== -1 && ss !== "") {
+          this.item.StartMonth.push(parseInt(sm));
+          this.item.StartSecond.push(parseInt(ss));
+        }
+      }
+      if (this.item.Id === -1) {
+        return this.item.create();
+      } else {
+        this.item.bind("ajaxSuccess", this.scheduleRefresh);
+        return this.item.save();
+      }
+    };
+
+    SForm.prototype.scheduleRefresh = function(data, status, xhr) {
+      var id;
+      if (xhr === "success") {
+        id = this.item.Id;
+        Schedule.fetch({
+          Id: id
+        });
+        this.item = Schedule.find(id);
+        return this.isRefresh = true;
+      }
+    };
+
+    SForm.prototype.setCyc = function(e) {
+      this.cycGroup.removeClass("label-success");
+      this.cycGroup.addClass("label-default");
+      $(e.target).removeClass("label-default");
+      $(e.target).addClass("label-success");
+      return this.item.SetCyc($(e.target).text());
+    };
+
+    SForm.prototype.setMoveFlg = function(e) {
+      this.isMove = true;
+      this.preLeft = e.clientX;
+      return this.preTop = e.clientY;
+    };
+
+    SForm.prototype.clearMoveFlg = function(e) {
+      this.isMove = false;
+      return this.el.css("opacity", 1);
+    };
+
+    SForm.prototype.movePanel = function(e) {
+      var dx, dy;
+      if (!this.isMove) {
+        return;
+      }
+      e = e || window.event;
+      dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
+      dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
+      this.el.css("left", dx);
+      this.el.css("top", dy);
+      this.el.css("opacity", 0.4);
+      this.preLeft = e.clientX;
+      return this.preTop = e.clientY;
+    };
+
+    SForm.prototype.render = function(x, y, schedule) {
+      var c, cs, _i, _len, _ref;
+      this.html(require('views/schedule')(schedule));
+      _ref = this.cycGroup;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        c = _ref[_i];
+        if (c.textContent === this.item.GetCyc()) {
+          cs = c;
+        }
+      }
+      $(cs).removeClass("label-default");
+      $(cs).addClass("label-success");
+      this.el.css("display", "block");
+      this.el.css("position", "absolute");
+      this.el.css("left", x - 400);
+      return this.el.css("top", y - 50);
+    };
+
+    SForm.prototype.showSchedule = function(e) {
+      e = e || window.event;
+      Spine.trigger("editScheduleRender", e.clientX, e.clientY, this.item);
+      return e;
+    };
+
+    SForm.prototype.hideSchedule = function() {
+      return this.el.css("display", "none");
+    };
+
+    return SForm;
+
+  })(Spine.Controller);
+
+  Shape = (function(_super) {
+    __extends(Shape, _super);
+
+    function Shape(paper, color, item, width) {
       this.paper = paper;
       this.color = color;
       this.item = item;
       this.width = width;
-      this.render = __bind(this.render, this);
-      this.scheduleRefresh = __bind(this.scheduleRefresh, this);
       this.refreshSchedule = __bind(this.refreshSchedule, this);
-      ScheduleManager.__super__.constructor.apply(this, arguments);
+      Shape.__super__.constructor.apply(this, arguments);
       this.isMove = false;
       this.height = 0;
       this.isRefresh = true;
       this.refreshSchedule(20, 10);
     }
 
-    ScheduleManager.prototype.refreshSchedule = function(top, left) {
+    Shape.prototype.refreshSchedule = function(top, left) {
       var gs, ss, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       if (!this.isRefresh) {
         return [top, left];
@@ -25923,135 +26123,12 @@ Released under the MIT License
       });
       this.titlerect = this.paper.rect(left, 0, 190, top - 10, 18).attr(Style.titlerectStyle);
       this.titlerect.hover(this.hoveron, this.hoverout);
-      this.titlerect.click(this.showSchedule, this);
       this.st = this.paper.setFinish();
       this.isRefresh = false;
       return this.height = top;
     };
 
-    ScheduleManager.prototype.showDelStart = function(e) {
-      return $(e.target).children(".delStart").css("display", "");
-    };
-
-    ScheduleManager.prototype.hideDelStart = function(e) {
-      return $(e.target).children(".delStart").css("display", "none");
-    };
-
-    ScheduleManager.prototype.delStart = function(e) {
-      return $(e.target).parent("li").remove();
-    };
-
-    ScheduleManager.prototype.appendStart = function() {
-      this.startList.append(require('views/schedule-start')(this.item.GetDefaultSecond()));
-      return $(".startInput").focus();
-    };
-
-    ScheduleManager.prototype.setStartVal = function(e) {
-      var m, t, _ref;
-      e = e || window.event;
-      $(e.target).css("display", "none");
-      $(e.target).siblings().not(".delStart").css("display", "");
-      $(e.target).siblings().not(".delStart").text(" " + ($(e.target).val()));
-      _ref = this.item.ParseSecond($(e.target).val()), m = _ref[0], t = _ref[1];
-      if (t === -1) {
-        return $(e.target).siblings().not(".delStart").addClass("alert-danger");
-      } else {
-        $(e.target).siblings().not(".delStart").removeClass("alert-danger");
-        $(e.target).siblings().filter(".startSecond").val(t);
-        return $(e.target).siblings().filter(".startMonth").val(m);
-      }
-    };
-
-    ScheduleManager.prototype.startKeypress = function(e) {
-      var _ref;
-      e = e || window.event;
-      if ((_ref = e.keyCode) === 13 || _ref === 10) {
-        return this.setStartVal();
-      }
-    };
-
-    ScheduleManager.prototype.editStart = function(e) {
-      $(e.target).siblings().not(".delStart").css("display", "");
-      $(e.target).siblings().focus();
-      return $(e.target).css("display", "none");
-    };
-
-    ScheduleManager.prototype.keypress = function(e) {
-      var _ref;
-      e = e || window.event;
-      if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
-        return this.addSchedule(e);
-      }
-    };
-
-    ScheduleManager.prototype.addSchedule = function(e) {
-      var i, li, sm, ss, _i, _len, _ref;
-      this.el.css("display", "none");
-      this.item.Name = this.scheduleName.val();
-      this.item.Desc = this.scheduleDesc.val();
-      this.item.StartMonth = [];
-      this.item.StartSecond = [];
-      _ref = this.startList.children("li");
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        li = _ref[i];
-        ss = $(li).children(".startSecond").val();
-        sm = $(li).children(".startMonth").val();
-        if (ss !== -1 && ss !== "") {
-          this.item.StartMonth.push(parseInt(sm));
-          this.item.StartSecond.push(parseInt(ss));
-        }
-      }
-      this.item.bind("ajaxSuccess", this.scheduleRefresh);
-      return this.item.save();
-    };
-
-    ScheduleManager.prototype.scheduleRefresh = function(data, status, xhr) {
-      var id;
-      if (xhr === "success") {
-        id = this.item.Id;
-        Schedule.fetch({
-          Id: id
-        });
-        this.item = Schedule.find(id);
-        return this.isRefresh = true;
-      }
-    };
-
-    ScheduleManager.prototype.setCyc = function(e) {
-      this.cycGroup.removeClass("label-success");
-      this.cycGroup.addClass("label-default");
-      $(e.target).removeClass("label-default");
-      $(e.target).addClass("label-success");
-      return this.item.SetCyc($(e.target).text());
-    };
-
-    ScheduleManager.prototype.setMoveFlg = function(e) {
-      this.isMove = true;
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
-    };
-
-    ScheduleManager.prototype.clearMoveFlg = function(e) {
-      this.isMove = false;
-      return this.el.css("opacity", 1);
-    };
-
-    ScheduleManager.prototype.movePanel = function(e) {
-      var dx, dy;
-      if (!this.isMove) {
-        return;
-      }
-      e = e || window.event;
-      dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
-      dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
-      this.el.css("left", dx);
-      this.el.css("top", dy);
-      this.el.css("opacity", 0.4);
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
-    };
-
-    ScheduleManager.prototype.hoveron = function() {
+    Shape.prototype.hoveron = function() {
       var a;
       a = Raphael.animation({
         "fill-opacity": 0.1
@@ -26059,7 +26136,7 @@ Released under the MIT License
       return this.animate(a);
     };
 
-    ScheduleManager.prototype.hoverout = function() {
+    Shape.prototype.hoverout = function() {
       var b;
       b = Raphael.animation({
         "fill-opacity": 0.01
@@ -26067,37 +26144,15 @@ Released under the MIT License
       return this.animate(b);
     };
 
-    ScheduleManager.prototype.render = function(x, y, schedule) {
-      var c, cs, _i, _len, _ref;
-      this.html(require('views/schedule')(schedule));
-      _ref = this.cycGroup;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        c = _ref[_i];
-        if (c.textContent === this.item.GetCyc()) {
-          cs = c;
-        }
-      }
-      $(cs).removeClass("label-default");
-      $(cs).addClass("label-success");
-      this.el.css("display", "block");
-      this.el.css("position", "absolute");
-      this.el.css("left", x - 400);
-      return this.el.css("top", y - 50);
-    };
-
-    ScheduleManager.prototype.showSchedule = function(e) {
-      e = e || window.event;
-      Spine.trigger("editScheduleRender", e.clientX, e.clientY, this.item);
-      return e;
-    };
-
-    ScheduleManager.prototype.hideSchedule = function() {
-      return this.el.css("display", "none");
-    };
-
-    return ScheduleManager;
+    return Shape;
 
   })(Spine.Controller);
+
+  ScheduleManager = {};
+
+  ScheduleManager.SForm = SForm;
+
+  ScheduleManager.Shape = Shape;
 
   module.exports = ScheduleManager;
 
@@ -27598,7 +27653,8 @@ Released under the MIT License
 }, "index": function(exports, require, module) {(function() {
   var App, Main, Manager, Navbar, Schedule, ScheduleInfo, ScheduleList, Spine,
     __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   require('lib/setup');
 
@@ -27645,8 +27701,10 @@ Released under the MIT License
     };
 
     function App() {
-      var main, nv;
+      this.showAddSchedule = __bind(this.showAddSchedule, this);
+      var nv;
       App.__super__.constructor.apply(this, arguments);
+      Spine.bind("showaddschedule", this.showAddSchedule);
       Schedule.fetch();
       Schedule.bind("ajaxError", function(record, xhr, settings, error) {
         return console.log(error);
@@ -27656,21 +27714,25 @@ Released under the MIT License
       });
       nv = new Navbar;
       this.append(nv.render());
-      main = new Main;
-      this.append(main);
+      this.main = new Main;
+      this.append(this.main);
       this.routes({
         '': function(params) {
-          return main.scheduleList.active(params);
+          return this.main.scheduleList.active(params);
         },
         '/schedules': function(params) {
-          return main.scheduleList.active(params);
+          return this.main.scheduleList.active(params);
         },
         '/schedules/:id': function(params) {
-          return main.scheduleInfo.active(params);
+          return this.main.scheduleInfo.active(params);
         }
       });
       Spine.Route.setup();
     }
+
+    App.prototype.showAddSchedule = function(t) {
+      return this.main.scheduleInfo.active(t);
+    };
 
     return App;
 
@@ -27965,6 +28027,9 @@ Released under the MIT License
 
     Schedule.prototype.GetSecond = function() {
       var cyc, i, s, sc, startMonth, t, _i, _len, _ref, _ref1, _ref2, _ref3, _results;
+      if (!this.StartSecond) {
+        return [];
+      }
       _ref = this.StartSecond;
       _results = [];
       for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
@@ -28463,7 +28528,7 @@ module.exports = content;}, "views/navbar": function(exports, require, module) {
   }
   (function() {
     (function() {
-      __out.push('<header id="header" >\n    <a href="/">\n        <h1>HiveGo Manager</h1>\n    </a>\n\n    <h1>\n        <span id="btnRefreshAll" class="addStart glyphicon glyphicon-refresh" ></span>\n    </h1>\n\n    <h1>\n        <span class="addStart glyphicon glyphicon-plus" ></span>\n    </h1>\n    &nbsp;&nbsp;&nbsp;\n\n    <input type="text" class="sinput" placeholder="搜索..." value=""/>\n\n</header>\n\n\n');
+      __out.push('<header id="header" >\n    <a href="/">\n        <h1>HiveGo Manager</h1>\n    </a>\n    &nbsp;\n\n    <h1>\n        <span id="btnRefreshAll" class="addStart glyphicon glyphicon-refresh" ></span>\n    </h1>\n    &nbsp;\n\n    <h1 id="addSchedule">\n        <span class="addStart glyphicon glyphicon-plus" ></span>Schedule\n    </h1>\n    &nbsp;\n\n    <h1 id="addTask">\n        <span class="addStart glyphicon glyphicon-plus" ></span>Task\n    </h1>\n    &nbsp;&nbsp;&nbsp;\n\n    <input type="text" class="sinput" placeholder="搜索..." value=""/>\n\n</header>\n\n\n');
     
     }).call(this);
     

@@ -1,11 +1,13 @@
 Spine = require('spineify')
+Events  = Spine.Events
+Module  = Spine.Module
 Raphael = require('raphaelify')
 Style = require('controllers/style')
 Eve = require('eve')
 Schedule = require('models/schedule')
 $       = Spine.$
 
-class ScheduleManager extends Spine.Controller
+class SForm extends Spine.Controller
   elements:
     ".cyclbl": "cycGroup"
     ".startList":"startList"
@@ -33,60 +35,8 @@ class ScheduleManager extends Spine.Controller
     "mouseup .addScheduleHead": "clearMoveFlg"
     "mousemove .addScheduleHead": "movePanel"
 
-  constructor: (@paper, @color, @item, @width) -># {{{
+  constructor: (@c, @item) -># {{{
     super
-    @isMove = false
-    @height = 0
-    @isRefresh = true
-    @refreshSchedule(20, 10)
-  # }}}
-
-  refreshSchedule: (top, left) =># {{{
-    return [top,left] unless @isRefresh
-    @st.pop().remove() while @st?.length
-
-    @paper.setStart()
-    [top,left] = [top + (@item.Name.length//7) * 20, left]
-    #标题，调度名称，每行超过7个字符后要换行
-    @title = @paper.text(left, top, @item.SplitName(7)).attr(Style.fontStyle)
-    @title.attr("font-size", 22)
-    [top,left] = [top + 30 + (@item.Name.length//7) * 20, left]
-    
-    #调度周期
-    @cyc = @paper.text(left, top, "调度周期：#{@item.GetCyc()}").attr(Style.fontStyle)
-
-    #调度时间
-    gs=@item.GetSecond()
-    [top,left] = [top+30, left]
-    @start = @paper.text(left, top, "启动时间：").attr(Style.fontStyle)
-
-    @startSecondList = []
-    for ss in gs
-      [top,left] = [top+30, left]
-      @startSecondList.push(@paper.text(left+20, top, "#{ss}").attr(Style.fontStyle))
-
-    #任务数量
-    [top,left] = [top+30, left]
-    @taskCnt = @paper.text(left, top, "任务数量：#{@item.TaskCnt}").attr(Style.fontStyle)
-
-    #下次执行时间
-    [top,left] = [top+30, left]
-    @nextStart = @paper.text(left, top, "下次执行：#{@item.GetNextStart()}").attr(Style.fontStyle)
-    
-    #当前状态
-    #所有者
-
-    [top,left] = [top+30, left]
-    @betweenline = @paper.path("M #{left},#{top}L #{@width-30},#{top}").attr({stroke: "#A0522D", "stroke-width": 2, "stroke-opacity": 0.2})
-
-    @titlerect = @paper.rect(left,0,190,top-10,18).attr(Style.titlerectStyle)
-    @titlerect.hover(@hoveron,@hoverout)
-    @titlerect.click(@showSchedule,@)
-
-    @st = @paper.setFinish()
-
-    @isRefresh = false
-    @height = top
   # }}}
 
   showDelStart: (e) -># {{{
@@ -151,8 +101,12 @@ class ScheduleManager extends Spine.Controller
       if ss isnt -1 and ss isnt ""
         @item.StartMonth.push(parseInt(sm))
         @item.StartSecond.push(parseInt(ss))
-    @item.bind("ajaxSuccess",@scheduleRefresh)
-    @item.save()
+
+    if @item.Id is -1
+      @item.create()
+    else
+      @item.bind("ajaxSuccess",@scheduleRefresh)
+      @item.save()
   # }}}
 
   scheduleRefresh:  (data, status, xhr) =># {{{
@@ -198,16 +152,6 @@ class ScheduleManager extends Spine.Controller
     @preTop = e.clientY
   # }}}
 
-  hoveron: -># {{{
-    a = Raphael.animation({"fill-opacity": 0.1}, 200)
-    @.animate(a)
-    # }}}
-
-  hoverout: -># {{{
-    b = Raphael.animation({"fill-opacity": 0.01}, 200)
-    @.animate(b)
-  # }}}
-
   render: (x, y, schedule) =># {{{
     @html(require('views/schedule')(schedule))
 
@@ -231,4 +175,71 @@ class ScheduleManager extends Spine.Controller
     @el.css("display","none")
   # }}}
 
+class Shape extends Spine.Controller
+
+  constructor: (@paper, @color, @item, @width) -># {{{
+    super
+    @isMove = false
+    @height = 0
+    @isRefresh = true
+    @refreshSchedule(20, 10)
+  # }}}
+
+  refreshSchedule: (top, left) =># {{{
+    return [top,left] unless @isRefresh
+    @st.pop().remove() while @st?.length
+
+    @paper.setStart()
+    [top,left] = [top + (@item.Name.length//7) * 20, left]
+    #标题，调度名称，每行超过7个字符后要换行
+    @title = @paper.text(left, top, @item.SplitName(7)).attr(Style.fontStyle)
+    @title.attr("font-size", 22)
+    [top,left] = [top + 30 + (@item.Name.length//7) * 20, left]
+    
+    #调度周期
+    @cyc = @paper.text(left, top, "调度周期：#{@item.GetCyc()}").attr(Style.fontStyle)
+
+    #调度时间
+    gs=@item.GetSecond()
+    [top,left] = [top+30, left]
+    @start = @paper.text(left, top, "启动时间：").attr(Style.fontStyle)
+
+    @startSecondList = []
+    for ss in gs
+      [top,left] = [top+30, left]
+      @startSecondList.push(@paper.text(left+20, top, "#{ss}").attr(Style.fontStyle))
+
+    #任务数量
+    [top,left] = [top+30, left]
+    @taskCnt = @paper.text(left, top, "任务数量：#{@item.TaskCnt}").attr(Style.fontStyle)
+
+    #下次执行时间
+    [top,left] = [top+30, left]
+    @nextStart = @paper.text(left, top, "下次执行：#{@item.GetNextStart()}").attr(Style.fontStyle)
+    
+    [top,left] = [top+30, left]
+    @betweenline = @paper.path("M #{left},#{top}L #{@width-30},#{top}").attr({stroke: "#A0522D", "stroke-width": 2, "stroke-opacity": 0.2})
+
+    @titlerect = @paper.rect(left,0,190,top-10,18).attr(Style.titlerectStyle)
+    @titlerect.hover(@hoveron,@hoverout)
+
+    @st = @paper.setFinish()
+
+    @isRefresh = false
+    @height = top
+  # }}}
+
+  hoveron: -># {{{
+    a = Raphael.animation({"fill-opacity": 0.1}, 200)
+    @.animate(a)
+    # }}}
+
+  hoverout: -># {{{
+    b = Raphael.animation({"fill-opacity": 0.01}, 200)
+    @.animate(b)
+  # }}}
+
+ScheduleManager = {}
+ScheduleManager.SForm = SForm
+ScheduleManager.Shape = Shape
 module.exports = ScheduleManager

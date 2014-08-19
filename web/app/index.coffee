@@ -25,6 +25,7 @@ class App extends Spine.Controller
 
   constructor: ->
     super
+    Spine.bind("showaddschedule", @showAddSchedule)
     Schedule.fetch()
 
     Schedule.bind "ajaxError", (record, xhr, settings, error) ->
@@ -36,14 +37,18 @@ class App extends Spine.Controller
     nv = new Navbar
     @append nv.render()
 
-    main = new Main
-    @append main
+    @main = new Main
+    @append @main
     
     @routes
-      '': (params)-> main.scheduleList.active(params)
-      '/schedules': (params)-> main.scheduleList.active(params)
-      '/schedules/:id': (params) -> main.scheduleInfo.active(params)
+      '': (params)-> @main.scheduleList.active(params)
+      '/schedules': (params)-> @main.scheduleList.active(params)
+      '/schedules/:id': (params) -> @main.scheduleInfo.active(params)
 
     Spine.Route.setup()
+
+  showAddSchedule: (t) =>
+    @main.scheduleInfo.active(t)
+
 
 module.exports = App

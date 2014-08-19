@@ -137,11 +137,12 @@ class ScheduleList extends Spine.Controller
     $('#smain').append(view.render().el)
 
     view.pbmask.css("position","absolute")
-    view.pbmask.css("z-index","1000")
+    view.pbmask.css("z-index","100")
     view.pbmask.css("width",view.sstart.css("width"))
     view.pbmask.css("height",view.body.css("height"))
 
   addAll: =>
+    $('.scheduleitem').remove()
     Schedule.each(@addOne)
 
 module.exports = ScheduleItem
