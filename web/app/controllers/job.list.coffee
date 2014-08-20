@@ -89,7 +89,7 @@ class JobManager extends Spine.Controller
   # }}}
 
   hlightTasks: -># {{{
-    @data("sinfo")?.taskManager.hlight(@data("Id"))
+    @data("sinfo")?.taskShape.hlight(@data("Id"))
   # }}}
       
   hoveron: -># {{{
@@ -98,7 +98,7 @@ class JobManager extends Spine.Controller
   # }}}
       
   nlightTasks: -># {{{
-    @data("sinfo")?.taskManager.nlight(@data("Id"))
+    @data("sinfo")?.taskShape.nlight(@data("Id"))
   # }}}
 
   hoverout: -># {{{

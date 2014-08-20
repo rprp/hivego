@@ -25241,7 +25241,7 @@ Released under the MIT License
 
     JobManager.prototype.hlightTasks = function() {
       var _ref;
-      return (_ref = this.data("sinfo")) != null ? _ref.taskManager.hlight(this.data("Id")) : void 0;
+      return (_ref = this.data("sinfo")) != null ? _ref.taskShape.hlight(this.data("Id")) : void 0;
     };
 
     JobManager.prototype.hoveron = function() {
@@ -25254,7 +25254,7 @@ Released under the MIT License
 
     JobManager.prototype.nlightTasks = function() {
       var _ref;
-      return (_ref = this.data("sinfo")) != null ? _ref.taskManager.nlight(this.data("Id")) : void 0;
+      return (_ref = this.data("sinfo")) != null ? _ref.taskShape.nlight(this.data("Id")) : void 0;
     };
 
     JobManager.prototype.hoverout = function() {
@@ -25403,26 +25403,30 @@ Released under the MIT License
     ScheduleInfo.prototype.className = 'scheduleinfo';
 
     ScheduleInfo.prototype.elements = {
-      ".pant": "pant",
-      "#btnAddTask": "btnAddTask"
-    };
-
-    ScheduleInfo.prototype.events = {
-      "click #btnAddTask": "renderTask"
+      ".pant": "pant"
     };
 
     function ScheduleInfo() {
-      this.renderTask = __bind(this.renderTask, this);
-      this.renderJob = __bind(this.renderJob, this);
-      this.renderSchedule = __bind(this.renderSchedule, this);
       this.draw = __bind(this.draw, this);
       this.render = __bind(this.render, this);
       this.change = __bind(this.change, this);
       ScheduleInfo.__super__.constructor.apply(this, arguments);
       Schedule.bind("findRecord", this.draw);
-      Spine.bind("addJobRender", this.renderJob);
-      Spine.bind("addTaskRender", this.renderTask);
-      Spine.bind("editScheduleRender", this.renderSchedule);
+      Spine.bind("addJobRender", this.renderJob = (function(_this) {
+        return function(x, y, job) {
+          return _this.append(_this.ssl.jobManager.render(x, y, job));
+        };
+      })(this));
+      Spine.bind("addTaskRender", this.renderTask = (function(_this) {
+        return function(task) {
+          return _this.append(_this.ssl.taskForm.render(task));
+        };
+      })(this));
+      Spine.bind("editScheduleRender", this.renderSchedule = (function(_this) {
+        return function(x, y, schedule) {
+          return _this.append(_this.ssl.scheduleForm.render(x, y, schedule));
+        };
+      })(this));
       this.active(this.change);
     }
 
@@ -25435,26 +25439,6 @@ Released under the MIT License
 
     ScheduleInfo.prototype.render = function() {
       return this.html(require('views/main-info')());
-    };
-
-    ScheduleInfo.prototype.mousewheel = function(event, delta, deltaX, deltaY) {
-      var tt, _i, _j, _len, _len1, _ref, _ref1;
-      if (delta > 0) {
-        this.ssl.taskManager.setpp.transform("...s1.1");
-        _ref = this.ssl.taskManager.ts;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          tt = _ref[_i];
-          tt.sp.refresh();
-        }
-      } else {
-        this.ssl.taskManager.setpp.transform("...s0.9");
-        _ref1 = this.ssl.taskManager.ts;
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          tt = _ref1[_j];
-          tt.sp.refresh();
-        }
-      }
-      return event.stopPropagation();
     };
 
     ScheduleInfo.prototype.draw = function(rs) {
@@ -25470,27 +25454,15 @@ Released under the MIT License
       this.pant.css("height", h);
       _ref2 = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref2[0], this.height = _ref2[1];
       if (this.ssl) {
-        this.ssl.ss.refreshSchedule(20, 10);
+        this.ssl.scheduleShape.refreshSchedule(20, 10);
         this.ssl.jobManager.refreshJobList(70, 10);
         this.ssl.layout();
       } else {
         paper = Raphael(this.pant.get(0), '100%', '100%');
         this.ssl = new ScheduleSymbol(paper, this.width, this.height, this.item);
       }
-      this.append(this.ssl.taskManager.el);
+      this.append(this.ssl.taskShape.el);
       return this.ssl;
-    };
-
-    ScheduleInfo.prototype.renderSchedule = function(x, y, schedule) {
-      return this.append(this.ssl.sf.render(x, y, schedule));
-    };
-
-    ScheduleInfo.prototype.renderJob = function(x, y, job) {
-      return this.append(this.ssl.jobManager.render(x, y, job));
-    };
-
-    ScheduleInfo.prototype.renderTask = function(task) {
-      return this.append(this.ssl.taskManager.render(task));
     };
 
     return ScheduleInfo;
@@ -25505,28 +25477,25 @@ Released under the MIT License
       this.height = height;
       this.item = item;
       this.layout = __bind(this.layout, this);
-      this.newJobManager = __bind(this.newJobManager, this);
       this.color = Style.color;
       _ref = [Style.sopt, Style.eopt], this.st = _ref[0], this.ed = _ref[1];
-      this.taskManager = new TaskManager(this.paper, this.color, this.item, this.width, this.height);
+      this.taskShape = new TaskManager.Shape(this.paper, this.color, this.item, this.width, this.height);
+      this.taskForm = new TaskManager.Form("c", this.item);
+      this.taskForm.bind('updateTaskAndRefresh', this.taskShape.updateTaskAndRefresh);
+      this.taskForm.bind('addTaskAndRefresh', this.taskShape.addTaskAndRefresh);
       slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
       slider.attr(Style.slider);
-      this.ss = new ScheduleManager.Shape(this.paper, this.color, this.item, 220);
-      this.sf = new ScheduleManager.SForm("c", this.item);
-      this.ss.titlerect.click(this.sf.showSchedule, this.sf);
-      this.newJobManager();
+      this.scheduleShape = new ScheduleManager.Shape(this.paper, this.color, this.item, 220);
+      this.scheduleForm = new ScheduleManager.Form("c", this.item);
+      this.scheduleShape.titlerect.click(this.scheduleForm.showSchedule, this.scheduleForm);
+      this.jobManager = new JobManager(this.paper, this.color, this.item, 220, this);
+      this.jobManager.bind("rfJobList", this.layout);
       this.layout();
     }
 
-    ScheduleSymbol.prototype.newJobManager = function() {
-      this.jobManager = new JobManager(this.paper, this.color, this.item, 220, this);
-      this.jobManager.bind("rfJobList", this.layout);
-      return this.layout();
-    };
-
     ScheduleSymbol.prototype.layout = function() {
-      this.ss.st.transform("t" + (this.width - 220) + ",10");
-      return this.jobManager.set.transform("t" + (this.width - 220) + "," + (this.ss.height + 10));
+      this.scheduleShape.st.transform("t" + (this.width - 220) + ",10");
+      return this.jobManager.set.transform("t" + (this.width - 220) + "," + (this.scheduleShape.height + 10));
     };
 
     return ScheduleSymbol;
@@ -25799,6 +25768,12 @@ Released under the MIT License
 
     Navbar.prototype.className = 'hnavbar';
 
+    Navbar.prototype.elements = {
+      "#addSchedule": "addSchedule",
+      "#addTask": "addTask",
+      "#refreshAll": "refreshAll"
+    };
+
     Navbar.prototype.events = {
       "mouseenter h1": "mouseover",
       "mouseleave h1": "mouseout",
@@ -25815,14 +25790,8 @@ Released under the MIT License
     };
 
     Navbar.prototype.showAddTask = function(e) {
-      var s;
       e = e || window.event;
-      s = new Schedule({
-        Id: -1
-      });
-      this.sf = new ScheduleManager.SForm("c", s);
-      this.append(this.sf.render(550, 100, s));
-      return this.sf.el.css("z-index", 1000);
+      return this.trigger('addtask', e);
     };
 
     Navbar.prototype.showAddSchedule = function(e) {
@@ -25831,7 +25800,7 @@ Released under the MIT License
       s = new Schedule({
         Id: -1
       });
-      this.sf = new ScheduleManager.SForm("c", s);
+      this.sf = new ScheduleManager.Form("c", s);
       this.append(this.sf.render(550, 100, s));
       return this.sf.el.css("z-index", 1000);
     };
@@ -25839,13 +25808,25 @@ Released under the MIT License
     Navbar.prototype.mouseover = function(e) {
       return $(e.target).stop().animate({
         backgroundColor: '#777'
-      }, 200);
+      }, 400);
     };
 
     Navbar.prototype.mouseout = function(e) {
       return $(e.target).stop().animate({
         backgroundColor: '#333'
       }, 200);
+    };
+
+    Navbar.prototype.show = function(param) {
+      if (param === 'list') {
+        this.addSchedule.css('display', 'block');
+        this.addTask.css('display', 'none');
+        return this.refreshAll.css('display', 'none');
+      } else {
+        this.addTask.css('display', 'block');
+        this.refreshAll.css('display', 'block');
+        return this.addSchedule.css('display', 'none');
+      }
     };
 
     return Navbar;
@@ -25856,7 +25837,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/schedule.info": function(exports, require, module) {(function() {
-  var $, Eve, Events, Module, Raphael, SForm, Schedule, ScheduleManager, Shape, Spine, Style,
+  var $, Eve, Events, Form, Module, Raphael, Schedule, ScheduleManager, Shape, Spine, Style,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -25877,10 +25858,10 @@ Released under the MIT License
 
   $ = Spine.$;
 
-  SForm = (function(_super) {
-    __extends(SForm, _super);
+  Form = (function(_super) {
+    __extends(Form, _super);
 
-    SForm.prototype.elements = {
+    Form.prototype.elements = {
       ".cyclbl": "cycGroup",
       ".startList": "startList",
       ".start": "start",
@@ -25889,7 +25870,7 @@ Released under the MIT License
       "#scheduleDesc": "scheduleDesc"
     };
 
-    SForm.prototype.events = {
+    Form.prototype.events = {
       "click .close": "hideSchedule",
       "click .cyclbl": "setCyc",
       "click .addStart": "appendStart",
@@ -25906,32 +25887,32 @@ Released under the MIT License
       "mousemove .addScheduleHead": "movePanel"
     };
 
-    function SForm(c, item) {
+    function Form(c, item) {
       this.c = c;
       this.item = item;
       this.render = __bind(this.render, this);
       this.scheduleRefresh = __bind(this.scheduleRefresh, this);
-      SForm.__super__.constructor.apply(this, arguments);
+      Form.__super__.constructor.apply(this, arguments);
     }
 
-    SForm.prototype.showDelStart = function(e) {
+    Form.prototype.showDelStart = function(e) {
       return $(e.target).children(".delStart").css("display", "");
     };
 
-    SForm.prototype.hideDelStart = function(e) {
+    Form.prototype.hideDelStart = function(e) {
       return $(e.target).children(".delStart").css("display", "none");
     };
 
-    SForm.prototype.delStart = function(e) {
+    Form.prototype.delStart = function(e) {
       return $(e.target).parent("li").remove();
     };
 
-    SForm.prototype.appendStart = function() {
+    Form.prototype.appendStart = function() {
       this.startList.append(require('views/schedule-start')(this.item.GetDefaultSecond()));
       return $(".startInput").focus();
     };
 
-    SForm.prototype.setStartVal = function(e) {
+    Form.prototype.setStartVal = function(e) {
       var m, t, _ref;
       e = e || window.event;
       $(e.target).css("display", "none");
@@ -25947,7 +25928,7 @@ Released under the MIT License
       }
     };
 
-    SForm.prototype.startKeypress = function(e) {
+    Form.prototype.startKeypress = function(e) {
       var _ref;
       e = e || window.event;
       if ((_ref = e.keyCode) === 13 || _ref === 10) {
@@ -25955,13 +25936,13 @@ Released under the MIT License
       }
     };
 
-    SForm.prototype.editStart = function(e) {
+    Form.prototype.editStart = function(e) {
       $(e.target).siblings().not(".delStart").css("display", "");
       $(e.target).siblings().focus();
       return $(e.target).css("display", "none");
     };
 
-    SForm.prototype.keypress = function(e) {
+    Form.prototype.keypress = function(e) {
       var _ref;
       e = e || window.event;
       if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
@@ -25969,7 +25950,7 @@ Released under the MIT License
       }
     };
 
-    SForm.prototype.addSchedule = function(e) {
+    Form.prototype.addSchedule = function(e) {
       var i, li, sm, ss, _i, _len, _ref;
       this.el.css("display", "none");
       this.item.Name = this.scheduleName.val();
@@ -25994,7 +25975,7 @@ Released under the MIT License
       }
     };
 
-    SForm.prototype.scheduleRefresh = function(data, status, xhr) {
+    Form.prototype.scheduleRefresh = function(data, status, xhr) {
       var id;
       if (xhr === "success") {
         id = this.item.Id;
@@ -26006,7 +25987,7 @@ Released under the MIT License
       }
     };
 
-    SForm.prototype.setCyc = function(e) {
+    Form.prototype.setCyc = function(e) {
       this.cycGroup.removeClass("label-success");
       this.cycGroup.addClass("label-default");
       $(e.target).removeClass("label-default");
@@ -26014,18 +25995,18 @@ Released under the MIT License
       return this.item.SetCyc($(e.target).text());
     };
 
-    SForm.prototype.setMoveFlg = function(e) {
+    Form.prototype.setMoveFlg = function(e) {
       this.isMove = true;
       this.preLeft = e.clientX;
       return this.preTop = e.clientY;
     };
 
-    SForm.prototype.clearMoveFlg = function(e) {
+    Form.prototype.clearMoveFlg = function(e) {
       this.isMove = false;
       return this.el.css("opacity", 1);
     };
 
-    SForm.prototype.movePanel = function(e) {
+    Form.prototype.movePanel = function(e) {
       var dx, dy;
       if (!this.isMove) {
         return;
@@ -26040,7 +26021,7 @@ Released under the MIT License
       return this.preTop = e.clientY;
     };
 
-    SForm.prototype.render = function(x, y, schedule) {
+    Form.prototype.render = function(x, y, schedule) {
       var c, cs, _i, _len, _ref;
       this.html(require('views/schedule')(schedule));
       _ref = this.cycGroup;
@@ -26058,17 +26039,17 @@ Released under the MIT License
       return this.el.css("top", y - 50);
     };
 
-    SForm.prototype.showSchedule = function(e) {
+    Form.prototype.showSchedule = function(e) {
       e = e || window.event;
       Spine.trigger("editScheduleRender", e.clientX, e.clientY, this.item);
       return e;
     };
 
-    SForm.prototype.hideSchedule = function() {
+    Form.prototype.hideSchedule = function() {
       return this.el.css("display", "none");
     };
 
-    return SForm;
+    return Form;
 
   })(Spine.Controller);
 
@@ -26150,7 +26131,7 @@ Released under the MIT License
 
   ScheduleManager = {};
 
-  ScheduleManager.SForm = SForm;
+  ScheduleManager.Form = Form;
 
   ScheduleManager.Shape = Shape;
 
@@ -26265,7 +26246,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/task.list": function(exports, require, module) {(function() {
-  var $, Ajax, Eve, Job, Raphael, Spine, Style, Task, TaskManager, TaskShape,
+  var $, Ajax, Eve, Form, Job, Raphael, Shape, Spine, Style, Task, TaskManager, TaskShape,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -26288,10 +26269,10 @@ Released under the MIT License
 
   $ = Spine.$;
 
-  TaskManager = (function(_super) {
-    __extends(TaskManager, _super);
+  Form = (function(_super) {
+    __extends(Form, _super);
 
-    TaskManager.prototype.elements = {
+    Form.prototype.elements = {
       "#taskName": "taskName",
       "#taskAddr": "taskAddr",
       "#taskid": "taskId",
@@ -26301,14 +26282,11 @@ Released under the MIT License
       ".tcyclbl": "cycGroup",
       ".startList": "startList",
       ".taskParamList": "taskParamList",
-      "#jobid": "JobId",
-      "#confirmdeltaskrel": "confirmdeltaskrel"
+      "#jobid": "JobId"
     };
 
-    TaskManager.prototype.events = {
+    Form.prototype.events = {
       "click .tclose": "hideTask",
-      "click #delrelclose": "hideDelTaskRel",
-      "click #deltaskrel": "postDelTaskRel",
       "click .tparam": "editParam",
       "click .addParam": "appendParam",
       "click .delParam": "delParam",
@@ -26324,16 +26302,229 @@ Released under the MIT License
       "mousemove .addTaskHead": "movePanel"
     };
 
-    function TaskManager(paper, color, item, w, h) {
+    function Form(c, item) {
+      this.c = c;
+      this.item = item;
+      this.render = __bind(this.render, this);
+      Form.__super__.constructor.apply(this, arguments);
+      this.isMove = false;
+    }
+
+    Form.prototype.showDelParam = function(e) {
+      return $(e.target).children(".delParam").css("display", "");
+    };
+
+    Form.prototype.hideDelParam = function(e) {
+      return $(e.target).children(".delParam").css("display", "none");
+    };
+
+    Form.prototype.delParam = function(e) {
+      return $(e.target).parent("li").remove();
+    };
+
+    Form.prototype.appendParam = function() {
+      this.taskParamList.append(require('views/task-param')());
+      return $(".taskParam").focus();
+    };
+
+    Form.prototype.addTaskKeyPress = function(e) {
+      var _ref;
+      e = e || window.event;
+      if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
+        return this.postTask(e);
+      }
+    };
+
+    Form.prototype.postTask = function(e) {
+      var i, li, tk, tp, _i, _j, _len, _len1, _ref, _ref1;
+      this.el.css("display", "none");
+      if (this.taskId.val()) {
+        tk = this.task;
+        tk.bind("ajaxSuccess", (function(_this) {
+          return function(task, status, xhr) {
+            return _this.trigger('updateTaskAndRefresh', task, status, xhr);
+          };
+        })(this));
+        tk.Name = this.taskName.val();
+        tk.JobId = parseInt(this.JobId.val());
+        tk.Address = this.taskAddr.val();
+        tk.Cmd = this.taskCmd.val();
+        tk.Desc = this.taskDesc.val();
+        tk.Param = [];
+        _ref = this.taskParamList.children("li");
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          li = _ref[i];
+          tp = $(li).children(".taskParam").val();
+          if (tp !== "") {
+            tk.Param.push(tp);
+          }
+        }
+        return tk.save({
+          method: "PUT",
+          url: "/schedules/" + this.item.Id + "/jobs/" + tk.JobId + "/tasks/" + tk.Id
+        });
+      } else {
+        tk = new Task();
+        tk.bind("ajaxSuccess", (function(_this) {
+          return function(task, status, xhr) {
+            return _this.trigger('addTaskAndRefresh', task, status, xhr);
+          };
+        })(this));
+        tk.Name = this.taskName.val();
+        tk.Address = this.taskAddr.val();
+        tk.Cmd = this.taskCmd.val();
+        tk.Desc = this.taskDesc.val();
+        tk.Id = -1;
+        tk.JobId = parseInt(this.JobId.val());
+        tk.Param = [];
+        _ref1 = this.taskParamList.children("li");
+        for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
+          li = _ref1[i];
+          tp = $(li).children(".taskParam").val();
+          if (tp !== "") {
+            tk.Param.push(tp);
+          }
+        }
+        if (tk.Name) {
+          return tk.create({
+            url: "/schedules/" + this.item.Id + "/jobs/0/tasks"
+          });
+        }
+      }
+    };
+
+    Form.prototype.render = function(task) {
+      var c, cs, i, n, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+      if (task.Name) {
+        this.task = task;
+      } else {
+        task = new Task();
+        task.Param = [];
+      }
+      task.JobList = this.item.Jobs;
+      _ref = this.item.Jobs;
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        n = _ref[i];
+        if (n.Id === task.JobId) {
+          _ref1 = [n.Name, i], task.JobName = _ref1[0], task.JobNo = _ref1[1];
+        }
+      }
+      task.RgbColor = Style.getRgbColor();
+      this.html(require("views/task")(task));
+      _ref2 = this.cycGroup;
+      for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+        c = _ref2[_j];
+        if (c.textContent === this.item.GetCyc()) {
+          cs = c;
+        }
+      }
+      $(cs).removeClass("label-default");
+      $(cs).addClass("label-success");
+      $(cs).css("display", "none");
+      $(cs).prevAll().css("display", "none");
+      window.setTimeout((function(_this) {
+        return function() {
+          return _this.taskName.focus();
+        };
+      })(this), 500);
+      this.el.css("display", "block");
+      this.el.css("position", "absolute");
+      this.el.css("left", 200);
+      return this.el.css("top", 60);
+    };
+
+    Form.prototype.setCyc = function(e) {
+      this.cycGroup.removeClass("label-success");
+      this.cycGroup.addClass("label-default");
+      $(e.target).removeClass("label-default");
+      $(e.target).addClass("label-success");
+      return this.item.SetCyc($(e.target).text());
+    };
+
+    Form.prototype.hideTask = function() {
+      return this.el.css("display", "none");
+    };
+
+    Form.prototype.setMoveFlg = function(e) {
+      this.isMove = true;
+      this.preLeft = e.clientX;
+      return this.preTop = e.clientY;
+    };
+
+    Form.prototype.clearMoveFlg = function(e) {
+      this.isMove = false;
+      return this.el.css("opacity", 1);
+    };
+
+    Form.prototype.movePanel = function(e) {
+      var dx, dy;
+      if (!this.isMove) {
+        return;
+      }
+      e = e || window.event;
+      dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
+      dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
+      this.el.css("left", dx);
+      this.el.css("top", dy);
+      this.el.css("opacity", 0.4);
+      this.preLeft = e.clientX;
+      return this.preTop = e.clientY;
+    };
+
+    Form.prototype.editParam = function(e) {
+      $(e.target).siblings().not(".delParam").css("display", "");
+      $(e.target).siblings().focus();
+      return $(e.target).css("display", "none");
+    };
+
+    Form.prototype.setTaskParamVal = function(e) {
+      e = e || window.event;
+      $(e.target).css("display", "none");
+      $(e.target).siblings().not(".delParam").css("display", "");
+      return $(e.target).siblings().not(".delParam").text(" " + ($(e.target).val()) + "           ");
+    };
+
+    Form.prototype.paramKeyPress = function(e) {
+      var _ref;
+      e = e || window.event;
+      if ((_ref = e.keyCode) === 13 || _ref === 10) {
+        return this.setTaskParamVal(e);
+      }
+    };
+
+    Form.prototype.setJob = function(e) {
+      $('#jobid').val(this.$(e.target).attr("data"));
+      $('.jobbtn').text(this.$(e.target).text());
+      $('.jobbtn').css("background-color", this.$(e.target).css("background-color"));
+      return $('.jobbl').css("background-color", this.$(e.target).css("background-color"));
+    };
+
+    return Form;
+
+  })(Spine.Controller);
+
+  Shape = (function(_super) {
+    __extends(Shape, _super);
+
+    Shape.prototype.elements = {
+      "#confirmdeltaskrel": "confirmdeltaskrel"
+    };
+
+    Shape.prototype.events = {
+      "click #delrelclose": "hideDelTaskRel",
+      "click #deltaskrel": "postDelTaskRel"
+    };
+
+    function Shape(paper, color, item, w, h) {
       var top;
       this.paper = paper;
       this.color = color;
       this.item = item;
       this.w = w;
       this.h = h;
+      this.deleteTask = __bind(this.deleteTask, this);
       this.connectFinish = __bind(this.connectFinish, this);
       this.connectStart = __bind(this.connectStart, this);
-      this.deleteTask = __bind(this.deleteTask, this);
       this.hideDelTaskRel = __bind(this.hideDelTaskRel, this);
       this.addRemoveTaskRel = __bind(this.addRemoveTaskRel, this);
       this.delTaskRelEnd = __bind(this.delTaskRelEnd, this);
@@ -26342,7 +26533,7 @@ Released under the MIT License
       this.addTaskAndRefresh = __bind(this.addTaskAndRefresh, this);
       this.updateTaskAndRefresh = __bind(this.updateTaskAndRefresh, this);
       this.refreshTaskList = __bind(this.refreshTaskList, this);
-      TaskManager.__super__.constructor.apply(this, arguments);
+      Shape.__super__.constructor.apply(this, arguments);
       Spine.bind("connectTaskStart", this.connectStart);
       Spine.bind("connectTaskFinish", this.connectFinish);
       Spine.bind("deleteTaskRelStart", this.delTaskRelStart);
@@ -26350,7 +26541,6 @@ Released under the MIT License
       Spine.bind("deleteTask", this.deleteTask);
       this.setpp = this.paper.set();
       this.isRefresh = true;
-      this.isMove = false;
       this.jobList = [];
       this.taskList = [];
       this.delTaskRels = [];
@@ -26362,7 +26552,7 @@ Released under the MIT License
       }
     }
 
-    TaskManager.prototype.refreshTaskList = function(top) {
+    Shape.prototype.refreshTaskList = function(top) {
       var i, j, jb, job, k, key, left, rts, spacing, t, task, tasks, tk, v, value, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _results;
       _ref = this.item.Jobs;
       _results = [];
@@ -26413,24 +26603,7 @@ Released under the MIT License
       return _results;
     };
 
-    TaskManager.prototype.showDelParam = function(e) {
-      return $(e.target).children(".delParam").css("display", "");
-    };
-
-    TaskManager.prototype.hideDelParam = function(e) {
-      return $(e.target).children(".delParam").css("display", "none");
-    };
-
-    TaskManager.prototype.delParam = function(e) {
-      return $(e.target).parent("li").remove();
-    };
-
-    TaskManager.prototype.appendParam = function() {
-      this.taskParamList.append(require('views/task-param')());
-      return $(".taskParam").focus();
-    };
-
-    TaskManager.prototype.getTaskShape = function(Ids) {
+    Shape.prototype.getTaskShape = function(Ids) {
       var t, _i, _len, _ref, _ref1, _results;
       _ref = this.taskList;
       _results = [];
@@ -26443,71 +26616,7 @@ Released under the MIT License
       return _results;
     };
 
-    TaskManager.prototype.addTaskKeyPress = function(e) {
-      var _ref;
-      e = e || window.event;
-      if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
-        return this.postTask(e);
-      }
-    };
-
-    TaskManager.prototype.postTask = function(e) {
-      var i, li, t, tk, tp, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
-      this.el.css("display", "none");
-      if (this.taskId.val()) {
-        _ref = this.taskList;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          t = _ref[_i];
-          if (t.task.Id === parseInt(this.taskId.val())) {
-            tk = t.task;
-          }
-        }
-        tk.bind("ajaxSuccess", this.updateTaskAndRefresh);
-        tk.Name = this.taskName.val();
-        tk.JobId = parseInt(this.JobId.val());
-        tk.Address = this.taskAddr.val();
-        tk.Cmd = this.taskCmd.val();
-        tk.Desc = this.taskDesc.val();
-        tk.Param = [];
-        _ref1 = this.taskParamList.children("li");
-        for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
-          li = _ref1[i];
-          tp = $(li).children(".taskParam").val();
-          if (tp !== "") {
-            tk.Param.push(tp);
-          }
-        }
-        return tk.save({
-          method: "PUT",
-          url: "/schedules/" + this.item.Id + "/jobs/" + tk.JobId + "/tasks/" + tk.Id
-        });
-      } else {
-        tk = new Task();
-        tk.bind("ajaxSuccess", this.addTaskAndRefresh);
-        tk.Name = this.taskName.val();
-        tk.Address = this.taskAddr.val();
-        tk.Cmd = this.taskCmd.val();
-        tk.Desc = this.taskDesc.val();
-        tk.Id = -1;
-        tk.JobId = parseInt(this.JobId.val());
-        tk.Param = [];
-        _ref2 = this.taskParamList.children("li");
-        for (i = _k = 0, _len2 = _ref2.length; _k < _len2; i = ++_k) {
-          li = _ref2[i];
-          tp = $(li).children(".taskParam").val();
-          if (tp !== "") {
-            tk.Param.push(tp);
-          }
-        }
-        if (tk.Name) {
-          return tk.create({
-            url: "/schedules/" + this.item.Id + "/jobs/0/tasks"
-          });
-        }
-      }
-    };
-
-    TaskManager.prototype.updateTaskAndRefresh = function(task, status, xhr) {
+    Shape.prototype.updateTaskAndRefresh = function(task, status, xhr) {
       var e, s, t, tp, _i, _len, _ref;
       s = Raphael.animation({
         "fill-opacity": 1,
@@ -26533,7 +26642,7 @@ Released under the MIT License
       }
     };
 
-    TaskManager.prototype.addTaskAndRefresh = function(task, status, xhr) {
+    Shape.prototype.addTaskAndRefresh = function(task, status, xhr) {
       var ci, el, i, j, t, _i, _j, _len, _len1, _ref, _ref1;
       if (xhr === "success") {
         Spine.Module.extend.call(task, Task);
@@ -26580,7 +26689,7 @@ Released under the MIT License
       }
     };
 
-    TaskManager.prototype.hlight = function(Id) {
+    Shape.prototype.hlight = function(Id) {
       var a, t, _i, _len, _ref, _results;
       a = Raphael.animation({
         "fill-opacity": 0.5
@@ -26603,7 +26712,7 @@ Released under the MIT License
       return _results;
     };
 
-    TaskManager.prototype.nlight = function(Id) {
+    Shape.prototype.nlight = function(Id) {
       var a, t, _i, _len, _ref, _results;
       a = Raphael.animation({
         "fill-opacity": 0.2
@@ -26622,111 +26731,7 @@ Released under the MIT License
       return _results;
     };
 
-    TaskManager.prototype.render = function(task) {
-      var c, cs, i, n, _i, _j, _len, _len1, _ref, _ref1, _ref2;
-      if (!task.Name) {
-        task = new Task();
-        task.Param = [];
-      }
-      task.JobList = this.item.Jobs;
-      _ref = this.item.Jobs;
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        n = _ref[i];
-        if (n.Id === task.JobId) {
-          _ref1 = [n.Name, i], task.JobName = _ref1[0], task.JobNo = _ref1[1];
-        }
-      }
-      task.RgbColor = Style.getRgbColor();
-      this.html(require("views/task")(task));
-      _ref2 = this.cycGroup;
-      for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
-        c = _ref2[_j];
-        if (c.textContent === this.item.GetCyc()) {
-          cs = c;
-        }
-      }
-      $(cs).removeClass("label-default");
-      $(cs).addClass("label-success");
-      $(cs).css("display", "none");
-      $(cs).prevAll().css("display", "none");
-      window.setTimeout((function(_this) {
-        return function() {
-          return _this.taskName.focus();
-        };
-      })(this), 500);
-      this.el.css("display", "block");
-      this.el.css("position", "absolute");
-      this.el.css("left", 200);
-      return this.el.css("top", 60);
-    };
-
-    TaskManager.prototype.setCyc = function(e) {
-      this.cycGroup.removeClass("label-success");
-      this.cycGroup.addClass("label-default");
-      $(e.target).removeClass("label-default");
-      $(e.target).addClass("label-success");
-      return this.item.SetCyc($(e.target).text());
-    };
-
-    TaskManager.prototype.hideTask = function() {
-      return this.el.css("display", "none");
-    };
-
-    TaskManager.prototype.setMoveFlg = function(e) {
-      this.isMove = true;
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
-    };
-
-    TaskManager.prototype.clearMoveFlg = function(e) {
-      this.isMove = false;
-      return this.el.css("opacity", 1);
-    };
-
-    TaskManager.prototype.movePanel = function(e) {
-      var dx, dy;
-      if (!this.isMove) {
-        return;
-      }
-      e = e || window.event;
-      dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
-      dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
-      this.el.css("left", dx);
-      this.el.css("top", dy);
-      this.el.css("opacity", 0.4);
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
-    };
-
-    TaskManager.prototype.editParam = function(e) {
-      $(e.target).siblings().not(".delParam").css("display", "");
-      $(e.target).siblings().focus();
-      return $(e.target).css("display", "none");
-    };
-
-    TaskManager.prototype.setTaskParamVal = function(e) {
-      e = e || window.event;
-      $(e.target).css("display", "none");
-      $(e.target).siblings().not(".delParam").css("display", "");
-      return $(e.target).siblings().not(".delParam").text(" " + ($(e.target).val()) + "           ");
-    };
-
-    TaskManager.prototype.paramKeyPress = function(e) {
-      var _ref;
-      e = e || window.event;
-      if ((_ref = e.keyCode) === 13 || _ref === 10) {
-        return this.setTaskParamVal(e);
-      }
-    };
-
-    TaskManager.prototype.setJob = function(e) {
-      $('#jobid').val(this.$(e.target).attr("data"));
-      $('.jobbtn').text(this.$(e.target).text());
-      $('.jobbtn').css("background-color", this.$(e.target).css("background-color"));
-      return $('.jobbl').css("background-color", this.$(e.target).css("background-color"));
-    };
-
-    TaskManager.prototype.delTaskRelStart = function(ts, e) {
+    Shape.prototype.delTaskRelStart = function(ts, e) {
       var i, r, s1, so, t, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       s1 = Raphael.animation({
         "fill-opacity": .05,
@@ -26808,7 +26813,7 @@ Released under the MIT License
       return $("svg").css("cursor", "url('img/scissors.cur'),auto");
     };
 
-    TaskManager.prototype.postDelTaskRel = function() {
+    Shape.prototype.postDelTaskRel = function() {
       var ajax, i, param, r, _i, _len, _ref;
       ajax = new Ajax();
       _ref = this.delTaskRels;
@@ -26829,7 +26834,7 @@ Released under the MIT License
       return this.confirmdeltaskrel.css("display", "none");
     };
 
-    TaskManager.prototype.delTaskRelEnd = function() {
+    Shape.prototype.delTaskRelEnd = function() {
       var i, r, s1, so, t, ts, txt, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
       s1 = Raphael.animation({
         "fill-opacity": .2,
@@ -26893,7 +26898,7 @@ Released under the MIT License
       return $("svg").css("cursor", "auto");
     };
 
-    TaskManager.prototype.addRemoveTaskRel = function(r) {
+    Shape.prototype.addRemoveTaskRel = function(r) {
       this.delTaskRels.push(r);
       $("#delcnt").text(this.delTaskRels.length);
       if (this.delTaskRels.length === 1) {
@@ -26907,35 +26912,14 @@ Released under the MIT License
       }
     };
 
-    TaskManager.prototype.hideDelTaskRel = function(e) {
+    Shape.prototype.hideDelTaskRel = function(e) {
       this.confirmdeltaskrel.css("display", "none");
       if (this.delTaskRelFlg) {
         return this.delTaskRelEnd();
       }
     };
 
-    TaskManager.prototype.deleteTask = function(ts, e) {
-      var i, t, tk;
-      this.taskList = (function() {
-        var _i, _len, _ref, _results;
-        _ref = this.taskList;
-        _results = [];
-        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-          t = _ref[i];
-          if (t !== ts) {
-            _results.push(t);
-          }
-        }
-        return _results;
-      }).call(this);
-      tk = new Task();
-      tk.destroy({
-        url: "/schedules/" + this.item.Id + "/jobs/" + ts.task.JobId + "/tasks/" + ts.task.Id
-      });
-      return ts.remove();
-    };
-
-    TaskManager.prototype.connectStart = function(ts, e) {
+    Shape.prototype.connectStart = function(ts, e) {
       var c, cnt, i, j, r, rts, s1, so, so2, t, tmp, tpre, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref10, _ref11, _ref12, _ref13, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9, _results;
       s1 = Raphael.animation({
         "fill-opacity": .05,
@@ -26993,7 +26977,7 @@ Released under the MIT License
       return _results;
     };
 
-    TaskManager.prototype.connectFinish = function(ts, e) {
+    Shape.prototype.connectFinish = function(ts, e) {
       var ajax, cr, i, j, param, r, rts, s1, so, t, tmp, tpre, txt, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref10, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9, _results;
       s1 = Raphael.animation({
         "fill-opacity": .2,
@@ -27063,7 +27047,28 @@ Released under the MIT License
       return _results;
     };
 
-    return TaskManager;
+    Shape.prototype.deleteTask = function(ts, e) {
+      var i, t, tk;
+      this.taskList = (function() {
+        var _i, _len, _ref, _results;
+        _ref = this.taskList;
+        _results = [];
+        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+          t = _ref[i];
+          if (t !== ts) {
+            _results.push(t);
+          }
+        }
+        return _results;
+      }).call(this);
+      tk = new Task();
+      tk.destroy({
+        url: "/schedules/" + this.item.Id + "/jobs/" + ts.task.JobId + "/tasks/" + ts.task.Id
+      });
+      return ts.remove();
+    };
+
+    return Shape;
 
   })(Spine.Controller);
 
@@ -27647,14 +27652,19 @@ Released under the MIT License
 
   })();
 
+  TaskManager = {};
+
+  TaskManager.Form = Form;
+
+  TaskManager.Shape = Shape;
+
   module.exports = TaskManager;
 
 }).call(this);
 }, "index": function(exports, require, module) {(function() {
   var App, Main, Manager, Navbar, Schedule, ScheduleInfo, ScheduleList, Spine,
     __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   require('lib/setup');
 
@@ -27701,38 +27711,42 @@ Released under the MIT License
     };
 
     function App() {
-      this.showAddSchedule = __bind(this.showAddSchedule, this);
-      var nv;
       App.__super__.constructor.apply(this, arguments);
-      Spine.bind("showaddschedule", this.showAddSchedule);
+      Spine.bind("showaddschedule", this.showAddSchedule = (function(_this) {
+        return function(t) {
+          return _this.main.scheduleInfo.active(t);
+        };
+      })(this));
       Schedule.fetch();
       Schedule.bind("ajaxError", function(record, xhr, settings, error) {
         return console.log(error);
       });
       Schedule.bind("ajaxSuccess", function(data, status, xhr) {
-        return console.log("ajaxSuccess" + data + "    " + xhr + "   " + status);
+        return console.log("ajaxSuccess " + xhr + " " + status);
       });
-      nv = new Navbar;
-      this.append(nv.render());
+      this.nv = new Navbar;
+      this.append(this.nv.render());
       this.main = new Main;
       this.append(this.main);
+      this.nv.bind('addtask', this.main.scheduleInfo.renderTask);
       this.routes({
         '': function(params) {
-          return this.main.scheduleList.active(params);
+          this.main.scheduleList.active(params);
+          return this.nv.show('list');
         },
         '/schedules': function(params) {
-          return this.main.scheduleList.active(params);
+          this.main.scheduleList.active(params);
+          return this.nv.show('list');
         },
-        '/schedules/:id': function(params) {
-          return this.main.scheduleInfo.active(params);
-        }
+        '/schedules/:id': (function(_this) {
+          return function(params) {
+            _this.main.scheduleInfo.active(params);
+            return _this.nv.show('info');
+          };
+        })(this)
       });
       Spine.Route.setup();
     }
-
-    App.prototype.showAddSchedule = function(t) {
-      return this.main.scheduleInfo.active(t);
-    };
 
     return App;
 
@@ -28314,7 +28328,7 @@ module.exports = content;}, "views/main-info": function(exports, require, module
   }
   (function() {
     (function() {
-      __out.push('<div class="panel panel-default fdin" style="background:transparent; border: 0;">\n    <div class="pant">\n    </div>\n</div>\n<div class="btn-toolbar" role="toolbar" style="position: absolute; top:80px; left:100px; opacity: 0.8">\n   <div class="btn-group">\n       <button type="button" class="btn btn-default btn-sm">\n           <span id="btnRefreshAll" class="addStart glyphicon glyphicon-refresh" ></span>\n       </button>\n       <button id="btnAddTask" type="button" class="btn btn-default btn-sm">\n           <span class="addStart glyphicon glyphicon-plus" ></span>\n       </button>\n    </div>\n</div>\n');
+      __out.push('<div class="panel panel-default fdin" style="background:transparent; border: 0;">\n    <div class="pant">\n    </div>\n</div>\n');
     
     }).call(this);
     
@@ -28528,7 +28542,7 @@ module.exports = content;}, "views/navbar": function(exports, require, module) {
   }
   (function() {
     (function() {
-      __out.push('<header id="header" >\n    <a href="/">\n        <h1>HiveGo Manager</h1>\n    </a>\n    &nbsp;\n\n    <h1>\n        <span id="btnRefreshAll" class="addStart glyphicon glyphicon-refresh" ></span>\n    </h1>\n    &nbsp;\n\n    <h1 id="addSchedule">\n        <span class="addStart glyphicon glyphicon-plus" ></span>Schedule\n    </h1>\n    &nbsp;\n\n    <h1 id="addTask">\n        <span class="addStart glyphicon glyphicon-plus" ></span>Task\n    </h1>\n    &nbsp;&nbsp;&nbsp;\n\n    <input type="text" class="sinput" placeholder="搜索..." value=""/>\n\n</header>\n\n\n');
+      __out.push('<header id="header" >\n    <a href="/">\n        <h1>HiveGo Manager</h1>\n    </a>\n    &nbsp;\n\n    <h1 id="addSchedule">\n        <span class="addStart glyphicon glyphicon-plus" ></span>&nbsp;Schedule\n    </h1>\n    &nbsp;\n\n    <h1 id="addTask">\n        <span class="addStart glyphicon glyphicon-plus" ></span>&nbsp;Task\n    </h1>\n    &nbsp;\n\n    <h1 id="refreshAll" >\n        <span class="addStart glyphicon glyphicon-refresh" ></span>\n    </h1>\n    &nbsp;\n\n    <input type="text" class="sinput" placeholder="搜索..." value=""/>\n\n</header>\n\n\n');
     
     }).call(this);
     

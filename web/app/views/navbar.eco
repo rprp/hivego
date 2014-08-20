@@ -4,20 +4,20 @@
     </a>
     &nbsp;
 
-    <h1>
-        <span id="btnRefreshAll" class="addStart glyphicon glyphicon-refresh" ></span>
-    </h1>
-    &nbsp;
-
     <h1 id="addSchedule">
-        <span class="addStart glyphicon glyphicon-plus" ></span>Schedule
+        <span class="addStart glyphicon glyphicon-plus" ></span>&nbsp;Schedule
     </h1>
     &nbsp;
 
     <h1 id="addTask">
-        <span class="addStart glyphicon glyphicon-plus" ></span>Task
+        <span class="addStart glyphicon glyphicon-plus" ></span>&nbsp;Task
     </h1>
-    &nbsp;&nbsp;&nbsp;
+    &nbsp;
+
+    <h1 id="refreshAll" >
+        <span class="addStart glyphicon glyphicon-refresh" ></span>
+    </h1>
+    &nbsp;
 
     <input type="text" class="sinput" placeholder="搜索..." value=""/>
 

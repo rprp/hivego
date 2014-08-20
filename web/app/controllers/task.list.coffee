@@ -7,8 +7,8 @@ Task = require('models/task')
 Job = require('models/job')
 $       = Spine.$
 
-class TaskManager extends Spine.Controller
-  elements:
+class Form extends Spine.Controller
+  elements:# {{{
     "#taskName": "taskName"
     "#taskAddr": "taskAddr"
     "#taskid": "taskId"
@@ -19,12 +19,10 @@ class TaskManager extends Spine.Controller
     ".startList":"startList"
     ".taskParamList":"taskParamList"
     "#jobid": "JobId"
-    "#confirmdeltaskrel": "confirmdeltaskrel"
+# }}}
 
-  events:
+  events:# {{{
     "click .tclose"       :  "hideTask"
-    "click #delrelclose"  :  "hideDelTaskRel"
-    "click #deltaskrel"   :  "postDelTaskRel"
     "click .tparam"       :  "editParam"
     "click .addParam"     :  "appendParam"
     "click .delParam"     :  "delParam"
@@ -41,54 +39,11 @@ class TaskManager extends Spine.Controller
     "mousedown .addTaskHead": "setMoveFlg"
     "mouseup .addTaskHead": "clearMoveFlg"
     "mousemove .addTaskHead": "movePanel"
+# }}}
 
-  constructor: (@paper, @color, @item, @w, @h) -># {{{
+  constructor: (@c, @item) -># {{{
     super
-    Spine.bind("connectTaskStart", @connectStart)
-    Spine.bind("connectTaskFinish", @connectFinish)
-    Spine.bind("deleteTaskRelStart", @delTaskRelStart)
-    Spine.bind("deleteTaskRel", @addRemoveTaskRel)
-    Spine.bind("deleteTask", @deleteTask)
-    @setpp = @paper.set()
-    @isRefresh = true
     @isMove = false
-    @jobList = []
-    @taskList = []
-    @delTaskRels = []
-    @currentTask
-    @relTask
-    top = 80
-    
-    if @item.Jobs
-      @refreshTaskList(top)
-  # }}}
-
-  refreshTaskList: (top) =># {{{
-    for jb,i in @item.Jobs
-      job = new Job()
-      for key, value of jb
-        job[key] = value
-      @jobList.push(job)
-
-      tasks = (v for k,v of job.Tasks)
-      spacing = 100
-  
-      left = (@w-200)/2-(tasks.length/2) * spacing if tasks.length > 0
-      for task,j in tasks
-        tk = new Task()
-        for key, value of task
-          tk[key] = value
-        tk.JobNo = i
-        t= new TaskShape(@paper,left,top,tk,@color[i],25)
-        t.conn.drag(t.connMove, t.connDragger, t.connUp,@)
-        @taskList.push(t)
-        
-        @setpp.push(t.sp)
-        @setpp.push(t.text)
-  
-        rts.addNext(t) for rts in @getTaskShape(t.RelTaskId)
-        left += spacing
-      top += 100
   # }}}
 
   showDelParam: (e) -># {{{
@@ -108,10 +63,6 @@ class TaskManager extends Spine.Controller
     $(".taskParam").focus()
   # }}}
 
-  getTaskShape: (Ids) -># {{{
-     t for t in @taskList when t.task.Id in Ids
-  # }}}
-
   addTaskKeyPress: (e) -># {{{
     e = e||window.event
     if e.ctrlKey and e.keyCode in [13,10]
@@ -121,8 +72,10 @@ class TaskManager extends Spine.Controller
   postTask: (e) -># {{{
     @el.css("display","none")
     if @taskId.val()
-      tk = t.task for t in @taskList when t.task.Id is parseInt(@taskId.val())
-      tk.bind("ajaxSuccess",@updateTaskAndRefresh)
+      tk = @task
+      tk.bind("ajaxSuccess", (task, status, xhr) =>
+          @trigger('updateTaskAndRefresh', task, status, xhr)
+      )
       tk.Name = @taskName.val()
       tk.JobId = parseInt(@JobId.val())
       tk.Address = @taskAddr.val()
@@ -137,7 +90,9 @@ class TaskManager extends Spine.Controller
       tk.save({method: "PUT", url:"/schedules/#{@item.Id}/jobs/#{tk.JobId}/tasks/#{tk.Id}"})
     else
       tk = new Task()
-      tk.bind("ajaxSuccess",@addTaskAndRefresh)
+      tk.bind("ajaxSuccess", (task, status, xhr) =>
+          @trigger('addTaskAndRefresh', task, status, xhr)
+      )
       tk.Name = @taskName.val()
       tk.Address = @taskAddr.val()
       tk.Cmd = @taskCmd.val()
@@ -154,59 +109,10 @@ class TaskManager extends Spine.Controller
       tk.create({url:"/schedules/#{@item.Id}/jobs/0/tasks"}) if tk.Name
   # }}}
 
-  updateTaskAndRefresh: (task, status, xhr) =># {{{
-    s = Raphael.animation({"fill-opacity": 1, "stroke-width": 6}, 1200, -> @.animate(e))
-    e = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 300)
-    if xhr is "success"
-      tp = t for t in @taskList when t.task.Id is parseInt(task.Id)
-      tp.task = task
-      tp.sp.animate(s)
-
-      @isRefresh = true
-  # }}}
-
-  addTaskAndRefresh: (task, status, xhr) =># {{{
-    if xhr is "success"
-      Spine.Module.extend.call(task, Task)
-
-      ci = i for j,i in @item.Jobs when j.Id is task.JobId
-
-      task.JobNo = ci
-      t= new TaskShape(@paper,150,0,task,Style.getRgbColor()[ci],25)
-      t.conn.drag(t.connMove, t.connDragger, t.connUp,@)
-      t.sp.animate({"cx": 150, "cy": ci*100+80}, 2000, "elastic")
-      t.text.animate({"x": 150, "y": ci*100+80}, 2000, "elastic")
-
-      for el in t.toolset
-        el.attr([cy:ci*100+80]) if el.attr("cx")
-        el.attr([y:ci*100+80]) if el.attr("x")
-
-      @taskList.push(t)
-      
-      @setpp.push(t.sp)
-      @setpp.push(t.text)
-
-      @isRefresh = true
-  # }}}
-
-  hlight: (Id) -># {{{
-    a = Raphael.animation({"fill-opacity": 0.5}, 500)
-    for t in @taskList
-      if t.task.JobId is Id
-        t.sp.animate(a)
-        t.sp.g = t.sp.glow({color: t.sp.attr("fill"), "fill-opacity": 0.2, width:10})
-  # }}}
-
-  nlight: (Id) -># {{{
-    a = Raphael.animation({"fill-opacity": 0.2}, 500)
-    for t in @taskList
-      if t.task.JobId is Id
-        t.sp.animate(a)
-        t.sp.g.remove()
-  # }}}
-
-  render: (task) -># {{{
-    unless task.Name
+  render: (task) =># {{{
+    if task.Name
+      @task=task
+    else
       task = new Task()
       task.Param=[]
     
@@ -296,7 +202,121 @@ class TaskManager extends Spine.Controller
     $('.jobbl').css("background-color",@$(e.target).css("background-color"))
   # }}}
   
-  delTaskRelStart: (ts, e) =>
+class Shape extends Spine.Controller
+  elements:# {{{
+    "#confirmdeltaskrel": "confirmdeltaskrel"
+# }}}
+
+  events:# {{{
+    "click #delrelclose"  :  "hideDelTaskRel"
+    "click #deltaskrel"   :  "postDelTaskRel"
+
+  # }}}
+
+  constructor: (@paper, @color, @item, @w, @h) -># {{{
+    super
+    Spine.bind("connectTaskStart", @connectStart)
+    Spine.bind("connectTaskFinish", @connectFinish)
+    Spine.bind("deleteTaskRelStart", @delTaskRelStart)
+    Spine.bind("deleteTaskRel", @addRemoveTaskRel)
+    Spine.bind("deleteTask", @deleteTask)
+    @setpp = @paper.set()
+    @isRefresh = true
+    @jobList = []
+    @taskList = []
+    @delTaskRels = []
+    @currentTask
+    @relTask
+    top = 80
+    
+    if @item.Jobs
+      @refreshTaskList(top)
+  # }}}
+
+  refreshTaskList: (top) =># {{{
+    for jb,i in @item.Jobs
+      job = new Job()
+      for key, value of jb
+        job[key] = value
+      @jobList.push(job)
+
+      tasks = (v for k,v of job.Tasks)
+      spacing = 100
+  
+      left = (@w-200)/2-(tasks.length/2) * spacing if tasks.length > 0
+      for task,j in tasks
+        tk = new Task()
+        for key, value of task
+          tk[key] = value
+        tk.JobNo = i
+        t= new TaskShape(@paper,left,top,tk,@color[i],25)
+        t.conn.drag(t.connMove, t.connDragger, t.connUp,@)
+        @taskList.push(t)
+        
+        @setpp.push(t.sp)
+        @setpp.push(t.text)
+  
+        rts.addNext(t) for rts in @getTaskShape(t.RelTaskId)
+        left += spacing
+      top += 100
+  # }}}
+
+  getTaskShape: (Ids) -># {{{
+     t for t in @taskList when t.task.Id in Ids
+  # }}}
+
+  updateTaskAndRefresh: (task, status, xhr) =># {{{
+    s = Raphael.animation({"fill-opacity": 1, "stroke-width": 6}, 1200, -> @.animate(e))
+    e = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 300)
+    if xhr is "success"
+      tp = t for t in @taskList when t.task.Id is parseInt(task.Id)
+      tp.task = task
+      tp.sp.animate(s)
+
+      @isRefresh = true
+  # }}}
+
+  addTaskAndRefresh: (task, status, xhr) =># {{{
+    if xhr is "success"
+      Spine.Module.extend.call(task, Task)
+
+      ci = i for j,i in @item.Jobs when j.Id is task.JobId
+
+      task.JobNo = ci
+      t= new TaskShape(@paper,150,0,task,Style.getRgbColor()[ci],25)
+      t.conn.drag(t.connMove, t.connDragger, t.connUp,@)
+      t.sp.animate({"cx": 150, "cy": ci*100+80}, 2000, "elastic")
+      t.text.animate({"x": 150, "y": ci*100+80}, 2000, "elastic")
+
+      for el in t.toolset
+        el.attr([cy:ci*100+80]) if el.attr("cx")
+        el.attr([y:ci*100+80]) if el.attr("x")
+
+      @taskList.push(t)
+      
+      @setpp.push(t.sp)
+      @setpp.push(t.text)
+
+      @isRefresh = true
+  # }}}
+
+  hlight: (Id) -># {{{
+    a = Raphael.animation({"fill-opacity": 0.5}, 500)
+    for t in @taskList
+      if t.task.JobId is Id
+        t.sp.animate(a)
+        t.sp.g = t.sp.glow({color: t.sp.attr("fill"), "fill-opacity": 0.2, width:10})
+  # }}}
+
+  nlight: (Id) -># {{{
+    a = Raphael.animation({"fill-opacity": 0.2}, 500)
+    for t in @taskList
+      if t.task.JobId is Id
+        t.sp.animate(a)
+        t.sp.g.remove()
+  # }}}
+
+  delTaskRelStart: (ts, e) =># {{{
     s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 800)
     @currentTask = ts
     @delTaskRelFlg = true
@@ -346,8 +366,9 @@ class TaskManager extends Spine.Controller
     ts.toolset.attr({"fill-opacity": 0.1, "stroke-width": 0.5})
     ts.showTool()
     $("svg").css("cursor","url('img/scissors.cur'),auto")
+# }}}
 
-  postDelTaskRel: =>
+  postDelTaskRel: =># {{{
     ajax = new Ajax()
     for r,i in @delTaskRels
       param = "tasks/#{r.tail.task.Id}/reltask/#{r.head.task.Id}"
@@ -365,8 +386,9 @@ class TaskManager extends Spine.Controller
     @delTaskRelEnd()
     @delTaskRelFlg = false
     @confirmdeltaskrel.css("display","none")
+# }}}
 
-  delTaskRelEnd: =>
+  delTaskRelEnd: =># {{{
     s1 = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 1200)
     txt = Raphael.animation({"fill-opacity": 1, "stroke-width": 1}, 1200)
 
@@ -399,8 +421,9 @@ class TaskManager extends Spine.Controller
     ts.toolset.attr({"fill-opacity": 0.1, "stroke-width": 0.5})
     @delTaskRels = []
     $("svg").css("cursor","auto")
+# }}}
 
-  addRemoveTaskRel: (r) =>
+  addRemoveTaskRel: (r) =># {{{
     @delTaskRels.push(r)
     $("#delcnt").text(@delTaskRels.length)
     
@@ -412,19 +435,15 @@ class TaskManager extends Spine.Controller
       @el.css("display","block")
     else
       @confirmdeltaskrel.css("display","block")
+# }}}
 
-  hideDelTaskRel: (e) =>
+  hideDelTaskRel: (e) =># {{{
     @confirmdeltaskrel.css("display","none")
     if @delTaskRelFlg
       @delTaskRelEnd()
+# }}}
 
-  deleteTask: (ts,e) =>
-    @taskList = (t for t,i in @taskList when t isnt ts)
-    tk = new Task()
-    tk.destroy({url:"/schedules/#{@item.Id}/jobs/#{ts.task.JobId}/tasks/#{ts.task.Id}"})
-    ts.remove()
-
-  connectStart: (ts, e) =>
+  connectStart: (ts, e) =># {{{
     s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 200)
 
     @currentTask = ts
@@ -456,8 +475,9 @@ class TaskManager extends Spine.Controller
           tmp.push(r) for r,j in rts.pre
             
       tpre = tmp
+# }}}
 
-  connectFinish: (ts, e) =>
+  connectFinish: (ts, e) =># {{{
     s1 = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 300)
     txt = Raphael.animation({"fill-opacity": 1, "stroke-width": 1}, 300)
     
@@ -497,9 +517,17 @@ class TaskManager extends Spine.Controller
           for r,j in rts.pre
             tmp.push(r)
       tpre = tmp
+# }}}
+
+  deleteTask: (ts,e) =># {{{
+    @taskList = (t for t,i in @taskList when t isnt ts)
+    tk = new Task()
+    tk.destroy({url:"/schedules/#{@item.Id}/jobs/#{ts.task.JobId}/tasks/#{ts.task.Id}"})
+    ts.remove()
+# }}}
 
 class TaskShape
-  constructor: (@paper, @cx, @cy, @task, @color="#FF8C00", @r=20) ->
+  constructor: (@paper, @cx, @cy, @task, @color="#FF8C00", @r=20) -># {{{
     
     @RelTaskId = (v.Id for k,v of @task.RelTasks)
     @pre=[]
@@ -508,8 +536,9 @@ class TaskShape
     @nextRel=[]
 
     @draw()
+# }}}
 
-  draw: ->
+  draw: -># {{{
     @toolset = @paper.set()
 
     imgStyle = [@cx, @cy, 15, 15]
@@ -581,17 +610,18 @@ class TaskShape
     @text = @paper.text(@cx, @cy, @task.Name)
     @text.toBack()
     @text.attr({fill: "#333", stroke: "none", "font-size": 10, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
+# }}}
 
-
-  addNext: (taskShape) ->
+  addNext: (taskShape) -># {{{
     @next.push(taskShape)
     r=@paper.connection(@sp,taskShape.sp,@sp.attr('fill'),"#{@sp.attr('fill')}|1")
     @nextRel.push(r)
 
     taskShape.pre.push(@)
     taskShape.preRel.push(r)
+# }}}
 
-  removeNext: (rel) ->
+  removeNext: (rel) -># {{{
     @next = (t for t,i in @next when t isnt rel.tail)
     @nextRel = (r for r,i in @nextRel when r isnt rel)
 
@@ -601,8 +631,9 @@ class TaskShape
     rel.bg.remove()
     rel.line.remove()
     rel = null
+# }}}
 
-  remove: ->
+  remove: -># {{{
     for r,j in @nextRel
       r.bg.remove()
       r.line.remove()
@@ -624,9 +655,9 @@ class TaskShape
     for key, value of @
       unless value is @paper
         value.remove?()
-    
+    # }}}
 
-  showTool: ->
+  showTool: -># {{{
     return unless @sp.flg
 
     s = @sp.ts
@@ -649,8 +680,9 @@ class TaskShape
       s.conn.animate({"cx": s.conn.ox + 60 * mc, "cy": s.conn.oy - 50 * ms}, 600, "elastic")
       s.toolset.show()
       @sp.isShowTool = true
+  # }}}
 
-  hoveron: =>
+  hoveron: =># {{{
     a = Raphael.animation({"stroke-width": 3, "fill-opacity": 0.7}, 200)
 
     @sp.animate(a)
@@ -658,16 +690,18 @@ class TaskShape
     n.sp.animate(a)    for n in @next
     rp.line.animate(a) for rp in @preRel
     p.sp.animate(a)    for p in @pre
-      
-  hoverout: =>
+    # }}}
+
+  hoverout: =># {{{
     b = Raphael.animation({"stroke-width": 1,"fill-opacity": 0.2}, 200)
     @sp.animate(b)
     r.line.animate(b)  for r in @nextRel
     n.sp.animate(b)    for n in @next
     rp.line.animate(b) for rp in @preRel
     p.sp.animate(b)    for p in @pre
-      
-  dragger: ->
+  # }}}
+
+  dragger: -># {{{
     [@ox, @oy]  = [@attr("cx"), @attr("cy")]
     @animate({"fill-opacity": .5}, 500) if @type isnt "text"
 
@@ -678,9 +712,9 @@ class TaskShape
         [el.ox,el.oy]  = [el.attr("cx"), el.attr("cy")]
     [@ts.text.ox, @ts.text.oy] = [@attr("x"),@attr("y")]
     @ts.text.animate({"fill-opacity": .2}, 500) if @ts.text.type isnt "text"
+  # }}}
 
-
-  move: (dx, dy) ->
+  move: (dx, dy) -># {{{
     @flg = false
     @attr([ cx:@ox + dx, cy:@oy + dy])
 
@@ -689,13 +723,15 @@ class TaskShape
       el.attr([ x:el.ox + dx, y:el.oy + dy]) if el.attr("x")
     @ts.text.attr([x:@ox + dx, y:@oy + dy])
     @refresh()
+# }}}
 
-  up: ->
+  up: -># {{{
     a = [{"fill-opacity": 0.2}, 500]
     @animate(a...) if @type isnt "text"
     @ts.text.animate(a...) if @ts.text.type isnt "text"
+# }}}
 
-  connDragger: ->
+  connDragger: -># {{{
     c = @currentTask
     [c.conn.ox, c.conn.oy]  = [c.conn.attr("cx"), c.conn.attr("cy")]
     c.conn.animate({"fill-opacity": .5}, 500)
@@ -707,8 +743,9 @@ class TaskShape
     c.deleteRelImg.hide()
     c.deleteImg.hide()
     c.toolset.attr({"fill-opacity": 0, "stroke-width": 0})
-
-  connMove: (dx, dy) ->
+# }}}
+  
+  connMove: (dx, dy) -># {{{
     flg = false
     c = @currentTask
     c.sp.flg = true
@@ -730,8 +767,9 @@ class TaskShape
       c.conn.rel.bg.animate({"stroke": c.sp.attr("fill"), "stroke-width": 2}, 50)
 
     c.conn.refresh()
+# }}}
 
-  connUp: ->
+  connUp: -># {{{
     c = @currentTask
     c.conn.animate({fill: c.sp.attr("fill"), stroke: c.sp.attr("fill"), "fill-opacity": 0.2}, 500)
     
@@ -741,5 +779,9 @@ class TaskShape
     c.showTool()
     @currentTask = null
     @relTask = null
+# }}}
 
+TaskManager = {}
+TaskManager.Form = Form
+TaskManager.Shape = Shape
 module.exports = TaskManager

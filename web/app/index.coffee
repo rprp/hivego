@@ -25,30 +25,37 @@ class App extends Spine.Controller
 
   constructor: ->
     super
-    Spine.bind("showaddschedule", @showAddSchedule)
+    Spine.bind("showaddschedule", @showAddSchedule = (t) =>
+        @main.scheduleInfo.active(t)
+      )
+
     Schedule.fetch()
 
     Schedule.bind "ajaxError", (record, xhr, settings, error) ->
         console.log(error)
     Schedule.bind "ajaxSuccess", (data,status,xhr) ->
-        console.log("ajaxSuccess#{data}    #{xhr}   #{status}")
+        console.log("ajaxSuccess #{xhr} #{status}")
 
-
-    nv = new Navbar
-    @append nv.render()
+    @nv = new Navbar
+    @append @nv.render()
 
     @main = new Main
     @append @main
     
+    @nv.bind('addtask',@main.scheduleInfo.renderTask)
     @routes
-      '': (params)-> @main.scheduleList.active(params)
-      '/schedules': (params)-> @main.scheduleList.active(params)
-      '/schedules/:id': (params) -> @main.scheduleInfo.active(params)
+      '': (params)->
+          @main.scheduleList.active(params)
+          @nv.show('list')
+      '/schedules': (params) ->
+          @main.scheduleList.active(params)
+          @nv.show('list')
+      '/schedules/:id': (params) =>
+          @main.scheduleInfo.active(params)
+          @nv.show('info')
 
     Spine.Route.setup()
 
-  showAddSchedule: (t) =>
-    @main.scheduleInfo.active(t)
 
 
 module.exports = App

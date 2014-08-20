@@ -7,7 +7,7 @@ Eve = require('eve')
 Schedule = require('models/schedule')
 $       = Spine.$
 
-class SForm extends Spine.Controller
+class Form extends Spine.Controller
   elements:
     ".cyclbl": "cycGroup"
     ".startList":"startList"
@@ -240,6 +240,6 @@ class Shape extends Spine.Controller
   # }}}
 
 ScheduleManager = {}
-ScheduleManager.SForm = SForm
+ScheduleManager.Form = Form
 ScheduleManager.Shape = Shape
 module.exports = ScheduleManager
