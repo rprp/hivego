@@ -16,7 +16,10 @@ class JobManager extends Spine.Controller
     "#jobid":  "jobid"
 
   events:
-    "click .close": "hideJob"
+    "click .close": @hideJob = (e) ->
+        @el.css("display","none")
+  
+
     "click #submitJob": "postJob"
     "keypress #jobname": "keypress"
     "keypress #jobdesc": "keypress"
@@ -39,7 +42,7 @@ class JobManager extends Spine.Controller
     @height = top
   # }}}
 
-  refreshJobList:(top,left) =># {{{
+  refreshJobList:(top,left) =>
     return [top,left] unless @item.Jobs
     return [top,left] unless @isRefresh
     if @list
@@ -77,8 +80,22 @@ class JobManager extends Spine.Controller
 
 
       s1.push(jobcir)
-      s.hover(@hoveron,@hoverout,s1,s1)
-      s.hover(@hlightTasks,@nlightTasks)
+
+      s.hover(
+         @hoveron = ->
+           a = Raphael.animation({"fill-opacity": 0.8}, 200)
+           @.animate(a)
+         ,@hoverout = ->
+           b = Raphael.animation({"fill-opacity": 0.1}, 200)
+           @.animate(b)
+         ,s1,s1)
+
+      s.hover(
+         @hlightTasks = ->
+            @data("sinfo")?.taskShape.hlight(@data("Id"))
+        ,@nlightTasks = ->
+            @data("sinfo")?.taskShape.nlight(@data("Id"))
+      )
 
       @set.push(s)
       @list.push(s)
@@ -86,25 +103,8 @@ class JobManager extends Spine.Controller
 
       @isRefresh = false
       [top,left]=[top+50,left]
-  # }}}
+  
 
-  hlightTasks: -># {{{
-    @data("sinfo")?.taskShape.hlight(@data("Id"))
-  # }}}
-      
-  hoveron: -># {{{
-    a = Raphael.animation({"fill-opacity": 0.8}, 200)
-    @.animate(a)
-  # }}}
-      
-  nlightTasks: -># {{{
-    @data("sinfo")?.taskShape.nlight(@data("Id"))
-  # }}}
-
-  hoverout: -># {{{
-    b = Raphael.animation({"fill-opacity": 0.1}, 200)
-    @.animate(b)
-  # }}}
 
   render: (x, y, job) =># {{{
     @html(require('views/job')(job))
@@ -143,10 +143,6 @@ class JobManager extends Spine.Controller
     ts = @.data("this")
     jb.bind("change",ts?.delJobAndRefresh)
     jb.destroy({url:"/schedules/#{@.data("Sid")}/jobs/#{@.data("Id")}"})
-  # }}}
-
-  hideJob: (e) -># {{{
-    @el.css("display","none")
   # }}}
 
   postJob: (e) -># {{{

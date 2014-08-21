@@ -19,54 +19,69 @@ class Form extends Spine.Controller
     ".startList":"startList"
     ".taskParamList":"taskParamList"
     "#jobid": "JobId"
-# }}}
+  # }}}
 
   events:# {{{
-    "click .tclose"       :  "hideTask"
-    "click .tparam"       :  "editParam"
-    "click .addParam"     :  "appendParam"
-    "click .delParam"     :  "delParam"
-    "click #submitTask": "postTask"
-    "click .jobli": "setJob"
+    "click #submitTask": "postTask"# {{{
+    "click .tclose": -> @el.css("display","none")
+    "mouseenter .list-group-item": (e) -> $(e.target).children(".delParam").css("display","")
+    "mouseleave .list-group-item": (e) -> $(e.target).children(".delParam").css("display","none")# }}}
 
-    "keypress .addTask":  "addTaskKeyPress"
-    "keypress .taskParam":  "paramKeyPress"
-    "blur .taskParam":  "setTaskParamVal"
+    "click .tparam": @editParam = (e) -># {{{
+            $(e.target).siblings().not(".delParam").css("display","")
+            $(e.target).siblings().focus()
+            $(e.target).css("display","none")# }}}
+  
+    "click .addParam": @appendParam = -># {{{
+            @taskParamList.append(require('views/task-param')())
+            $(".taskParam").focus()
+    "click .delParam": (e) -> $(e.target).parent("li").remove()# }}}
+  
+    "click .jobli": @setJob = (e) -># {{{
+            $('#jobid').val(@$(e.target).attr("data"))
+            $('.jobbtn').text(@$(e.target).text())
+            $('.jobbtn').css("background-color",@$(e.target).css("background-color"))
+            $('.jobbl').css("background-color",@$(e.target).css("background-color"))
+    # }}}
 
-    "mouseenter .list-group-item":  "showDelParam"
-    "mouseleave .list-group-item":  "hideDelParam"
+    "keypress .addTask":  @addTaskKeyPress = (e) -># {{{
+            e = e||window.event
+            if e.ctrlKey and e.keyCode in [13,10]
+              @postTask(e)# }}}
+  
+    "keypress .taskParam": @paramKeyPress = (e) -># {{{
+            e = e||window.event
+            if e.keyCode in [13,10]
+              @setTaskParamVal(e)
+    # }}}
 
-    "mousedown .addTaskHead": "setMoveFlg"
-    "mouseup .addTaskHead": "clearMoveFlg"
-    "mousemove .addTaskHead": "movePanel"
-# }}}
+    "blur .taskParam":  @setTaskParamVal = (e) -># {{{
+            e = e||window.event
+            $(e.target).css("display","none")
+            $(e.target).siblings().not(".delParam").css("display","")
+            $(e.target).siblings().not(".delParam").text(" #{$(e.target).val()}           ")
+    # }}}
+
+    "mousedown .addTaskHead": (e) -> [@isMove,@preLeft,@preTop] = [true, e.clientX, e.clientY]# {{{
+    "mouseup .addTaskHead": (e) -> [@isMove = false, @el.css("opacity", 1)]
+    "mousemove .addTaskHead": (e) ->
+            return unless @isMove
+            e = e||window.event
+
+            dx = (e.clientX - @preLeft) + parseInt(@el.css("left"))
+            dy = (e.clientY - @preTop) + parseInt(@el.css("top"))
+            @el.css("left", dx)
+            @el.css("top", dy)
+            @el.css("opacity", 0.4)
+
+            @preLeft = e.clientX
+            @preTop = e.clientY# }}}
+
+  # }}}
 
   constructor: (@c, @item) -># {{{
     super
     @isMove = false
-  # }}}
-
-  showDelParam: (e) -># {{{
-    $(e.target).children(".delParam").css("display","")
-  # }}}
-
-  hideDelParam: (e) -># {{{
-    $(e.target).children(".delParam").css("display","none")
-  # }}}
-
-  delParam: (e) -># {{{
-    $(e.target).parent("li").remove()
-  # }}}
-
-  appendParam: -># {{{
-    @taskParamList.append(require('views/task-param')())
-    $(".taskParam").focus()
-  # }}}
-
-  addTaskKeyPress: (e) -># {{{
-    e = e||window.event
-    if e.ctrlKey and e.keyCode in [13,10]
-      @postTask(e)
   # }}}
 
   postTask: (e) -># {{{
@@ -137,71 +152,6 @@ class Form extends Spine.Controller
 
 # }}}
 
-  setCyc: (e) -># {{{
-    @cycGroup.removeClass("label-success")
-    @cycGroup.addClass("label-default")
-
-    $(e.target).removeClass("label-default")
-    $(e.target).addClass("label-success")
-
-    @item.SetCyc($(e.target).text())
-  # }}}
-
-  hideTask: -># {{{
-    @el.css("display","none")
-# }}}
-
-  setMoveFlg: (e) -># {{{
-    @isMove = true
-    @preLeft = e.clientX
-    @preTop = e.clientY
-  # }}}
-
-  clearMoveFlg: (e) -># {{{
-    @isMove = false
-    @el.css("opacity", 1)
-  # }}}
-
-  movePanel: (e) -># {{{
-    return unless @isMove
-    e = e||window.event
-
-    dx = (e.clientX - @preLeft) + parseInt(@el.css("left"))
-    dy = (e.clientY - @preTop) + parseInt(@el.css("top"))
-    @el.css("left", dx)
-    @el.css("top", dy)
-    @el.css("opacity", 0.4)
-
-    @preLeft = e.clientX
-    @preTop = e.clientY
-  # }}}
-
-  editParam: (e) -># {{{
-    $(e.target).siblings().not(".delParam").css("display","")
-    $(e.target).siblings().focus()
-    $(e.target).css("display","none")
-  # }}}
-
-  setTaskParamVal: (e) -># {{{
-    e = e||window.event
-    $(e.target).css("display","none")
-    $(e.target).siblings().not(".delParam").css("display","")
-    $(e.target).siblings().not(".delParam").text(" #{$(e.target).val()}           ")
-  # }}}
-
-  paramKeyPress: (e) -># {{{
-    e = e||window.event
-    if e.keyCode in [13,10]
-      @setTaskParamVal(e)
-  # }}}
-
-  setJob: (e) -># {{{
-    $('#jobid').val(@$(e.target).attr("data"))
-    $('.jobbtn').text(@$(e.target).text())
-    $('.jobbtn').css("background-color",@$(e.target).css("background-color"))
-    $('.jobbl').css("background-color",@$(e.target).css("background-color"))
-  # }}}
-  
 class Shape extends Spine.Controller
   elements:# {{{
     "#confirmdeltaskrel": "confirmdeltaskrel"
@@ -222,18 +172,22 @@ class Shape extends Spine.Controller
     Spine.bind("deleteTask", @deleteTask)
     @setpp = @paper.set()
     @isRefresh = true
-    @jobList = []
-    @taskList = []
     @delTaskRels = []
     @currentTask
     @relTask
-    top = 80
+    top = 100
     
     if @item.Jobs
       @refreshTaskList(top)
   # }}}
 
-  refreshTaskList: (top) =># {{{
+  refreshTaskList: (top = 100) =># {{{
+    if @taskList
+      s.remove() for s in @taskList
+
+    @jobList = []
+    @taskList = []
+
     for jb,i in @item.Jobs
       job = new Job()
       for key, value of jb
@@ -358,9 +312,9 @@ class Shape extends Spine.Controller
               Spine.trigger("deleteTaskRel",@)
             ,r)
 
-          #cc = @paper.circle(0, 0, 3)
+          #cc = @paper.circle(0, 0, 3.5)
           #cc.attr({fill: '#00FF00', stroke:  '#00FF00', "fill-opacity": 1, "stroke-width": 0})
-          #$(cc.node).html("<animateMotion fill='freeze' begin='2s' dur='2s' repeatCount='8' path='#{r.line.getSubpath().end}' rotate='auto' />")
+          #$(cc.node).html("<animateMotion fill='freeze' begin='3s' dur='2s' repeatCount='8' path='#{r.line.getSubpath().end}' rotate='auto' />")
 
     ts.toolset.show()
     ts.toolset.attr({"fill-opacity": 0.1, "stroke-width": 0.5})

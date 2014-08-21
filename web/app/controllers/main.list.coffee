@@ -25,22 +25,56 @@ class ScheduleItem extends Spine.Controller
     ".addstart":      "addstart"
     
   events:
-   "mouseenter":            "mouseover"
-   "mouseleave":             "mouseout"
+   "click .cyc":    "showcyc"
+   "click .sname":  "showschedule"
+   "click .sstart": "ck"
+   "click .sdelete": "deleteSchedule"
 
-   "mouseenter .sstart":    "sstartmouseover"
-   "mouseleave .sstart":     "sstartmouseout"
+   "mouseenter": @mouseover = (e)->
+        @panel.stop().animate({boxShadow:'0 0 20px #777'},"fast")
+        @cyc.stop().animate({opacity: 1},200)
+        @timout=window.setTimeout( =>
+            @pbmask.fadeOut(400)
+            @body.stop().animate({opacity: 1},800)
+            @footer.stop().animate({opacity: 1},800)
+            @sname.stop().animate({color:"#333", opacity: 1},800)
+            @header.stop().animate({backgroundColor:"#E0E0E0", opactiy: 1},"fast")
 
-   "mouseenter .jobcnt":    "jobcntmouseover"
-   "mouseleave .jobcnt":     "jobcntmouseout"
+            @srun.stop().animate({backgroundColor:"#999", opactiy: 1},800)
+            @sdelete.stop().animate({backgroundColor:"#999", opactiy: 1},800)
+            @scopy.stop().animate({backgroundColor:"#999", opactiy: 1},800)
+          ,800)
 
-   "mouseenter .nextstart": "nextstartmouseover"
-   "mouseleave .nextstart":  "nextstartmouseout"
+   "mouseleave": @mouseout = (e)->
+        window.clearTimeout(@timout)
+        @pbmask.fadeIn(200)
+        @cyc.stop().animate({opacity: 0},200)
+        @body.stop().animate({opacity: 0},800)
+        @footer.stop().animate({opacity: 0},800)
+        @sname.stop().animate({color:"transparent"},"fast")
+        @header.stop().animate({backgroundColor:"transparent"},"fast")
+        @panel.stop().animate({boxShadow:''},"fast")
 
-   "click .cyc":       "showcyc"
-   "click .sname":       "showschedule"
-   "click .sstart":       "ck"
-   "click .sdelete":       "deleteSchedule"
+        @srun.stop().animate({backgroundColor:"transparent"},"fast")
+        @scopy.stop().animate({backgroundColor:"transparent"},"fast")
+        @sdelete.stop().animate({backgroundColor:"transparent"},"fast")
+
+   "mouseenter .sstart":    @sstartmouseover = (e)->
+          @sstart.css("background-color","#E0E0E0")
+          @addstart.stop().animate({backgroundColor:"#999"},1)
+   "mouseleave .sstart":     @sstartmouseout = (e)->
+          @sstart.css("background-color","transparent")
+          @addstart.stop().animate({backgroundColor:"transparent"},10)
+
+   "mouseenter .jobcnt": @jobcntmouseover = (e)->
+          @jobcnt.css("background-color","#E0E0E0")
+   "mouseleave .jobcnt": @jobcntmouseout = (e)->
+          @jobcnt.css("background-color","transparent")
+
+   "mouseenter .nextstart": @nextstartmouseover = (e)->
+          @nextstart.css("background-color","#E0E0E0")
+   "mouseleave .nextstart": @nextstartmouseout = (e)->
+          @nextstart.css("background-color","transparent")
 
   constructor: ->
     super
@@ -70,52 +104,6 @@ class ScheduleItem extends Spine.Controller
       alert(e.target.className)
       e.stopPropagation()
 
-  mouseover: (e)->
-    @panel.stop().animate({boxShadow:'0 0 20px #777'},"fast")
-    @cyc.stop().animate({opacity: 1},200)
-    @timout=window.setTimeout( =>
-        @pbmask.fadeOut(400)
-        @body.stop().animate({opacity: 1},800)
-        @footer.stop().animate({opacity: 1},800)
-        @sname.stop().animate({color:"#333", opacity: 1},800)
-        @header.stop().animate({backgroundColor:"#E0E0E0", opactiy: 1},"fast")
-
-        @srun.stop().animate({backgroundColor:"#999", opactiy: 1},800)
-        @sdelete.stop().animate({backgroundColor:"#999", opactiy: 1},800)
-        @scopy.stop().animate({backgroundColor:"#999", opactiy: 1},800)
-      ,800)
-
-  mouseout: (e)->
-    window.clearTimeout(@timout)
-    @pbmask.fadeIn(200)
-    @cyc.stop().animate({opacity: 0},200)
-    @body.stop().animate({opacity: 0},800)
-    @footer.stop().animate({opacity: 0},800)
-    @sname.stop().animate({color:"transparent"},"fast")
-    @header.stop().animate({backgroundColor:"transparent"},"fast")
-    @panel.stop().animate({boxShadow:''},"fast")
-
-    @srun.stop().animate({backgroundColor:"transparent"},"fast")
-    @scopy.stop().animate({backgroundColor:"transparent"},"fast")
-    @sdelete.stop().animate({backgroundColor:"transparent"},"fast")
-
-  sstartmouseover: (e)->
-      @sstart.css("background-color","#E0E0E0")
-      @addstart.stop().animate({backgroundColor:"#999"},1)
-  sstartmouseout: (e)->
-      @sstart.css("background-color","transparent")
-      @addstart.stop().animate({backgroundColor:"transparent"},10)
-
-  jobcntmouseover: (e)->
-      @jobcnt.css("background-color","#E0E0E0")
-  jobcntmouseout: (e)->
-      @jobcnt.css("background-color","transparent")
-
-  nextstartmouseover: (e)->
-      @nextstart.css("background-color","#E0E0E0")
-  nextstartmouseout: (e)->
-      @nextstart.css("background-color","transparent")
-
   deleteSchedule: (e) ->
     s = Schedule.find(@item.Id)
     s.bind("refresh",ScheduleList.addAll)
@@ -133,7 +121,6 @@ class ScheduleList extends Spine.Controller
 
   addOne: (it) =>
     view = new ScheduleItem(item: it)
-    #@append(view.render())
     $('#smain').append(view.render().el)
 
     view.pbmask.css("position","absolute")

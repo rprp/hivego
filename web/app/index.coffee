@@ -43,6 +43,11 @@ class App extends Spine.Controller
     @append @main
     
     @nv.bind('addtask',@main.scheduleInfo.renderTask)
+    @nv.bind('refreshAllTask', =>
+        @main.scheduleInfo.draw()
+        @main.scheduleInfo.ssl.taskShape.refreshTaskList()
+        @main
+      )
     @routes
       '': (params)->
           @main.scheduleList.active(params)

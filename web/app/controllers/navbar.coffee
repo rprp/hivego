@@ -12,35 +12,29 @@ class Navbar extends Spine.Controller
     "#refreshAll": "refreshAll"
 
   events:
-    "mouseenter h1":   "mouseover"
-    "mouseleave h1":   "mouseout"
+    "mouseenter h1": (e) -> $(e.target).stop().animate({backgroundColor:'#777'},400)
+    "mouseleave h1": (e) -> $(e.target).stop().animate({backgroundColor:'#333'},200)
 
-    "click #addSchedule": "showAddSchedule"
-    "click #addTask": "showAddTask"
+    "click #addSchedule": (e) ->
+        e = e||window.event
+        s = new Schedule({Id:-1})
+        @sf = new ScheduleManager.Form("c",s)
+        @append(@sf.render(550,100,s))
+        @sf.el.css("z-index",1000)
+
+    "click #addTask": (e) ->
+        e = e||window.event
+        @trigger('addtask',e)
+
+    "click #refreshAll": (e) ->
+        e = e||window.event
+        @trigger('refreshAllTask',e)
 
   constructor: ->
     super
 
   render: ->
     @html(require('views/navbar')())
-
-  showAddTask: (e) ->
-    e = e||window.event
-    @trigger('addtask',e)
-
-  showAddSchedule: (e) ->
-    e = e||window.event
-    s = new Schedule({Id:-1})
-    @sf = new ScheduleManager.Form("c",s)
-    @append(@sf.render(550,100,s))
-    @sf.el.css("z-index",1000)
-
-  mouseover: (e) ->
-    $(e.target).stop().animate({backgroundColor:'#777'},400)
-
-
-  mouseout: (e) ->
-    $(e.target).stop().animate({backgroundColor:'#333'},200)
 
   show: (param) ->
     if param is 'list'

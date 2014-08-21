@@ -17,43 +17,69 @@ class Form extends Spine.Controller
     "#scheduleDesc":"scheduleDesc"
 
   events:
-    "click .close"        :  "hideSchedule"
-    "click .cyclbl"       :  "setCyc"
-    "click .addStart"     :  "appendStart"
-    "click .delStart"     :  "delStart"
-    "click .start"        :  "editStart"
     "click #submitSchedule": "addSchedule"
-
-    "keypress .startInput":  "startKeypress"
-    "keypress .addSchedule": "keypress"
     "blur .startInput":  "setStartVal"
 
-    "mouseenter .list-group-item":  "showDelStart"
-    "mouseleave .list-group-item":  "hideDelStart"
+    "click .close": -> @el.css("display","none")
 
-    "mousedown .addScheduleHead": "setMoveFlg"
-    "mouseup .addScheduleHead": "clearMoveFlg"
-    "mousemove .addScheduleHead": "movePanel"
+    "click .cyclbl": @setCyc = (e) ->
+            @cycGroup.removeClass("label-success")
+            @cycGroup.addClass("label-default")
+            $(e.target).removeClass("label-default")
+            $(e.target).addClass("label-success")
+            @item.SetCyc($(e.target).text())
+
+    "click .addStart": @appendStart = ->
+            @startList.append(require('views/schedule-start')(@item.GetDefaultSecond()))
+            $(".startInput").focus()
+    "click .delStart": (e) -> $(e.target).parent("li").remove()
+
+    "click .start": @editStart = (e) ->
+            $(e.target).siblings().not(".delStart").css("display","")
+            $(e.target).siblings().focus()
+            $(e.target).css("display","none")
+
+    "keypress .startInput":  @startKeypress = (e) ->
+            e = e||window.event
+            if e.keyCode in [13,10]
+              @setStartVal()
+  
+    "keypress .addSchedule": @keypress = (e) ->
+            e = e||window.event
+            if e.ctrlKey and e.keyCode in [13,10]
+              @addSchedule(e)
+
+    "mouseenter .list-group-item": @showDelStart = (e) ->
+            $(e.target).children(".delStart").css("display","")
+    "mouseleave .list-group-item": @hideDelStart = (e) ->
+            $(e.target).children(".delStart").css("display","none")
+  
+
+    "mousedown .addScheduleHead": @setMoveFlg = (e) ->
+            @isMove = true
+            @preLeft = e.clientX
+            @preTop = e.clientY
+  
+    "mouseup .addScheduleHead": @clearMoveFlg = (e) ->
+            @isMove = false
+            @el.css("opacity", 1)
+  
+    "mousemove .addScheduleHead": @movePanel = (e) ->
+            return unless @isMove
+            e = e||window.event
+
+            dx = (e.clientX - @preLeft) + parseInt(@el.css("left"))
+            dy = (e.clientY - @preTop) + parseInt(@el.css("top"))
+            @el.css("left", dx)
+            @el.css("top", dy)
+            @el.css("opacity", 0.4)
+
+            @preLeft = e.clientX
+            @preTop = e.clientY
+
 
   constructor: (@c, @item) -># {{{
     super
-  # }}}
-
-  showDelStart: (e) -># {{{
-    $(e.target).children(".delStart").css("display","")
-  # }}}
-
-  hideDelStart: (e) -># {{{
-    $(e.target).children(".delStart").css("display","none")
-  # }}}
-
-  delStart: (e) -># {{{
-    $(e.target).parent("li").remove()
-  # }}}
-
-  appendStart: -># {{{
-    @startList.append(require('views/schedule-start')(@item.GetDefaultSecond()))
-    $(".startInput").focus()
   # }}}
 
   setStartVal: (e) -># {{{
@@ -69,24 +95,6 @@ class Form extends Spine.Controller
       $(e.target).siblings().not(".delStart").removeClass("alert-danger")
       $(e.target).siblings().filter(".startSecond").val(t)
       $(e.target).siblings().filter(".startMonth").val(m)
-  # }}}
-
-  startKeypress: (e) -># {{{
-    e = e||window.event
-    if e.keyCode in [13,10]
-      @setStartVal()
-  # }}}
-
-  editStart: (e) -># {{{
-    $(e.target).siblings().not(".delStart").css("display","")
-    $(e.target).siblings().focus()
-    $(e.target).css("display","none")
-  # }}}
-
-  keypress: (e) -># {{{
-    e = e||window.event
-    if e.ctrlKey and e.keyCode in [13,10]
-      @addSchedule(e)
   # }}}
 
   addSchedule: (e) -># {{{
@@ -117,40 +125,6 @@ class Form extends Spine.Controller
       @isRefresh = true
   # }}}
 
-  setCyc: (e) -># {{{
-    @cycGroup.removeClass("label-success")
-    @cycGroup.addClass("label-default")
-
-    $(e.target).removeClass("label-default")
-    $(e.target).addClass("label-success")
-
-    @item.SetCyc($(e.target).text())
-  # }}}
-
-  setMoveFlg: (e) -># {{{
-    @isMove = true
-    @preLeft = e.clientX
-    @preTop = e.clientY
-  # }}}
-
-  clearMoveFlg: (e) -># {{{
-    @isMove = false
-    @el.css("opacity", 1)
-  # }}}
-
-  movePanel: (e) -># {{{
-    return unless @isMove
-    e = e||window.event
-
-    dx = (e.clientX - @preLeft) + parseInt(@el.css("left"))
-    dy = (e.clientY - @preTop) + parseInt(@el.css("top"))
-    @el.css("left", dx)
-    @el.css("top", dy)
-    @el.css("opacity", 0.4)
-
-    @preLeft = e.clientX
-    @preTop = e.clientY
-  # }}}
 
   render: (x, y, schedule) =># {{{
     @html(require('views/schedule')(schedule))
@@ -171,9 +145,7 @@ class Form extends Spine.Controller
     e
   # }}}
     
-  hideSchedule: -># {{{
-    @el.css("display","none")
-  # }}}
+  
 
 class Shape extends Spine.Controller
 

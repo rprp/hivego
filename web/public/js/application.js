@@ -25141,7 +25141,9 @@ Released under the MIT License
     };
 
     JobManager.prototype.events = {
-      "click .close": "hideJob",
+      "click .close": JobManager.hideJob = function(e) {
+        return this.el.css("display", "none");
+      },
       "click #submitJob": "postJob",
       "keypress #jobname": "keypress",
       "keypress #jobdesc": "keypress"
@@ -25228,8 +25230,26 @@ Released under the MIT License
         s.data("Id", job.Id);
         s.data("sinfo", this.sinfo);
         s1.push(jobcir);
-        s.hover(this.hoveron, this.hoverout, s1, s1);
-        s.hover(this.hlightTasks, this.nlightTasks);
+        s.hover(this.hoveron = function() {
+          var a;
+          a = Raphael.animation({
+            "fill-opacity": 0.8
+          }, 200);
+          return this.animate(a);
+        }, this.hoverout = function() {
+          var b;
+          b = Raphael.animation({
+            "fill-opacity": 0.1
+          }, 200);
+          return this.animate(b);
+        }, s1, s1);
+        s.hover(this.hlightTasks = function() {
+          var _ref2;
+          return (_ref2 = this.data("sinfo")) != null ? _ref2.taskShape.hlight(this.data("Id")) : void 0;
+        }, this.nlightTasks = function() {
+          var _ref2;
+          return (_ref2 = this.data("sinfo")) != null ? _ref2.taskShape.nlight(this.data("Id")) : void 0;
+        });
         this.set.push(s);
         this.list.push(s);
         this.lastJob = job;
@@ -25237,32 +25257,6 @@ Released under the MIT License
         _results.push((_ref2 = [top + 50, left], top = _ref2[0], left = _ref2[1], _ref2));
       }
       return _results;
-    };
-
-    JobManager.prototype.hlightTasks = function() {
-      var _ref;
-      return (_ref = this.data("sinfo")) != null ? _ref.taskShape.hlight(this.data("Id")) : void 0;
-    };
-
-    JobManager.prototype.hoveron = function() {
-      var a;
-      a = Raphael.animation({
-        "fill-opacity": 0.8
-      }, 200);
-      return this.animate(a);
-    };
-
-    JobManager.prototype.nlightTasks = function() {
-      var _ref;
-      return (_ref = this.data("sinfo")) != null ? _ref.taskShape.nlight(this.data("Id")) : void 0;
-    };
-
-    JobManager.prototype.hoverout = function() {
-      var b;
-      b = Raphael.animation({
-        "fill-opacity": 0.1
-      }, 200);
-      return this.animate(b);
     };
 
     JobManager.prototype.render = function(x, y, job) {
@@ -25309,10 +25303,6 @@ Released under the MIT License
       return jb.destroy({
         url: "/schedules/" + (this.data("Sid")) + "/jobs/" + (this.data("Id"))
       });
-    };
-
-    JobManager.prototype.hideJob = function(e) {
-      return this.el.css("display", "none");
     };
 
     JobManager.prototype.postJob = function(e) {
@@ -25443,7 +25433,9 @@ Released under the MIT License
 
     ScheduleInfo.prototype.draw = function(rs) {
       var h, paper, _ref, _ref1, _ref2;
-      this.item = Schedule.find(rs.Id);
+      if (rs) {
+        this.item = Schedule.find(rs.Id);
+      }
       h = ((_ref = this.item) != null ? (_ref1 = _ref.Jobs) != null ? _ref1.length : void 0 : void 0) * 140;
       if (!h) {
         h = 800;
@@ -25542,18 +25534,104 @@ Released under the MIT License
     };
 
     ScheduleItem.prototype.events = {
-      "mouseenter": "mouseover",
-      "mouseleave": "mouseout",
-      "mouseenter .sstart": "sstartmouseover",
-      "mouseleave .sstart": "sstartmouseout",
-      "mouseenter .jobcnt": "jobcntmouseover",
-      "mouseleave .jobcnt": "jobcntmouseout",
-      "mouseenter .nextstart": "nextstartmouseover",
-      "mouseleave .nextstart": "nextstartmouseout",
       "click .cyc": "showcyc",
       "click .sname": "showschedule",
       "click .sstart": "ck",
-      "click .sdelete": "deleteSchedule"
+      "click .sdelete": "deleteSchedule",
+      "mouseenter": ScheduleItem.mouseover = function(e) {
+        this.panel.stop().animate({
+          boxShadow: '0 0 20px #777'
+        }, "fast");
+        this.cyc.stop().animate({
+          opacity: 1
+        }, 200);
+        return this.timout = window.setTimeout((function(_this) {
+          return function() {
+            _this.pbmask.fadeOut(400);
+            _this.body.stop().animate({
+              opacity: 1
+            }, 800);
+            _this.footer.stop().animate({
+              opacity: 1
+            }, 800);
+            _this.sname.stop().animate({
+              color: "#333",
+              opacity: 1
+            }, 800);
+            _this.header.stop().animate({
+              backgroundColor: "#E0E0E0",
+              opactiy: 1
+            }, "fast");
+            _this.srun.stop().animate({
+              backgroundColor: "#999",
+              opactiy: 1
+            }, 800);
+            _this.sdelete.stop().animate({
+              backgroundColor: "#999",
+              opactiy: 1
+            }, 800);
+            return _this.scopy.stop().animate({
+              backgroundColor: "#999",
+              opactiy: 1
+            }, 800);
+          };
+        })(this), 800);
+      },
+      "mouseleave": ScheduleItem.mouseout = function(e) {
+        window.clearTimeout(this.timout);
+        this.pbmask.fadeIn(200);
+        this.cyc.stop().animate({
+          opacity: 0
+        }, 200);
+        this.body.stop().animate({
+          opacity: 0
+        }, 800);
+        this.footer.stop().animate({
+          opacity: 0
+        }, 800);
+        this.sname.stop().animate({
+          color: "transparent"
+        }, "fast");
+        this.header.stop().animate({
+          backgroundColor: "transparent"
+        }, "fast");
+        this.panel.stop().animate({
+          boxShadow: ''
+        }, "fast");
+        this.srun.stop().animate({
+          backgroundColor: "transparent"
+        }, "fast");
+        this.scopy.stop().animate({
+          backgroundColor: "transparent"
+        }, "fast");
+        return this.sdelete.stop().animate({
+          backgroundColor: "transparent"
+        }, "fast");
+      },
+      "mouseenter .sstart": ScheduleItem.sstartmouseover = function(e) {
+        this.sstart.css("background-color", "#E0E0E0");
+        return this.addstart.stop().animate({
+          backgroundColor: "#999"
+        }, 1);
+      },
+      "mouseleave .sstart": ScheduleItem.sstartmouseout = function(e) {
+        this.sstart.css("background-color", "transparent");
+        return this.addstart.stop().animate({
+          backgroundColor: "transparent"
+        }, 10);
+      },
+      "mouseenter .jobcnt": ScheduleItem.jobcntmouseover = function(e) {
+        return this.jobcnt.css("background-color", "#E0E0E0");
+      },
+      "mouseleave .jobcnt": ScheduleItem.jobcntmouseout = function(e) {
+        return this.jobcnt.css("background-color", "transparent");
+      },
+      "mouseenter .nextstart": ScheduleItem.nextstartmouseover = function(e) {
+        return this.nextstart.css("background-color", "#E0E0E0");
+      },
+      "mouseleave .nextstart": ScheduleItem.nextstartmouseout = function(e) {
+        return this.nextstart.css("background-color", "transparent");
+      }
     };
 
     function ScheduleItem() {
@@ -25594,108 +25672,6 @@ Released under the MIT License
         alert(e.target.className);
         return e.stopPropagation();
       }
-    };
-
-    ScheduleItem.prototype.mouseover = function(e) {
-      this.panel.stop().animate({
-        boxShadow: '0 0 20px #777'
-      }, "fast");
-      this.cyc.stop().animate({
-        opacity: 1
-      }, 200);
-      return this.timout = window.setTimeout((function(_this) {
-        return function() {
-          _this.pbmask.fadeOut(400);
-          _this.body.stop().animate({
-            opacity: 1
-          }, 800);
-          _this.footer.stop().animate({
-            opacity: 1
-          }, 800);
-          _this.sname.stop().animate({
-            color: "#333",
-            opacity: 1
-          }, 800);
-          _this.header.stop().animate({
-            backgroundColor: "#E0E0E0",
-            opactiy: 1
-          }, "fast");
-          _this.srun.stop().animate({
-            backgroundColor: "#999",
-            opactiy: 1
-          }, 800);
-          _this.sdelete.stop().animate({
-            backgroundColor: "#999",
-            opactiy: 1
-          }, 800);
-          return _this.scopy.stop().animate({
-            backgroundColor: "#999",
-            opactiy: 1
-          }, 800);
-        };
-      })(this), 800);
-    };
-
-    ScheduleItem.prototype.mouseout = function(e) {
-      window.clearTimeout(this.timout);
-      this.pbmask.fadeIn(200);
-      this.cyc.stop().animate({
-        opacity: 0
-      }, 200);
-      this.body.stop().animate({
-        opacity: 0
-      }, 800);
-      this.footer.stop().animate({
-        opacity: 0
-      }, 800);
-      this.sname.stop().animate({
-        color: "transparent"
-      }, "fast");
-      this.header.stop().animate({
-        backgroundColor: "transparent"
-      }, "fast");
-      this.panel.stop().animate({
-        boxShadow: ''
-      }, "fast");
-      this.srun.stop().animate({
-        backgroundColor: "transparent"
-      }, "fast");
-      this.scopy.stop().animate({
-        backgroundColor: "transparent"
-      }, "fast");
-      return this.sdelete.stop().animate({
-        backgroundColor: "transparent"
-      }, "fast");
-    };
-
-    ScheduleItem.prototype.sstartmouseover = function(e) {
-      this.sstart.css("background-color", "#E0E0E0");
-      return this.addstart.stop().animate({
-        backgroundColor: "#999"
-      }, 1);
-    };
-
-    ScheduleItem.prototype.sstartmouseout = function(e) {
-      this.sstart.css("background-color", "transparent");
-      return this.addstart.stop().animate({
-        backgroundColor: "transparent"
-      }, 10);
-    };
-
-    ScheduleItem.prototype.jobcntmouseover = function(e) {
-      return this.jobcnt.css("background-color", "#E0E0E0");
-    };
-
-    ScheduleItem.prototype.jobcntmouseout = function(e) {
-      return this.jobcnt.css("background-color", "transparent");
-    };
-
-    ScheduleItem.prototype.nextstartmouseover = function(e) {
-      return this.nextstart.css("background-color", "#E0E0E0");
-    };
-
-    ScheduleItem.prototype.nextstartmouseout = function(e) {
-      return this.nextstart.css("background-color", "transparent");
     };
 
     ScheduleItem.prototype.deleteSchedule = function(e) {
@@ -25775,10 +25751,34 @@ Released under the MIT License
     };
 
     Navbar.prototype.events = {
-      "mouseenter h1": "mouseover",
-      "mouseleave h1": "mouseout",
-      "click #addSchedule": "showAddSchedule",
-      "click #addTask": "showAddTask"
+      "mouseenter h1": function(e) {
+        return $(e.target).stop().animate({
+          backgroundColor: '#777'
+        }, 400);
+      },
+      "mouseleave h1": function(e) {
+        return $(e.target).stop().animate({
+          backgroundColor: '#333'
+        }, 200);
+      },
+      "click #addSchedule": function(e) {
+        var s;
+        e = e || window.event;
+        s = new Schedule({
+          Id: -1
+        });
+        this.sf = new ScheduleManager.Form("c", s);
+        this.append(this.sf.render(550, 100, s));
+        return this.sf.el.css("z-index", 1000);
+      },
+      "click #addTask": function(e) {
+        e = e || window.event;
+        return this.trigger('addtask', e);
+      },
+      "click #refreshAll": function(e) {
+        e = e || window.event;
+        return this.trigger('refreshAllTask', e);
+      }
     };
 
     function Navbar() {
@@ -25787,34 +25787,6 @@ Released under the MIT License
 
     Navbar.prototype.render = function() {
       return this.html(require('views/navbar')());
-    };
-
-    Navbar.prototype.showAddTask = function(e) {
-      e = e || window.event;
-      return this.trigger('addtask', e);
-    };
-
-    Navbar.prototype.showAddSchedule = function(e) {
-      var s;
-      e = e || window.event;
-      s = new Schedule({
-        Id: -1
-      });
-      this.sf = new ScheduleManager.Form("c", s);
-      this.append(this.sf.render(550, 100, s));
-      return this.sf.el.css("z-index", 1000);
-    };
-
-    Navbar.prototype.mouseover = function(e) {
-      return $(e.target).stop().animate({
-        backgroundColor: '#777'
-      }, 400);
-    };
-
-    Navbar.prototype.mouseout = function(e) {
-      return $(e.target).stop().animate({
-        backgroundColor: '#333'
-      }, 200);
     };
 
     Navbar.prototype.show = function(param) {
@@ -25871,20 +25843,73 @@ Released under the MIT License
     };
 
     Form.prototype.events = {
-      "click .close": "hideSchedule",
-      "click .cyclbl": "setCyc",
-      "click .addStart": "appendStart",
-      "click .delStart": "delStart",
-      "click .start": "editStart",
       "click #submitSchedule": "addSchedule",
-      "keypress .startInput": "startKeypress",
-      "keypress .addSchedule": "keypress",
       "blur .startInput": "setStartVal",
-      "mouseenter .list-group-item": "showDelStart",
-      "mouseleave .list-group-item": "hideDelStart",
-      "mousedown .addScheduleHead": "setMoveFlg",
-      "mouseup .addScheduleHead": "clearMoveFlg",
-      "mousemove .addScheduleHead": "movePanel"
+      "click .close": function() {
+        return this.el.css("display", "none");
+      },
+      "click .cyclbl": Form.setCyc = function(e) {
+        this.cycGroup.removeClass("label-success");
+        this.cycGroup.addClass("label-default");
+        $(e.target).removeClass("label-default");
+        $(e.target).addClass("label-success");
+        return this.item.SetCyc($(e.target).text());
+      },
+      "click .addStart": Form.appendStart = function() {
+        this.startList.append(require('views/schedule-start')(this.item.GetDefaultSecond()));
+        return $(".startInput").focus();
+      },
+      "click .delStart": function(e) {
+        return $(e.target).parent("li").remove();
+      },
+      "click .start": Form.editStart = function(e) {
+        $(e.target).siblings().not(".delStart").css("display", "");
+        $(e.target).siblings().focus();
+        return $(e.target).css("display", "none");
+      },
+      "keypress .startInput": Form.startKeypress = function(e) {
+        var _ref;
+        e = e || window.event;
+        if ((_ref = e.keyCode) === 13 || _ref === 10) {
+          return this.setStartVal();
+        }
+      },
+      "keypress .addSchedule": Form.keypress = function(e) {
+        var _ref;
+        e = e || window.event;
+        if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
+          return this.addSchedule(e);
+        }
+      },
+      "mouseenter .list-group-item": Form.showDelStart = function(e) {
+        return $(e.target).children(".delStart").css("display", "");
+      },
+      "mouseleave .list-group-item": Form.hideDelStart = function(e) {
+        return $(e.target).children(".delStart").css("display", "none");
+      },
+      "mousedown .addScheduleHead": Form.setMoveFlg = function(e) {
+        this.isMove = true;
+        this.preLeft = e.clientX;
+        return this.preTop = e.clientY;
+      },
+      "mouseup .addScheduleHead": Form.clearMoveFlg = function(e) {
+        this.isMove = false;
+        return this.el.css("opacity", 1);
+      },
+      "mousemove .addScheduleHead": Form.movePanel = function(e) {
+        var dx, dy;
+        if (!this.isMove) {
+          return;
+        }
+        e = e || window.event;
+        dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
+        dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
+        this.el.css("left", dx);
+        this.el.css("top", dy);
+        this.el.css("opacity", 0.4);
+        this.preLeft = e.clientX;
+        return this.preTop = e.clientY;
+      }
     };
 
     function Form(c, item) {
@@ -25894,23 +25919,6 @@ Released under the MIT License
       this.scheduleRefresh = __bind(this.scheduleRefresh, this);
       Form.__super__.constructor.apply(this, arguments);
     }
-
-    Form.prototype.showDelStart = function(e) {
-      return $(e.target).children(".delStart").css("display", "");
-    };
-
-    Form.prototype.hideDelStart = function(e) {
-      return $(e.target).children(".delStart").css("display", "none");
-    };
-
-    Form.prototype.delStart = function(e) {
-      return $(e.target).parent("li").remove();
-    };
-
-    Form.prototype.appendStart = function() {
-      this.startList.append(require('views/schedule-start')(this.item.GetDefaultSecond()));
-      return $(".startInput").focus();
-    };
 
     Form.prototype.setStartVal = function(e) {
       var m, t, _ref;
@@ -25925,28 +25933,6 @@ Released under the MIT License
         $(e.target).siblings().not(".delStart").removeClass("alert-danger");
         $(e.target).siblings().filter(".startSecond").val(t);
         return $(e.target).siblings().filter(".startMonth").val(m);
-      }
-    };
-
-    Form.prototype.startKeypress = function(e) {
-      var _ref;
-      e = e || window.event;
-      if ((_ref = e.keyCode) === 13 || _ref === 10) {
-        return this.setStartVal();
-      }
-    };
-
-    Form.prototype.editStart = function(e) {
-      $(e.target).siblings().not(".delStart").css("display", "");
-      $(e.target).siblings().focus();
-      return $(e.target).css("display", "none");
-    };
-
-    Form.prototype.keypress = function(e) {
-      var _ref;
-      e = e || window.event;
-      if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
-        return this.addSchedule(e);
       }
     };
 
@@ -25987,40 +25973,6 @@ Released under the MIT License
       }
     };
 
-    Form.prototype.setCyc = function(e) {
-      this.cycGroup.removeClass("label-success");
-      this.cycGroup.addClass("label-default");
-      $(e.target).removeClass("label-default");
-      $(e.target).addClass("label-success");
-      return this.item.SetCyc($(e.target).text());
-    };
-
-    Form.prototype.setMoveFlg = function(e) {
-      this.isMove = true;
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
-    };
-
-    Form.prototype.clearMoveFlg = function(e) {
-      this.isMove = false;
-      return this.el.css("opacity", 1);
-    };
-
-    Form.prototype.movePanel = function(e) {
-      var dx, dy;
-      if (!this.isMove) {
-        return;
-      }
-      e = e || window.event;
-      dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
-      dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
-      this.el.css("left", dx);
-      this.el.css("top", dy);
-      this.el.css("opacity", 0.4);
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
-    };
-
     Form.prototype.render = function(x, y, schedule) {
       var c, cs, _i, _len, _ref;
       this.html(require('views/schedule')(schedule));
@@ -26043,10 +25995,6 @@ Released under the MIT License
       e = e || window.event;
       Spine.trigger("editScheduleRender", e.clientX, e.clientY, this.item);
       return e;
-    };
-
-    Form.prototype.hideSchedule = function() {
-      return this.el.css("display", "none");
     };
 
     return Form;
@@ -26286,20 +26234,75 @@ Released under the MIT License
     };
 
     Form.prototype.events = {
-      "click .tclose": "hideTask",
-      "click .tparam": "editParam",
-      "click .addParam": "appendParam",
-      "click .delParam": "delParam",
       "click #submitTask": "postTask",
-      "click .jobli": "setJob",
-      "keypress .addTask": "addTaskKeyPress",
-      "keypress .taskParam": "paramKeyPress",
-      "blur .taskParam": "setTaskParamVal",
-      "mouseenter .list-group-item": "showDelParam",
-      "mouseleave .list-group-item": "hideDelParam",
-      "mousedown .addTaskHead": "setMoveFlg",
-      "mouseup .addTaskHead": "clearMoveFlg",
-      "mousemove .addTaskHead": "movePanel"
+      "click .tclose": function() {
+        return this.el.css("display", "none");
+      },
+      "mouseenter .list-group-item": function(e) {
+        return $(e.target).children(".delParam").css("display", "");
+      },
+      "mouseleave .list-group-item": function(e) {
+        return $(e.target).children(".delParam").css("display", "none");
+      },
+      "click .tparam": Form.editParam = function(e) {
+        $(e.target).siblings().not(".delParam").css("display", "");
+        $(e.target).siblings().focus();
+        return $(e.target).css("display", "none");
+      },
+      "click .addParam": Form.appendParam = function() {
+        this.taskParamList.append(require('views/task-param')());
+        return $(".taskParam").focus();
+      },
+      "click .delParam": function(e) {
+        return $(e.target).parent("li").remove();
+      },
+      "click .jobli": Form.setJob = function(e) {
+        $('#jobid').val(this.$(e.target).attr("data"));
+        $('.jobbtn').text(this.$(e.target).text());
+        $('.jobbtn').css("background-color", this.$(e.target).css("background-color"));
+        return $('.jobbl').css("background-color", this.$(e.target).css("background-color"));
+      },
+      "keypress .addTask": Form.addTaskKeyPress = function(e) {
+        var _ref;
+        e = e || window.event;
+        if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
+          return this.postTask(e);
+        }
+      },
+      "keypress .taskParam": Form.paramKeyPress = function(e) {
+        var _ref;
+        e = e || window.event;
+        if ((_ref = e.keyCode) === 13 || _ref === 10) {
+          return this.setTaskParamVal(e);
+        }
+      },
+      "blur .taskParam": Form.setTaskParamVal = function(e) {
+        e = e || window.event;
+        $(e.target).css("display", "none");
+        $(e.target).siblings().not(".delParam").css("display", "");
+        return $(e.target).siblings().not(".delParam").text(" " + ($(e.target).val()) + "           ");
+      },
+      "mousedown .addTaskHead": function(e) {
+        var _ref;
+        return _ref = [true, e.clientX, e.clientY], this.isMove = _ref[0], this.preLeft = _ref[1], this.preTop = _ref[2], _ref;
+      },
+      "mouseup .addTaskHead": function(e) {
+        return [this.isMove = false, this.el.css("opacity", 1)];
+      },
+      "mousemove .addTaskHead": function(e) {
+        var dx, dy;
+        if (!this.isMove) {
+          return;
+        }
+        e = e || window.event;
+        dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
+        dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
+        this.el.css("left", dx);
+        this.el.css("top", dy);
+        this.el.css("opacity", 0.4);
+        this.preLeft = e.clientX;
+        return this.preTop = e.clientY;
+      }
     };
 
     function Form(c, item) {
@@ -26309,31 +26312,6 @@ Released under the MIT License
       Form.__super__.constructor.apply(this, arguments);
       this.isMove = false;
     }
-
-    Form.prototype.showDelParam = function(e) {
-      return $(e.target).children(".delParam").css("display", "");
-    };
-
-    Form.prototype.hideDelParam = function(e) {
-      return $(e.target).children(".delParam").css("display", "none");
-    };
-
-    Form.prototype.delParam = function(e) {
-      return $(e.target).parent("li").remove();
-    };
-
-    Form.prototype.appendParam = function() {
-      this.taskParamList.append(require('views/task-param')());
-      return $(".taskParam").focus();
-    };
-
-    Form.prototype.addTaskKeyPress = function(e) {
-      var _ref;
-      e = e || window.event;
-      if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
-        return this.postTask(e);
-      }
-    };
 
     Form.prototype.postTask = function(e) {
       var i, li, tk, tp, _i, _j, _len, _len1, _ref, _ref1;
@@ -26433,72 +26411,6 @@ Released under the MIT License
       return this.el.css("top", 60);
     };
 
-    Form.prototype.setCyc = function(e) {
-      this.cycGroup.removeClass("label-success");
-      this.cycGroup.addClass("label-default");
-      $(e.target).removeClass("label-default");
-      $(e.target).addClass("label-success");
-      return this.item.SetCyc($(e.target).text());
-    };
-
-    Form.prototype.hideTask = function() {
-      return this.el.css("display", "none");
-    };
-
-    Form.prototype.setMoveFlg = function(e) {
-      this.isMove = true;
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
-    };
-
-    Form.prototype.clearMoveFlg = function(e) {
-      this.isMove = false;
-      return this.el.css("opacity", 1);
-    };
-
-    Form.prototype.movePanel = function(e) {
-      var dx, dy;
-      if (!this.isMove) {
-        return;
-      }
-      e = e || window.event;
-      dx = (e.clientX - this.preLeft) + parseInt(this.el.css("left"));
-      dy = (e.clientY - this.preTop) + parseInt(this.el.css("top"));
-      this.el.css("left", dx);
-      this.el.css("top", dy);
-      this.el.css("opacity", 0.4);
-      this.preLeft = e.clientX;
-      return this.preTop = e.clientY;
-    };
-
-    Form.prototype.editParam = function(e) {
-      $(e.target).siblings().not(".delParam").css("display", "");
-      $(e.target).siblings().focus();
-      return $(e.target).css("display", "none");
-    };
-
-    Form.prototype.setTaskParamVal = function(e) {
-      e = e || window.event;
-      $(e.target).css("display", "none");
-      $(e.target).siblings().not(".delParam").css("display", "");
-      return $(e.target).siblings().not(".delParam").text(" " + ($(e.target).val()) + "           ");
-    };
-
-    Form.prototype.paramKeyPress = function(e) {
-      var _ref;
-      e = e || window.event;
-      if ((_ref = e.keyCode) === 13 || _ref === 10) {
-        return this.setTaskParamVal(e);
-      }
-    };
-
-    Form.prototype.setJob = function(e) {
-      $('#jobid').val(this.$(e.target).attr("data"));
-      $('.jobbtn').text(this.$(e.target).text());
-      $('.jobbtn').css("background-color", this.$(e.target).css("background-color"));
-      return $('.jobbl').css("background-color", this.$(e.target).css("background-color"));
-    };
-
     return Form;
 
   })(Spine.Controller);
@@ -26541,23 +26453,33 @@ Released under the MIT License
       Spine.bind("deleteTask", this.deleteTask);
       this.setpp = this.paper.set();
       this.isRefresh = true;
-      this.jobList = [];
-      this.taskList = [];
       this.delTaskRels = [];
       this.currentTask;
       this.relTask;
-      top = 80;
+      top = 100;
       if (this.item.Jobs) {
         this.refreshTaskList(top);
       }
     }
 
     Shape.prototype.refreshTaskList = function(top) {
-      var i, j, jb, job, k, key, left, rts, spacing, t, task, tasks, tk, v, value, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _results;
-      _ref = this.item.Jobs;
+      var i, j, jb, job, k, key, left, rts, s, spacing, t, task, tasks, tk, v, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _results;
+      if (top == null) {
+        top = 100;
+      }
+      if (this.taskList) {
+        _ref = this.taskList;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          s = _ref[_i];
+          s.remove();
+        }
+      }
+      this.jobList = [];
+      this.taskList = [];
+      _ref1 = this.item.Jobs;
       _results = [];
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        jb = _ref[i];
+      for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
+        jb = _ref1[i];
         job = new Job();
         for (key in jb) {
           value = jb[key];
@@ -26565,11 +26487,11 @@ Released under the MIT License
         }
         this.jobList.push(job);
         tasks = (function() {
-          var _ref1, _results1;
-          _ref1 = job.Tasks;
+          var _ref2, _results1;
+          _ref2 = job.Tasks;
           _results1 = [];
-          for (k in _ref1) {
-            v = _ref1[k];
+          for (k in _ref2) {
+            v = _ref2[k];
             _results1.push(v);
           }
           return _results1;
@@ -26578,7 +26500,7 @@ Released under the MIT License
         if (tasks.length > 0) {
           left = (this.w - 200) / 2 - (tasks.length / 2) * spacing;
         }
-        for (j = _j = 0, _len1 = tasks.length; _j < _len1; j = ++_j) {
+        for (j = _k = 0, _len2 = tasks.length; _k < _len2; j = ++_k) {
           task = tasks[j];
           tk = new Task();
           for (key in task) {
@@ -26591,9 +26513,9 @@ Released under the MIT License
           this.taskList.push(t);
           this.setpp.push(t.sp);
           this.setpp.push(t.text);
-          _ref1 = this.getTaskShape(t.RelTaskId);
-          for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
-            rts = _ref1[_k];
+          _ref2 = this.getTaskShape(t.RelTaskId);
+          for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
+            rts = _ref2[_l];
             rts.addNext(t);
           }
           left += spacing;
@@ -27729,6 +27651,13 @@ Released under the MIT License
       this.main = new Main;
       this.append(this.main);
       this.nv.bind('addtask', this.main.scheduleInfo.renderTask);
+      this.nv.bind('refreshAllTask', (function(_this) {
+        return function() {
+          _this.main.scheduleInfo.draw();
+          _this.main.scheduleInfo.ssl.taskShape.refreshTaskList();
+          return _this.main;
+        };
+      })(this));
       this.routes({
         '': function(params) {
           this.main.scheduleList.active(params);

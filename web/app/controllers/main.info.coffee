@@ -41,7 +41,8 @@ class ScheduleInfo extends Spine.Controller
     @html(require('views/main-info')())
 
   draw: (rs) =>
-    @item = Schedule.find(rs.Id)
+    if rs
+      @item = Schedule.find(rs.Id)
 
     h = @item?.Jobs?.length*140
     h = 800 unless h
@@ -60,7 +61,6 @@ class ScheduleInfo extends Spine.Controller
 
     @append (@ssl.taskShape.el)
     @ssl
-
 
 class ScheduleSymbol
   constructor: (@paper, @width, @height, @item) ->
