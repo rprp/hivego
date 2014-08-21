@@ -25432,6 +25432,7 @@ Released under the MIT License
     }
 
     ScheduleInfo.prototype.change = function(params) {
+      this.ssl = null;
       Schedule.fetch({
         Id: params.id
       });
@@ -25705,11 +25706,17 @@ Released under the MIT License
     function ScheduleList() {
       this.addAll = __bind(this.addAll, this);
       this.addOne = __bind(this.addOne, this);
+      this.change = __bind(this.change, this);
       ScheduleList.__super__.constructor.apply(this, arguments);
       Schedule.bind("create", this.addOne);
       Schedule.bind("refresh", this.addAll);
       this.html(require('views/main')());
+      this.active(this.change);
     }
+
+    ScheduleList.prototype.change = function(params) {
+      return this.addAll();
+    };
 
     ScheduleList.prototype.addOne = function(it) {
       var view;
@@ -25725,6 +25732,10 @@ Released under the MIT License
 
     ScheduleList.prototype.addAll = function() {
       $('.scheduleitem').remove();
+      Schedule.comparator = function(a, b) {
+        return a.Id - b.Id;
+      };
+      Schedule.sort();
       return Schedule.each(this.addOne);
     };
 
@@ -26387,10 +26398,6 @@ Released under the MIT License
 
     Form.prototype.render = function(task) {
       var c, cs, i, n, _i, _j, _len, _len1, _ref, _ref1, _ref2;
-      if (!this.item.Jobs) {
-        alert('xxx');
-        return;
-      }
       if (task.Name) {
         this.task = task;
       } else {
@@ -27642,21 +27649,14 @@ Released under the MIT License
     __extends(App, _super);
 
     App.prototype.events = {
-      "keypress": "keypress"
-    };
-
-    App.prototype.keypress = function(e) {
-      e = e || window.event;
-      return console.log(e.keyCode);
+      "keypress": function(e) {
+        e = e || window.event;
+        return console.log(e.keyCode);
+      }
     };
 
     function App() {
       App.__super__.constructor.apply(this, arguments);
-      Spine.bind("showaddschedule", this.showAddSchedule = (function(_this) {
-        return function(t) {
-          return _this.main.scheduleInfo.active(t);
-        };
-      })(this));
       Schedule.fetch();
       Schedule.bind("ajaxError", function(record, xhr, settings, error) {
         return console.log(error);
@@ -27665,9 +27665,8 @@ Released under the MIT License
         return console.log("ajaxSuccess " + xhr + " " + status);
       });
       this.nv = new Navbar;
-      this.append(this.nv.render());
       this.main = new Main;
-      this.append(this.main);
+      this.append(this.nv.render(), this.main);
       this.nv.bind('addtask', this.main.scheduleInfo.renderTask);
       this.nv.bind('refreshAllTask', (function(_this) {
         return function() {

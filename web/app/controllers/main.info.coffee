@@ -36,6 +36,7 @@ class ScheduleInfo extends Spine.Controller
     @active @change
 
   change: (params) =>
+    @ssl = null
     Schedule.fetch({Id:params.id})
     @render()
 

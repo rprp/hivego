@@ -14,21 +14,14 @@ class Main extends Spine.Stack
     scheduleList: ScheduleList
     scheduleInfo: ScheduleInfo
 
-
 class App extends Spine.Controller
   events:
-    "keypress": "keypress"
-
-  keypress: (e) ->
-    e = e||window.event
-    console.log(e.keyCode)
+    "keypress": (e) ->
+        e = e||window.event
+        console.log(e.keyCode)
 
   constructor: ->
     super
-    Spine.bind("showaddschedule", @showAddSchedule = (t) =>
-        @main.scheduleInfo.active(t)
-      )
-
     Schedule.fetch()
 
     Schedule.bind "ajaxError", (record, xhr, settings, error) ->
@@ -37,17 +30,16 @@ class App extends Spine.Controller
         console.log("ajaxSuccess #{xhr} #{status}")
 
     @nv = new Navbar
-    @append @nv.render()
-
     @main = new Main
-    @append @main
+    @append @nv.render(), @main
     
-    @nv.bind('addtask',@main.scheduleInfo.renderTask)
+    @nv.bind('addtask', @main.scheduleInfo.renderTask)
     @nv.bind('refreshAllTask', =>
         @main.scheduleInfo.draw()
         @main.scheduleInfo.ssl.taskShape.refreshTaskList()
         @main
       )
+
     @routes
       '': (params)->
           @main.scheduleList.active(params)
@@ -60,7 +52,5 @@ class App extends Spine.Controller
           @nv.show('info')
 
     Spine.Route.setup()
-
-
 
 module.exports = App

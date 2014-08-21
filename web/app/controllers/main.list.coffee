@@ -82,7 +82,7 @@ class ScheduleItem extends Spine.Controller
     throw "@item required" unless @item
     @item.bind("update", @render)
     @item.bind("destroy", @remove)
-  
+
   render: (item) =>
     @item = item if item
     @html(@template(@item))
@@ -119,6 +119,11 @@ class ScheduleList extends Spine.Controller
     Schedule.bind("refresh", @addAll)
     @html(require('views/main')())
 
+    @active @change
+
+  change: (params) =>
+    @addAll()
+
   addOne: (it) =>
     view = new ScheduleItem(item: it)
     $('#smain').append(view.render().el)
@@ -130,6 +135,9 @@ class ScheduleList extends Spine.Controller
 
   addAll: =>
     $('.scheduleitem').remove()
+    Schedule.comparator = (a, b) ->
+      return a.Id - b.Id
+    Schedule.sort()
     Schedule.each(@addOne)
 
 module.exports = ScheduleItem
