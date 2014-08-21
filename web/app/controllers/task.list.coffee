@@ -125,6 +125,10 @@ class Form extends Spine.Controller
   # }}}
 
   render: (task) =># {{{
+    unless @item.Jobs
+      alert('xxx')
+      return
+
     if task.Name
       @task=task
     else

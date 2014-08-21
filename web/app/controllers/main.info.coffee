@@ -24,6 +24,8 @@ class ScheduleInfo extends Spine.Controller
       )
       
     Spine.bind("addTaskRender", @renderTask = (task) =>
+        unless @item.Jobs
+          return
         @append (@ssl.taskForm.render(task))
       )
 

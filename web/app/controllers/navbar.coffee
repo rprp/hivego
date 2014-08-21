@@ -16,6 +16,9 @@ class Navbar extends Spine.Controller
     "mouseleave h1": (e) -> $(e.target).stop().animate({backgroundColor:'#333'},200)
 
     "click #addSchedule": (e) ->
+        if @sf
+          @sf.el.remove()
+
         e = e||window.event
         s = new Schedule({Id:-1})
         @sf = new ScheduleManager.Form("c",s)

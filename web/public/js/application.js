@@ -25172,7 +25172,15 @@ Released under the MIT License
       _ref = [30, 10], top = _ref[0], left = _ref[1];
       this.title = this.paper.text(left, top, "作业列表").attr(Style.fontStyle);
       this.titlerect = this.paper.rect(left, top - 20, 190, 35, 3).attr(Style.titlerectStyle);
-      this.titlerect.hover(this.hoveron, this.hoverout);
+      this.titlerect.hover(function() {
+        return this.animate({
+          "fill-opacity": 0.8
+        }, 200);
+      }, function() {
+        return this.animate({
+          "fill-opacity": 0.1
+        }, 200);
+      });
       this.titlerect.click(this.showJob, this);
       this.set = this.paper.setFinish();
       _ref1 = this.refreshJobList(top + 40, left), top = _ref1[0], left = _ref1[1];
@@ -25409,6 +25417,9 @@ Released under the MIT License
       })(this));
       Spine.bind("addTaskRender", this.renderTask = (function(_this) {
         return function(task) {
+          if (!_this.item.Jobs) {
+            return;
+          }
           return _this.append(_this.ssl.taskForm.render(task));
         };
       })(this));
@@ -25763,6 +25774,9 @@ Released under the MIT License
       },
       "click #addSchedule": function(e) {
         var s;
+        if (this.sf) {
+          this.sf.el.remove();
+        }
         e = e || window.event;
         s = new Schedule({
           Id: -1
@@ -26373,6 +26387,10 @@ Released under the MIT License
 
     Form.prototype.render = function(task) {
       var c, cs, i, n, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+      if (!this.item.Jobs) {
+        alert('xxx');
+        return;
+      }
       if (task.Name) {
         this.task = task;
       } else {

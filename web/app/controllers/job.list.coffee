@@ -34,7 +34,13 @@ class JobManager extends Spine.Controller
     [top,left] = [30, 10]
     @title = @paper.text(left, top, "作业列表").attr(Style.fontStyle)
     @titlerect = @paper.rect(left,top-20,190,35,3).attr(Style.titlerectStyle)
-    @titlerect.hover(@hoveron,@hoverout)
+
+    @titlerect.hover(
+         -> @.animate({"fill-opacity": 0.8}, 200)
+      ,
+         -> @.animate({"fill-opacity": 0.1}, 200)
+         )
+
     @titlerect.click(@showJob,@)
     @set = @paper.setFinish()
 
