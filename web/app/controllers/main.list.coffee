@@ -3,7 +3,7 @@ Schedule = require('models/schedule')
 $       = Spine.$
 
 class ScheduleItem extends Spine.Controller
-  className: 'scheduleitem'
+  className: 'scheduleitem col-sm-3'
   
   elements:
     ".panel":          "panel"
@@ -25,10 +25,9 @@ class ScheduleItem extends Spine.Controller
     ".addstart":      "addstart"
     
   events:
-   "click .cyc":    "showcyc"
-   "click .sname":  "showschedule"
-   "click .sstart": "ck"
    "click .sdelete": "deleteSchedule"
+   "click .sname": (e)-> @navigate('/schedules', @item.Id)
+   "click .pbmask": (e)-> @navigate('/schedules', @item.Id)
 
    "mouseenter": @mouseover = (e)->
         @panel.stop().animate({boxShadow:'0 0 20px #777'},"fast")
@@ -59,59 +58,37 @@ class ScheduleItem extends Spine.Controller
         @scopy.stop().animate({backgroundColor:"transparent"},"fast")
         @sdelete.stop().animate({backgroundColor:"transparent"},"fast")
 
-   "mouseenter .sstart":    @sstartmouseover = (e)->
+   "mouseenter .sstart": (e)->
           @sstart.css("background-color","#E0E0E0")
           @addstart.stop().animate({backgroundColor:"#999"},1)
-   "mouseleave .sstart":     @sstartmouseout = (e)->
+   "mouseleave .sstart": (e)->
           @sstart.css("background-color","transparent")
           @addstart.stop().animate({backgroundColor:"transparent"},10)
 
-   "mouseenter .jobcnt": @jobcntmouseover = (e)->
-          @jobcnt.css("background-color","#E0E0E0")
-   "mouseleave .jobcnt": @jobcntmouseout = (e)->
-          @jobcnt.css("background-color","transparent")
+   "mouseenter .jobcnt": (e)-> @jobcnt.css("background-color","#E0E0E0")
+   "mouseleave .jobcnt": (e)-> @jobcnt.css("background-color","transparent")
 
-   "mouseenter .nextstart": @nextstartmouseover = (e)->
-          @nextstart.css("background-color","#E0E0E0")
-   "mouseleave .nextstart": @nextstartmouseout = (e)->
-          @nextstart.css("background-color","transparent")
+   "mouseenter .nextstart": (e)-> @nextstart.css("background-color","#E0E0E0")
+   "mouseleave .nextstart": (e)-> @nextstart.css("background-color","transparent")
 
   constructor: ->
     super
-    @el.addClass('col-sm-3')
     throw "@item required" unless @item
     @item.bind("update", @render)
-    @item.bind("destroy", @remove)
 
   render: (item) =>
     @item = item if item
-    @html(@template(@item))
+    @html(require('views/main-list')(@item))
     @
     
-  template: (items) ->
-    require('views/main-list')(items)
-
-  remove: ->
-
-  showcyc: ->
-    alert('！')
-
-  showschedule: (e)->
-    @navigate('/schedules', @item.Id)
-
-  ck: (e) ->
-    if e.target.className.indexOf("glyphicon-plus")>=0
-      alert(e.target.className)
-      e.stopPropagation()
-
   deleteSchedule: (e) ->
     s = Schedule.find(@item.Id)
-    s.bind("refresh",ScheduleList.addAll)
+    s.bind("refresh", MainList.addAll)
     @el.remove()
     s.destroy()
 
-class ScheduleList extends Spine.Controller
-  className: 'schedulelist'
+class MainList extends Spine.Controller
+  className: 'mainlist row'
 
   constructor: ->
     super
@@ -119,19 +96,11 @@ class ScheduleList extends Spine.Controller
     Schedule.bind("refresh", @addAll)
     @html(require('views/main')())
 
-    @active @change
-
-  change: (params) =>
-    @addAll()
+    @active (params) => @addAll()
 
   addOne: (it) =>
     view = new ScheduleItem(item: it)
-    $('#smain').append(view.render().el)
-
-    view.pbmask.css("position","absolute")
-    view.pbmask.css("z-index","100")
-    view.pbmask.css("width",view.sstart.css("width"))
-    view.pbmask.css("height",view.body.css("height"))
+    @append(view.render().el)
 
   addAll: =>
     $('.scheduleitem').remove()
@@ -140,5 +109,4 @@ class ScheduleList extends Spine.Controller
     Schedule.sort()
     Schedule.each(@addOne)
 
-module.exports = ScheduleItem
-module.exports = ScheduleList
+module.exports = MainList

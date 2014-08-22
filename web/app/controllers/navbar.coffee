@@ -10,6 +10,7 @@ class Navbar extends Spine.Controller
     "#addSchedule": "addSchedule"
     "#addTask": "addTask"
     "#refreshAll": "refreshAll"
+    ".sinput": "sinput"
 
   events:
     "mouseenter h1": (e) -> $(e.target).stop().animate({backgroundColor:'#777'},400)
@@ -32,6 +33,23 @@ class Navbar extends Spine.Controller
     "click #refreshAll": (e) ->
         e = e||window.event
         @trigger('refreshAllTask',e)
+
+    "click #home": (e) -> @navigate('/schedules')
+
+    "focus .sinput": (e) ->
+        $(e.target).stop().animate({width:'300px'},400)
+        window.setTimeout( =>
+            @sinput.val("")
+          ,1)
+    "blur .sinput": (e) ->
+        $(e.target).stop().animate({width:'50px'},400)
+        @sinput.val("")
+
+    "keypress": (e) ->
+        console.log(e.keyCode)
+        e = e||window.event
+        if e.keyCode in [27, 13]
+          @sinput.blur()
 
   constructor: ->
     super

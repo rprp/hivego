@@ -1,25 +1,24 @@
 <header id="header" >
-    <a href="/">
-        <h1>HiveGo Manager</h1>
-    </a>
+    <h1 id="home">
+        <span class="glyphicon glyphicon-home" ></span>&nbsp;
+    </h1>
     &nbsp;
 
     <h1 id="addSchedule">
-        <span class="addStart glyphicon glyphicon-plus" ></span>&nbsp;Schedule
+        <span class="addStart glyphicon glyphicon-plus" ></span>&nbsp;S
     </h1>
     &nbsp;
 
     <h1 id="addTask">
-        <span class="addStart glyphicon glyphicon-plus" ></span>&nbsp;Task
+        <span class="addStart glyphicon glyphicon-plus" ></span>&nbsp;T
     </h1>
     &nbsp;
 
     <h1 id="refreshAll" >
         <span class="addStart glyphicon glyphicon-refresh" ></span>
     </h1>
-    &nbsp;
-
-    <input type="text" class="sinput" placeholder="搜索..." value=""/>
+     
+    <input id="isearch" type="text" class="sinput" placeholder="搜索..." value=""/>
 
 </header>
 

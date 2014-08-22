@@ -122,12 +122,14 @@ class Form extends Spine.Controller
       id = @item.Id
       Schedule.fetch({Id:id})
       @item = Schedule.find(id)
-      @isRefresh = true
   # }}}
 
 
   render: (x, y, schedule) =># {{{
     @html(require('views/schedule')(schedule))
+    window.setTimeout( =>
+            @scheduleName.focus()
+      ,500)
 
     cs = c for c in @cycGroup when c.textContent is @item.GetCyc()
     $(cs).removeClass("label-default")
@@ -153,12 +155,11 @@ class Shape extends Spine.Controller
     super
     @isMove = false
     @height = 0
-    @isRefresh = true
     @refreshSchedule(20, 10)
   # }}}
 
-  refreshSchedule: (top, left) =># {{{
-    return [top,left] unless @isRefresh
+  refreshSchedule: (top, left, isRefresh = true) =># {{{
+    return [top,left] unless isRefresh
     @st.pop().remove() while @st?.length
 
     @paper.setStart()
@@ -197,7 +198,6 @@ class Shape extends Spine.Controller
 
     @st = @paper.setFinish()
 
-    @isRefresh = false
     @height = top
   # }}}
 

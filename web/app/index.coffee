@@ -1,24 +1,24 @@
 require('lib/setup')
 
 Spine    = require('spineify')
-Manager = require('spineify/lib/manager')
 Schedule = require('models/schedule')
-ScheduleList = require('controllers/main.list')
-ScheduleInfo = require('controllers/main.info')
+MainList = require('controllers/main.list')
+MainInfo = require('controllers/main.info')
 Navbar = require('controllers/navbar')
 
 class Main extends Spine.Stack
-  className: 'smain'
+  className: 'smain container'
 
   controllers:
-    scheduleList: ScheduleList
-    scheduleInfo: ScheduleInfo
+    mainList: MainList
+    mainInfo: MainInfo
 
 class App extends Spine.Controller
   events:
     "keypress": (e) ->
-        e = e||window.event
-        console.log(e.keyCode)
+       e = e||window.event
+       if e.keyCode is 47
+         @nv.sinput.focus()
 
   constructor: ->
     super
@@ -33,22 +33,22 @@ class App extends Spine.Controller
     @main = new Main
     @append @nv.render(), @main
     
-    @nv.bind('addtask', @main.scheduleInfo.renderTask)
+    @nv.bind('addtask', @main.mainInfo.addTaskRender)
     @nv.bind('refreshAllTask', =>
-        @main.scheduleInfo.draw()
-        @main.scheduleInfo.ssl.taskShape.refreshTaskList()
+        @main.mainInfo.draw()
+        @main.mainInfo.taskShape.refreshTaskList()
         @main
       )
 
     @routes
       '': (params)->
-          @main.scheduleList.active(params)
+          @main.mainList.active(params)
           @nv.show('list')
       '/schedules': (params) ->
-          @main.scheduleList.active(params)
+          @main.mainList.active(params)
           @nv.show('list')
       '/schedules/:id': (params) =>
-          @main.scheduleInfo.active(params)
+          @main.mainInfo.active(params)
           @nv.show('info')
 
     Spine.Route.setup()
