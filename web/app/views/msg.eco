@@ -1,0 +1,5 @@
+<div class="alert alert-dismissible" role="alert" style="z-index: 500; position: absolute; top: 0px; left:
+    300px; padding: 5px; display: none;">
+    <div id='msg'> 
+    </div>
+</div>

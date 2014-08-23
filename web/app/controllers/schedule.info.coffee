@@ -110,6 +110,10 @@ class Form extends Spine.Controller
         @item.StartMonth.push(parseInt(sm))
         @item.StartSecond.push(parseInt(ss))
 
+    @item.bind "ajaxError", (xhr, st, error) ->
+        stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+        Spine.trigger("msg",st.status,stxt)
+
     if @item.Id is -1
       @item.create()
     else
@@ -143,7 +147,7 @@ class Form extends Spine.Controller
 
   showSchedule: (e) -># {{{
     e = e||window.event
-    Spine.trigger("editScheduleRender",e.clientX,e.clientY,@.item)
+    @trigger("editScheduleRender",e.clientX,e.clientY,@.item)
     e
   # }}}
     

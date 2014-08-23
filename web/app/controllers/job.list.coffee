@@ -16,9 +16,7 @@ class JobManager extends Spine.Controller
     "#jobid":  "jobid"
 
   events:
-    "click .close": @hideJob = (e) ->
-        @el.css("display","none")
-  
+    "click .close": (e) -> @el.css("display","none")
 
     "click #submitJob": "postJob"
     "keypress #jobname": "keypress"
@@ -27,7 +25,9 @@ class JobManager extends Spine.Controller
   constructor: (@paper, @color, @item, @width, @sinfo) -># {{{
     super
     Job.fetch({url:"/schedules/#{@item.Id}/jobs"}) if @item.Jobs
-    @isRefresh = true
+    Job.bind "ajaxError", (xhr, st, error) ->
+        stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+        Spine.trigger("msg",st.status,stxt)
     @height = 0
 
     @paper.setStart()
@@ -48,9 +48,9 @@ class JobManager extends Spine.Controller
     @height = top
   # }}}
 
-  refreshJobList:(top,left) =>
+  refreshJobList:(top,left,isRefresh = true) =>
     return [top,left] unless @item.Jobs
-    return [top,left] unless @isRefresh
+    return [top,left] unless isRefresh
     if @list
       for s in @list
         s.pop().remove() while s?.length
@@ -107,7 +107,6 @@ class JobManager extends Spine.Controller
       @list.push(s)
       @lastJob = job
 
-      @isRefresh = false
       [top,left]=[top+50,left]
   
 
@@ -148,6 +147,9 @@ class JobManager extends Spine.Controller
     jb = Job.find(@.data("Id"))
     ts = @.data("this")
     jb.bind("change",ts?.delJobAndRefresh)
+    jb.bind "ajaxError", (xhr, st, error) ->
+        stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+        Spine.trigger("msg",st.status,stxt)
     jb.destroy({url:"/schedules/#{@.data("Sid")}/jobs/#{@.data("Id")}"})
   # }}}
 
@@ -156,12 +158,18 @@ class JobManager extends Spine.Controller
     if @jobid.val()
       jb = Job.find(@jobid.val())
       jb.bind("ajaxSuccess",@addJobAndRefresh)
+      jb.bind "ajaxError", (xhr, st, error) ->
+          stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+          Spine.trigger("msg",st.status,stxt)
       jb.Name = @jobname.val()
       jb.Desc = @jobdesc.val()
       jb.save({url:"/schedules/#{@item.Id}/jobs/#{jb.Id}"})
     else
       jb = new Job()
       jb.bind("ajaxSuccess",@addJobAndRefresh)
+      jb.bind "ajaxError", (xhr, st, error) ->
+          stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+          Spine.trigger("msg",st.status,stxt)
       jb.ScheduleId = @item.Id
       jb.PreJobId = if @prejobid.val() then parseInt(@prejobid.val()) else 0
       jb.Id = -1
@@ -175,14 +183,12 @@ class JobManager extends Spine.Controller
       id = @item.Id
       Schedule.fetch({Id:id})
       @item = Schedule.find(id)
-      @isRefresh = true
   # }}}
  
   delJobAndRefresh: (data, status, xhr) =># {{{
     id = @item.Id
     Schedule.fetch({Id:id})
     @item = Schedule.find(id)
-    @isRefresh = true
   # }}}
  
 module.exports = JobManager

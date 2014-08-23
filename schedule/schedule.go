@@ -166,8 +166,8 @@ type Schedule struct { // {{{
 	Jobs         []*Job          //作业列表
 	Tasks        []*Task         `json:"-"` //任务列表
 	Desc         string          //调度说明
-	JobCnt       int64           //调度中作业数量
-	TaskCnt      int64           //调度中任务数量
+	JobCnt       int             //调度中作业数量
+	TaskCnt      int             //调度中任务数量
 	CreateUserId int64           //创建人
 	CreateTime   time.Time       //创人
 	ModifyUserId int64           //修改人
@@ -178,6 +178,12 @@ type Schedule struct { // {{{
 //启动的时间，并依据此设置一个定时器按时唤醒，Schedule唤醒后，会重新
 //从元数据库初始化一下信息，生成执行结构ExecSchedule，执行其Run方法
 func (s *Schedule) Timer() { // {{{
+	if s.Cyc == "" {
+		e := fmt.Sprintf("[s.Timer] Schedule [%s] Cyc is not set!", s.Name)
+		g.L.Warningln(e)
+		return
+	}
+
 	//获取距启动的时间（秒）
 	countDown, err := getCountDown(s.Cyc, s.StartMonth, s.StartSecond)
 	if err != nil {
@@ -279,6 +285,7 @@ func (s *Schedule) AddTask(task *Task) error { // {{{
 	}
 
 	s.Tasks = append(s.Tasks, task)
+	s.TaskCnt = len(s.Tasks)
 	g.Tasks[string(task.Id)] = task
 
 	j, err := s.GetJobById(task.JobId)
@@ -310,7 +317,7 @@ func (s *Schedule) DeleteTask(id int64) error { // {{{
 
 	t := s.Tasks[i]
 	s.Tasks = append(s.Tasks[0:i], s.Tasks[i+1:]...)
-	s.TaskCnt--
+	s.TaskCnt = len(s.Tasks)
 
 	delete(g.Tasks, string(id))
 
@@ -325,6 +332,7 @@ func (s *Schedule) DeleteTask(id int64) error { // {{{
 		e := fmt.Sprintf("\n[s.DeleteTask] DeleteTask error %s", err.Error())
 		return errors.New(e)
 	}
+	j.TaskCnt--
 
 	err = t.Delete()
 	if err != nil {
@@ -371,7 +379,7 @@ func (s *Schedule) AddJob(job *Job) error { // {{{
 		}
 	}
 	s.Jobs = append(s.Jobs, job)
-	s.JobCnt += 1
+	s.JobCnt = len(s.Jobs)
 	return err
 } // }}}
 
@@ -429,7 +437,7 @@ func (s *Schedule) DeleteJob(id int64) error { // {{{
 			s.Jobs = s.Jobs[0 : len(s.Jobs)-1]
 		}
 
-		s.JobCnt--
+		s.JobCnt = len(s.Jobs)
 		err = j.deleteJob()
 		if err != nil {
 			e := fmt.Sprintf("\n[s.DeleteJob] delete job [%d] error %s.", j.Id, err.Error())

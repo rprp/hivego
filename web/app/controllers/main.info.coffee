@@ -25,11 +25,11 @@ class MainInfo extends Spine.Controller
           return
         @append (@taskForm.render(task))
       )
-    Spine.bind("editScheduleRender", (x, y, schedule) => @append(@scheduleForm.render(x, y, schedule)))
 
     @active @change
 
   change: (params) =>
+    @paper = null
     Schedule.fetch({Id:params.id})
     @render()
 
@@ -41,23 +41,25 @@ class MainInfo extends Spine.Controller
       @item = Schedule.find(rs.Id)
 
     h = @item?.Jobs?.length*140
-    @pant.css("height", 800 if h < 800)
+    @pant.css("height", 800 if h? or h < 800)
     [@width, @height] = [parseFloat(@pant.css("width")), parseFloat(@pant.css("height"))]
 
     unless @paper
       @paper = Raphael(@pant.get(0),'100%','100%')
       @color = Style.color
       @taskShape = new TaskManager.Shape(@paper,@color,@item,@width,@height)
+      @taskShape.bind('refresh',@draw)
       @taskForm = new TaskManager.Form("c",@item)
       @taskForm.bind('updateTaskAndRefresh',@taskShape.updateTaskAndRefresh)
       @taskForm.bind('addTaskAndRefresh',@taskShape.addTaskAndRefresh)
+      @taskForm.bind('refresh',@draw)
   
       slider = @paper.path("M #{@width-220},10L #{@width-220},#{@height}")
       slider.attr(Style.slider)
       
       @scheduleShape = new ScheduleManager.Shape(@paper,@color,@item,220)
       @scheduleForm = new ScheduleManager.Form("c",@item)
-      @scheduleShape.titlerect.click(@scheduleForm.showSchedule,@scheduleForm)
+      @scheduleForm.bind("editScheduleRender", (x, y, schedule) => @append(@scheduleForm.render(x, y, schedule)))
   
       @jobManager = new JobManager(@paper,@color,@item,220,@)
       @jobManager.bind("rfJobList",@layout)
@@ -65,6 +67,7 @@ class MainInfo extends Spine.Controller
       @scheduleShape.refreshSchedule(20,10)
       @jobManager.refreshJobList(70,10)
 
+    @scheduleShape.titlerect.click(@scheduleForm.showSchedule,@scheduleForm)
     @layout()
     @append (@taskShape.el)
     @

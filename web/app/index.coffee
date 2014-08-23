@@ -5,6 +5,7 @@ Schedule = require('models/schedule')
 MainList = require('controllers/main.list')
 MainInfo = require('controllers/main.info')
 Navbar = require('controllers/navbar')
+Msg = require('controllers/msg')
 
 class Main extends Spine.Stack
   className: 'smain container'
@@ -24,14 +25,18 @@ class App extends Spine.Controller
     super
     Schedule.fetch()
 
-    Schedule.bind "ajaxError", (record, xhr, settings, error) ->
-        console.log(error)
+    Schedule.bind "ajaxError", (xhr, st, error) ->
+        stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+        Spine.trigger("msg",st.status,stxt)
+        console.log("ajaxError statusText=#{stxt} error=#{error}")
     Schedule.bind "ajaxSuccess", (data,status,xhr) ->
+        #Spine.trigger("msg",status,"success")
         console.log("ajaxSuccess #{xhr} #{status}")
 
     @nv = new Navbar
+    @msg = new Msg
     @main = new Main
-    @append @nv.render(), @main
+    @append @nv.render(), @main, @msg.render()
     
     @nv.bind('addtask', @main.mainInfo.addTaskRender)
     @nv.bind('refreshAllTask', =>

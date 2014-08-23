@@ -18,7 +18,7 @@ type Job struct { // {{{
 	NextJobId    int64            //下级作业ID
 	NextJob      *Job             `json:"-"` //下级作业
 	Tasks        map[string]*Task //作业中的任务
-	TaskCnt      int64            //调度中任务数量
+	TaskCnt      int              //调度中任务数量
 	CreateUserId int64            //创建人
 	CreateTime   time.Time        //创人
 	ModifyUserId int64            //修改人

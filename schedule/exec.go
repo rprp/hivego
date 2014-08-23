@@ -21,10 +21,10 @@ type ExecSchedule struct { // {{{
 	execType       int8                //执行类型 1. 自动定时调度 2.手动人工调度 3.修复执行
 	execJob        *ExecJob            //作业执行信息
 	execTasks      map[int64]*ExecTask //任务执行信息
-	jobCnt         int64               //调度中作业数量
-	taskCnt        int64               //调度中任务数量
-	successTaskCnt int64               //执行成功任务数量
-	failTaskCnt    int64               //执行失败任务数量
+	jobCnt         int                 //调度中作业数量
+	taskCnt        int                 //调度中任务数量
+	successTaskCnt int                 //执行成功任务数量
+	failTaskCnt    int                 //执行失败任务数量
 } // }}}
 
 //ExecSchedule.Run()方法执行调度任务。
@@ -154,7 +154,7 @@ func (s *ExecSchedule) Pause() { // {{{
 //clearFailTask会处理失败的任务，失败的任务被当做参数传递进来后，会将这个任务从其依赖任务
 //的下级列表中删除，若该任务还有下级任务则进行递归调用。
 //返回删掉的任务数量。
-func clearFailTask(t *ExecTask) (n int64) { // {{{
+func clearFailTask(t *ExecTask) (n int) { // {{{
 
 	if len(t.nextExecTasks) != 0 {
 		for _, nextaks := range t.nextExecTasks {
@@ -214,7 +214,7 @@ type ExecJob struct { // {{{
 	nextJob    *ExecJob    //下一个作业
 	execType   int8        //执行类型1. 自动定时调度 2.手动人工调度 3.修复执行
 	execTasks  []*ExecTask //任务执行信息
-	taskCnt    int64       //作业中任务数量
+	taskCnt    int         //作业中任务数量
 } // }}}
 
 //保存执行日志

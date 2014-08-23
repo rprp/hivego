@@ -91,6 +91,9 @@ class Form extends Spine.Controller
       tk.bind("ajaxSuccess", (task, status, xhr) =>
           @trigger('updateTaskAndRefresh', task, status, xhr)
       )
+      tk.bind "ajaxError", (xhr, st, error) ->
+          stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+          Spine.trigger("msg",st.status,stxt)
       tk.Name = @taskName.val()
       tk.JobId = parseInt(@JobId.val())
       tk.Address = @taskAddr.val()
@@ -107,7 +110,11 @@ class Form extends Spine.Controller
       tk = new Task()
       tk.bind("ajaxSuccess", (task, status, xhr) =>
           @trigger('addTaskAndRefresh', task, status, xhr)
+          @trigger('refresh')
       )
+      tk.bind "ajaxError", (xhr, st, error) ->
+          stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+          Spine.trigger("msg",st.status,stxt)
       tk.Name = @taskName.val()
       tk.Address = @taskAddr.val()
       tk.Cmd = @taskCmd.val()
@@ -173,6 +180,8 @@ class Shape extends Spine.Controller
     @setpp = @paper.set()
     @isRefresh = true
     @delTaskRels = []
+    @jobList = []
+    @taskList = []
     @currentTask
     @relTask
     top = 100
@@ -234,7 +243,10 @@ class Shape extends Spine.Controller
     if xhr is "success"
       Spine.Module.extend.call(task, Task)
 
-      ci = i for j,i in @item.Jobs when j.Id is task.JobId
+      for j,i in @item.Jobs when j.Id is task.JobId
+        ci = i
+        j.TaskCnt++
+        j.Tasks["#{task.Id}"] = task
 
       task.JobNo = ci
       t= new TaskShape(@paper,150,0,task,Style.getRgbColor()[ci],25)
@@ -255,6 +267,7 @@ class Shape extends Spine.Controller
   # }}}
 
   hlight: (Id) -># {{{
+    return unless @taskList
     a = Raphael.animation({"fill-opacity": 0.5}, 500)
     for t in @taskList
       if t.task.JobId is Id
@@ -263,6 +276,7 @@ class Shape extends Spine.Controller
   # }}}
 
   nlight: (Id) -># {{{
+    return unless @taskList
     a = Raphael.animation({"fill-opacity": 0.2}, 500)
     for t in @taskList
       if t.task.JobId is Id
@@ -474,10 +488,21 @@ class Shape extends Spine.Controller
 # }}}
 
   deleteTask: (ts,e) =># {{{
-    @taskList = (t for t,i in @taskList when t isnt ts)
     tk = new Task()
     tk.destroy({url:"/schedules/#{@item.Id}/jobs/#{ts.task.JobId}/tasks/#{ts.task.Id}"})
-    ts.remove()
+
+    tk.bind("ajaxSuccess", (task, status, xhr) =>
+        @taskList = (t for t,i in @taskList when t isnt ts)
+        for j,i in @item.Jobs when j.Id is ts.task.JobId
+          j.TaskCnt--
+          delete j.Tasks["#{ts.task.Id}"]
+        ts.remove()
+        
+        @trigger('refresh')
+    )
+    tk.bind "ajaxError", (xhr, st, error) ->
+        stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+        Spine.trigger("msg",st.status,stxt)
 # }}}
 
 class TaskShape
@@ -609,6 +634,7 @@ class TaskShape
     for key, value of @
       unless value is @paper
         value.remove?()
+    @task = null
     # }}}
 
   showTool: -># {{{

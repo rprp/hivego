@@ -17,6 +17,7 @@ var (
 	g *schedule.GlobalConfigStruct
 )
 
+//初始化并启动web服务
 func StartManager(sl *schedule.ScheduleManager) { // {{{
 	g = sl.Global
 	m := martini.Classic()
@@ -43,37 +44,45 @@ func StartManager(sl *schedule.ScheduleManager) { // {{{
 	}
 } // }}}
 
+//controller转发规则设置
 func controller(m *martini.ClassicMartini) { // {{{
 	m.Get("/", func(r render.Render) {
 		r.HTML(200, "index", nil)
 	})
 
 	m.Group("/schedules", func(r martini.Router) {
+		//Schedule部分
 		r.Get("", getSchedules)
 		r.Post("", binding.Bind(schedule.Schedule{}), addSchedule)
 		r.Get("/:id", getScheduleById)
 		r.Put("/:id", binding.Bind(schedule.Schedule{}), updateSchedule)
 		r.Delete("/:id", deleteSchedule)
 
+		//Job部分
 		r.Get("/:sid/jobs", getJobsForSchedule)
 		r.Post("/:sid/jobs", binding.Bind(schedule.Job{}), addJob)
 		r.Put("/:sid/jobs/:id", binding.Bind(schedule.Job{}), updateJob)
 		r.Delete("/:sid/jobs/:id", deleteJob)
 
+		//Task部分
 		r.Post("/:sid/jobs/:jid/tasks", binding.Bind(schedule.Task{}), addTask)
 		r.Put("/:sid/jobs/:jid/tasks/:id", binding.Bind(schedule.Task{}), updateTask)
 		r.Delete("/:sid/jobs/:jid/tasks/:id", deleteTask)
 
+		//TaskRelation部分
 		r.Post("/:sid/jobs/:jid/tasks/:id/reltask/:relid", addRelTask)
 		r.Delete("/:sid/jobs/:jid/tasks/:id/reltask/:relid", deleteRelTask)
 	})
 
 } // }}}
 
+//返回当前的调度列表
 func getSchedules(ctx *web.Context, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
 	r.JSON(200, Ss.ScheduleList)
+	return
 } // }}}
 
+//根据参数中的Id，返回对应的Schedule信息
 func getScheduleById(params martini.Params, r render.Render, res http.ResponseWriter, Ss *schedule.ScheduleManager) { // {{{
 
 	if i, ok := params["id"]; ok {
@@ -85,6 +94,10 @@ func getScheduleById(params martini.Params, r render.Render, res http.ResponseWr
 			}
 		}
 	}
+
+	r.JSON(500, "xxxxxxx")
+	return
+
 } // }}}
 
 func addSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss *schedule.ScheduleManager, scd schedule.Schedule) { // {{{

@@ -25141,7 +25141,7 @@ Released under the MIT License
     };
 
     JobManager.prototype.events = {
-      "click .close": JobManager.hideJob = function(e) {
+      "click .close": function(e) {
         return this.el.css("display", "none");
       },
       "click #submitJob": "postJob",
@@ -25166,7 +25166,11 @@ Released under the MIT License
           url: "/schedules/" + this.item.Id + "/jobs"
         });
       }
-      this.isRefresh = true;
+      Job.bind("ajaxError", function(xhr, st, error) {
+        var stxt;
+        stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+        return Spine.trigger("msg", st.status, stxt);
+      });
       this.height = 0;
       this.paper.setStart();
       _ref = [30, 10], top = _ref[0], left = _ref[1];
@@ -25187,12 +25191,15 @@ Released under the MIT License
       this.height = top;
     }
 
-    JobManager.prototype.refreshJobList = function(top, left) {
+    JobManager.prototype.refreshJobList = function(top, left, isRefresh) {
       var i, job, jobcir, jobname, jobrect, s, s1, subButton, _i, _j, _len, _len1, _ref, _ref1, _ref2, _results;
+      if (isRefresh == null) {
+        isRefresh = true;
+      }
       if (!this.item.Jobs) {
         return [top, left];
       }
-      if (!this.isRefresh) {
+      if (!isRefresh) {
         return [top, left];
       }
       if (this.list) {
@@ -25261,7 +25268,6 @@ Released under the MIT License
         this.set.push(s);
         this.list.push(s);
         this.lastJob = job;
-        this.isRefresh = false;
         _results.push((_ref2 = [top + 50, left], top = _ref2[0], left = _ref2[1], _ref2));
       }
       return _results;
@@ -25308,6 +25314,11 @@ Released under the MIT License
       jb = Job.find(this.data("Id"));
       ts = this.data("this");
       jb.bind("change", ts != null ? ts.delJobAndRefresh : void 0);
+      jb.bind("ajaxError", function(xhr, st, error) {
+        var stxt;
+        stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+        return Spine.trigger("msg", st.status, stxt);
+      });
       return jb.destroy({
         url: "/schedules/" + (this.data("Sid")) + "/jobs/" + (this.data("Id"))
       });
@@ -25319,6 +25330,11 @@ Released under the MIT License
       if (this.jobid.val()) {
         jb = Job.find(this.jobid.val());
         jb.bind("ajaxSuccess", this.addJobAndRefresh);
+        jb.bind("ajaxError", function(xhr, st, error) {
+          var stxt;
+          stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+          return Spine.trigger("msg", st.status, stxt);
+        });
         jb.Name = this.jobname.val();
         jb.Desc = this.jobdesc.val();
         return jb.save({
@@ -25327,6 +25343,11 @@ Released under the MIT License
       } else {
         jb = new Job();
         jb.bind("ajaxSuccess", this.addJobAndRefresh);
+        jb.bind("ajaxError", function(xhr, st, error) {
+          var stxt;
+          stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+          return Spine.trigger("msg", st.status, stxt);
+        });
         jb.ScheduleId = this.item.Id;
         jb.PreJobId = this.prejobid.val() ? parseInt(this.prejobid.val()) : 0;
         jb.Id = -1;
@@ -25347,8 +25368,7 @@ Released under the MIT License
         Schedule.fetch({
           Id: id
         });
-        this.item = Schedule.find(id);
-        return this.isRefresh = true;
+        return this.item = Schedule.find(id);
       }
     };
 
@@ -25358,8 +25378,7 @@ Released under the MIT License
       Schedule.fetch({
         Id: id
       });
-      this.item = Schedule.find(id);
-      return this.isRefresh = true;
+      return this.item = Schedule.find(id);
     };
 
     return JobManager;
@@ -25424,15 +25443,11 @@ Released under the MIT License
           return _this.append(_this.taskForm.render(task));
         };
       })(this));
-      Spine.bind("editScheduleRender", (function(_this) {
-        return function(x, y, schedule) {
-          return _this.append(_this.scheduleForm.render(x, y, schedule));
-        };
-      })(this));
       this.active(this.change);
     }
 
     MainInfo.prototype.change = function(params) {
+      this.paper = null;
       Schedule.fetch({
         Id: params.id
       });
@@ -25449,26 +25464,33 @@ Released under the MIT License
         this.item = Schedule.find(rs.Id);
       }
       h = ((_ref = this.item) != null ? (_ref1 = _ref.Jobs) != null ? _ref1.length : void 0 : void 0) * 140;
-      this.pant.css("height", h < 800 ? 800 : void 0);
+      this.pant.css("height", (h != null) || h < 800 ? 800 : void 0);
       _ref2 = [parseFloat(this.pant.css("width")), parseFloat(this.pant.css("height"))], this.width = _ref2[0], this.height = _ref2[1];
       if (!this.paper) {
         this.paper = Raphael(this.pant.get(0), '100%', '100%');
         this.color = Style.color;
         this.taskShape = new TaskManager.Shape(this.paper, this.color, this.item, this.width, this.height);
+        this.taskShape.bind('refresh', this.draw);
         this.taskForm = new TaskManager.Form("c", this.item);
         this.taskForm.bind('updateTaskAndRefresh', this.taskShape.updateTaskAndRefresh);
         this.taskForm.bind('addTaskAndRefresh', this.taskShape.addTaskAndRefresh);
+        this.taskForm.bind('refresh', this.draw);
         slider = this.paper.path("M " + (this.width - 220) + ",10L " + (this.width - 220) + "," + this.height);
         slider.attr(Style.slider);
         this.scheduleShape = new ScheduleManager.Shape(this.paper, this.color, this.item, 220);
         this.scheduleForm = new ScheduleManager.Form("c", this.item);
-        this.scheduleShape.titlerect.click(this.scheduleForm.showSchedule, this.scheduleForm);
+        this.scheduleForm.bind("editScheduleRender", (function(_this) {
+          return function(x, y, schedule) {
+            return _this.append(_this.scheduleForm.render(x, y, schedule));
+          };
+        })(this));
         this.jobManager = new JobManager(this.paper, this.color, this.item, 220, this);
         this.jobManager.bind("rfJobList", this.layout);
       } else {
         this.scheduleShape.refreshSchedule(20, 10);
         this.jobManager.refreshJobList(70, 10);
       }
+      this.scheduleShape.titlerect.click(this.scheduleForm.showSchedule, this.scheduleForm);
       this.layout();
       this.append(this.taskShape.el);
       return this;
@@ -25696,6 +25718,75 @@ Released under the MIT License
   })(Spine.Controller);
 
   module.exports = MainList;
+
+}).call(this);
+}, "controllers/msg": function(exports, require, module) {(function() {
+  var $, Msg, Schedule, ScheduleManager, Spine,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Spine = require('spineify');
+
+  Schedule = require('models/schedule');
+
+  ScheduleManager = require('controllers/schedule.info');
+
+  $ = Spine.$;
+
+  Msg = (function(_super) {
+    __extends(Msg, _super);
+
+    Msg.prototype.className = 'msg';
+
+    Msg.prototype.elements = {
+      "#msg": "msg",
+      ".alert": "alert"
+    };
+
+    Msg.prototype.events = {
+      "click": function(e) {
+        return this.alert.css('display', 'none');
+      }
+    };
+
+    function Msg() {
+      this.show = __bind(this.show, this);
+      Msg.__super__.constructor.apply(this, arguments);
+      Spine.bind("msg", this.show);
+    }
+
+    Msg.prototype.render = function() {
+      return this.html(require('views/msg')());
+    };
+
+    Msg.prototype.show = function(status, msg) {
+      if (status >= 400) {
+        this.alert.removeClass("alert-success");
+        this.alert.addClass("alert-danger");
+        this.alert.stop().animate({
+          opacity: 0
+        }, 0);
+        this.alert.css('display', 'block');
+        this.alert.stop().animate({
+          opacity: 1
+        }, 800);
+        this.msg.text("错误：" + msg);
+        return this.timout = window.setTimeout((function(_this) {
+          return function() {
+            return _this.alert.stop().animate({
+              opacity: 0
+            }, 1000);
+          };
+        })(this), 20000);
+      }
+    };
+
+    return Msg;
+
+  })(Spine.Controller);
+
+  module.exports = Msg;
 
 }).call(this);
 }, "controllers/navbar": function(exports, require, module) {(function() {
@@ -25956,6 +26047,11 @@ Released under the MIT License
           this.item.StartSecond.push(parseInt(ss));
         }
       }
+      this.item.bind("ajaxError", function(xhr, st, error) {
+        var stxt;
+        stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+        return Spine.trigger("msg", st.status, stxt);
+      });
       if (this.item.Id === -1) {
         return this.item.create();
       } else {
@@ -26000,7 +26096,7 @@ Released under the MIT License
 
     Form.prototype.showSchedule = function(e) {
       e = e || window.event;
-      Spine.trigger("editScheduleRender", e.clientX, e.clientY, this.item);
+      this.trigger("editScheduleRender", e.clientX, e.clientY, this.item);
       return e;
     };
 
@@ -26331,6 +26427,11 @@ Released under the MIT License
             return _this.trigger('updateTaskAndRefresh', task, status, xhr);
           };
         })(this));
+        tk.bind("ajaxError", function(xhr, st, error) {
+          var stxt;
+          stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+          return Spine.trigger("msg", st.status, stxt);
+        });
         tk.Name = this.taskName.val();
         tk.JobId = parseInt(this.JobId.val());
         tk.Address = this.taskAddr.val();
@@ -26353,9 +26454,15 @@ Released under the MIT License
         tk = new Task();
         tk.bind("ajaxSuccess", (function(_this) {
           return function(task, status, xhr) {
-            return _this.trigger('addTaskAndRefresh', task, status, xhr);
+            _this.trigger('addTaskAndRefresh', task, status, xhr);
+            return _this.trigger('refresh');
           };
         })(this));
+        tk.bind("ajaxError", function(xhr, st, error) {
+          var stxt;
+          stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+          return Spine.trigger("msg", st.status, stxt);
+        });
         tk.Name = this.taskName.val();
         tk.Address = this.taskAddr.val();
         tk.Cmd = this.taskCmd.val();
@@ -26462,6 +26569,8 @@ Released under the MIT License
       this.setpp = this.paper.set();
       this.isRefresh = true;
       this.delTaskRels = [];
+      this.jobList = [];
+      this.taskList = [];
       this.currentTask;
       this.relTask;
       top = 100;
@@ -26579,9 +26688,12 @@ Released under the MIT License
         _ref = this.item.Jobs;
         for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
           j = _ref[i];
-          if (j.Id === task.JobId) {
-            ci = i;
+          if (!(j.Id === task.JobId)) {
+            continue;
           }
+          ci = i;
+          j.TaskCnt++;
+          j.Tasks["" + task.Id] = task;
         }
         task.JobNo = ci;
         t = new TaskShape(this.paper, 150, 0, task, Style.getRgbColor()[ci], 25);
@@ -26621,6 +26733,9 @@ Released under the MIT License
 
     Shape.prototype.hlight = function(Id) {
       var a, t, _i, _len, _ref, _results;
+      if (!this.taskList) {
+        return;
+      }
       a = Raphael.animation({
         "fill-opacity": 0.5
       }, 500);
@@ -26644,6 +26759,9 @@ Released under the MIT License
 
     Shape.prototype.nlight = function(Id) {
       var a, t, _i, _len, _ref, _results;
+      if (!this.taskList) {
+        return;
+      }
       a = Raphael.animation({
         "fill-opacity": 0.2
       }, 500);
@@ -26978,24 +27096,44 @@ Released under the MIT License
     };
 
     Shape.prototype.deleteTask = function(ts, e) {
-      var i, t, tk;
-      this.taskList = (function() {
-        var _i, _len, _ref, _results;
-        _ref = this.taskList;
-        _results = [];
-        for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-          t = _ref[i];
-          if (t !== ts) {
-            _results.push(t);
-          }
-        }
-        return _results;
-      }).call(this);
+      var tk;
       tk = new Task();
       tk.destroy({
         url: "/schedules/" + this.item.Id + "/jobs/" + ts.task.JobId + "/tasks/" + ts.task.Id
       });
-      return ts.remove();
+      tk.bind("ajaxSuccess", (function(_this) {
+        return function(task, status, xhr) {
+          var i, j, t, _i, _len, _ref;
+          _this.taskList = (function() {
+            var _i, _len, _ref, _results;
+            _ref = this.taskList;
+            _results = [];
+            for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+              t = _ref[i];
+              if (t !== ts) {
+                _results.push(t);
+              }
+            }
+            return _results;
+          }).call(_this);
+          _ref = _this.item.Jobs;
+          for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+            j = _ref[i];
+            if (!(j.Id === ts.task.JobId)) {
+              continue;
+            }
+            j.TaskCnt--;
+            delete j.Tasks["" + ts.task.Id];
+          }
+          ts.remove();
+          return _this.trigger('refresh');
+        };
+      })(this));
+      return tk.bind("ajaxError", function(xhr, st, error) {
+        var stxt;
+        stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+        return Spine.trigger("msg", st.status, stxt);
+      });
     };
 
     return Shape;
@@ -27199,7 +27337,7 @@ Released under the MIT License
     };
 
     TaskShape.prototype.remove = function() {
-      var i, j, key, n, p, r, t, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _results;
+      var i, j, key, n, p, r, t, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
       _ref = this.nextRel;
       for (j = _i = 0, _len = _ref.length; _i < _len; j = ++_i) {
         r = _ref[j];
@@ -27270,16 +27408,15 @@ Released under the MIT License
           return _results;
         })();
       }
-      _results = [];
       for (key in this) {
         value = this[key];
         if (value !== this.paper) {
-          _results.push(typeof value.remove === "function" ? value.remove() : void 0);
-        } else {
-          _results.push(void 0);
+          if (typeof value.remove === "function") {
+            value.remove();
+          }
         }
       }
-      return _results;
+      return this.task = null;
     };
 
     TaskShape.prototype.showTool = function() {
@@ -27592,7 +27729,7 @@ Released under the MIT License
 
 }).call(this);
 }, "index": function(exports, require, module) {(function() {
-  var App, Main, MainInfo, MainList, Navbar, Schedule, Spine,
+  var App, Main, MainInfo, MainList, Msg, Navbar, Schedule, Spine,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -27607,6 +27744,8 @@ Released under the MIT License
   MainInfo = require('controllers/main.info');
 
   Navbar = require('controllers/navbar');
+
+  Msg = require('controllers/msg');
 
   Main = (function(_super) {
     __extends(Main, _super);
@@ -27641,15 +27780,19 @@ Released under the MIT License
     function App() {
       App.__super__.constructor.apply(this, arguments);
       Schedule.fetch();
-      Schedule.bind("ajaxError", function(record, xhr, settings, error) {
-        return console.log(error);
+      Schedule.bind("ajaxError", function(xhr, st, error) {
+        var stxt;
+        stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+        Spine.trigger("msg", st.status, stxt);
+        return console.log("ajaxError statusText=" + stxt + " error=" + error);
       });
       Schedule.bind("ajaxSuccess", function(data, status, xhr) {
         return console.log("ajaxSuccess " + xhr + " " + status);
       });
       this.nv = new Navbar;
+      this.msg = new Msg;
       this.main = new Main;
-      this.append(this.nv.render(), this.main);
+      this.append(this.nv.render(), this.main, this.msg.render());
       this.nv.bind('addtask', this.main.mainInfo.addTaskRender);
       this.nv.bind('refreshAllTask', (function(_this) {
         return function() {
@@ -28425,6 +28568,53 @@ module.exports = content;}, "views/main": function(exports, require, module) {va
   (function() {
     (function() {
       __out.push('<br>\n');
+    
+    }).call(this);
+    
+  }).call(__obj);
+  __obj.safe = __objSafe, __obj.escape = __escape;
+  return __out.join('');
+};
+module.exports = content;}, "views/msg": function(exports, require, module) {var content = function(__obj) {
+  if (!__obj) __obj = {};
+  var __out = [], __capture = function(callback) {
+    var out = __out, result;
+    __out = [];
+    callback.call(this);
+    result = __out.join('');
+    __out = out;
+    return __safe(result);
+  }, __sanitize = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else if (typeof value !== 'undefined' && value != null) {
+      return __escape(value);
+    } else {
+      return '';
+    }
+  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
+  __safe = __obj.safe = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else {
+      if (!(typeof value !== 'undefined' && value != null)) value = '';
+      var result = new String(value);
+      result.ecoSafe = true;
+      return result;
+    }
+  };
+  if (!__escape) {
+    __escape = __obj.escape = function(value) {
+      return ('' + value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+  }
+  (function() {
+    (function() {
+      __out.push('<div class="alert alert-dismissible" role="alert" style="z-index: 500; position: absolute; top: 0px; left:\n    300px; padding: 5px; display: none;">\n    <div id=\'msg\'> \n    </div>\n</div>\n');
     
     }).call(this);
     
