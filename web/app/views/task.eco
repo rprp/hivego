@@ -13,12 +13,11 @@
         <br>
 
         <div class="btn-group">
-          <button type="button" class="jobbtn btn" style="background-color: <%= @RgbColor[@JobNo] or @RgbColor[0] %>;">&nbsp;&nbsp;<%= @JobName %>&nbsp;&nbsp;</button>
-          <button type="button" class="jobbl btn dropdown-toggle" style="background-color: <%= @RgbColor[@JobNo] or @RgbColor[0] %>;" data-toggle="dropdown">
-          <input id="jobid" type="hidden" value="<%= @JobId %>" />
-            <span class="caret"></span>
-            <span class="sr-only">Toggle Dropdown</span>
-          </button>
+            <button type="button" class="jobbtn btn dropdown-toggle" style="background-color: <%= @RgbColor[@JobNo] or @RgbColor[0] %>;" data-toggle="dropdown">
+                &nbsp;<%= @JobName %>&nbsp;&nbsp;
+                <span class="caret"></span>
+            </button>
+            <input id="jobid" type="hidden" value="<%= @JobId %>" />
           <ul class="dropdown-menu" role="menu">
             <% for p,i in @JobList : %>
             <li class="jobli" style="cursor: pointer; background-color: <%= @RgbColor[i] %>;" data="<%= p.Id %>"><%= p.Name %></li>

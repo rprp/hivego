@@ -39,9 +39,8 @@ class Form extends Spine.Controller
   
     "click .jobli": @setJob = (e) -># {{{
             $('#jobid').val(@$(e.target).attr("data"))
-            $('.jobbtn').text(@$(e.target).text())
+            $('.jobbtn').html("&nbsp;" + @$(e.target).text() + "&nbsp;&nbsp;<span class='caret'></span>")
             $('.jobbtn').css("background-color",@$(e.target).css("background-color"))
-            $('.jobbl').css("background-color",@$(e.target).css("background-color"))
     # }}}
 
     "keypress .addTask":  @addTaskKeyPress = (e) -># {{{
@@ -88,7 +87,7 @@ class Form extends Spine.Controller
     @el.css("display","none")
     if @taskId.val()
       tk = @task
-      tk.bind("ajaxSuccess", (task, status, xhr) =>
+      tk.one("ajaxSuccess", (task, status, xhr) =>
           @trigger('updateTaskAndRefresh', task, status, xhr)
       )
       tk.bind "ajaxError", (xhr, st, error) ->
@@ -108,7 +107,7 @@ class Form extends Spine.Controller
       tk.save({method: "PUT", url:"/schedules/#{@item.Id}/jobs/#{tk.JobId}/tasks/#{tk.Id}"})
     else
       tk = new Task()
-      tk.bind("ajaxSuccess", (task, status, xhr) =>
+      tk.one("ajaxSuccess", (task, status, xhr) =>
           @trigger('addTaskAndRefresh', task, status, xhr)
           @trigger('refresh')
       )
@@ -134,13 +133,18 @@ class Form extends Spine.Controller
   render: (task) =># {{{
     if task.Name
       @task=task
+      task.JobList = @item.Jobs
+      [task.JobName,task.JobNo] = [n.Name,i] for n,i in @item.Jobs when n.Id is task.JobId
+      task.RgbColor = Style.getRgbColor()
     else
       task = new Task()
       task.Param=[]
+      task.JobList = @item.Jobs
+      task.JobName = @item.Jobs[@item.Jobs.length-1].Name
+      task.JobId = @item.Jobs[@item.Jobs.length-1].Id
+      task.JobNo = @item.Jobs.length-1
+      task.RgbColor = Style.getRgbColor()
     
-    task.JobList = @item.Jobs
-    [task.JobName,task.JobNo] = [n.Name,i] for n,i in @item.Jobs when n.Id is task.JobId
-    task.RgbColor = Style.getRgbColor()
     @html(require("views/task")(task))
 
     cs = c for c in @cycGroup when c.textContent is @item.GetCyc()
@@ -178,7 +182,6 @@ class Shape extends Spine.Controller
     Spine.bind("deleteTaskRel", @addRemoveTaskRel)
     Spine.bind("deleteTask", @deleteTask)
     @setpp = @paper.set()
-    @isRefresh = true
     @delTaskRels = []
     @jobList = []
     @taskList = []
@@ -234,22 +237,27 @@ class Shape extends Spine.Controller
     if xhr is "success"
       tp = t for t in @taskList when t.task.Id is parseInt(task.Id)
       tp.task = task
-      tp.sp.animate(s)
+      tp.text.remove()
+      tp.text = @paper.text(tp.sp.ox, tp.sp.oy, tp.task.Name)
+      tp.text.toBack()
+      tp.text.attr({fill: "#333", stroke: "none", "font-size": 10, "fill-opacity": 1, "stroke-width": 1, cursor: "move"})
 
-      @isRefresh = true
+      tp.sp.animate(s)
   # }}}
 
   addTaskAndRefresh: (task, status, xhr) =># {{{
     if xhr is "success"
-      Spine.Module.extend.call(task, Task)
+      tk = new Task()
+      for key, value of task
+        tk[key] = value
 
-      for j,i in @item.Jobs when j.Id is task.JobId
+      for j,i in @item.Jobs when j.Id is tk.JobId
         ci = i
         j.TaskCnt++
-        j.Tasks["#{task.Id}"] = task
+        j.Tasks["#{tk.Id}"] = tk
 
-      task.JobNo = ci
-      t= new TaskShape(@paper,150,0,task,Style.getRgbColor()[ci],25)
+      tk.JobNo = ci
+      t= new TaskShape(@paper,150,0,tk,Style.getRgbColor()[ci],25)
       t.conn.drag(t.connMove, t.connDragger, t.connUp,@)
       t.sp.animate({"cx": 150, "cy": ci*100+80}, 2000, "elastic")
       t.text.animate({"x": 150, "y": ci*100+80}, 2000, "elastic")
@@ -262,8 +270,6 @@ class Shape extends Spine.Controller
       
       @setpp.push(t.sp)
       @setpp.push(t.text)
-
-      @isRefresh = true
   # }}}
 
   hlight: (Id) -># {{{
