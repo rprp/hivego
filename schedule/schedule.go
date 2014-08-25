@@ -415,16 +415,18 @@ func (s *Schedule) DeleteJob(id int64) error { // {{{
 	}
 	if j.TaskCnt == 0 && j.NextJobId == 0 {
 
-		pj, er := s.GetJobById(j.PreJobId)
-		if er != nil {
-			e := fmt.Sprintf("\n[s.DeleteJob] not found prejob by id %d", j.PreJobId)
-			return errors.New(e)
-		}
+		if j.PreJobId > 0 {
+			pj, er := s.GetJobById(j.PreJobId)
+			if er != nil {
+				e := fmt.Sprintf("\n[s.DeleteJob] get prejob [%d] error %s", j.PreJobId, er.Error())
+				return errors.New(e)
+			}
 
-		pj.NextJob, pj.NextJobId = nil, 0
-		if err = pj.update(); err != nil {
-			e := fmt.Sprintf("\n[s.DeleteJob] update job [%d] to schedule [%d] error %s.", j.Id, s.Id, err.Error())
-			return errors.New(e)
+			pj.NextJob, pj.NextJobId = nil, 0
+			if err = pj.update(); err != nil {
+				e := fmt.Sprintf("\n[s.DeleteJob] update job [%d] to schedule [%d] error %s.", j.Id, s.Id, err.Error())
+				return errors.New(e)
+			}
 		}
 
 		if len(s.Jobs) == 1 {

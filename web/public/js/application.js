@@ -25364,11 +25364,7 @@ Released under the MIT License
       this.updateTaskAndRefresh = __bind(this.updateTaskAndRefresh, this);
       this.refreshTaskList = __bind(this.refreshTaskList, this);
       Shape.__super__.constructor.apply(this, arguments);
-      Spine.bind("connectTaskStart", this.connectStart);
-      Spine.bind("connectTaskFinish", this.connectFinish);
-      Spine.bind("deleteTaskRelStart", this.delTaskRelStart);
       Spine.bind("deleteTaskRel", this.addRemoveTaskRel);
-      Spine.bind("deleteTask", this.deleteTask);
       this.setpp = this.paper.set();
       this.delTaskRels = [];
       this.jobList = [];
@@ -25428,6 +25424,10 @@ Released under the MIT License
           }
           tk.JobNo = i;
           t = new TaskShape(this.paper, left, top, tk, this.color[i], 25);
+          t.bind("connectTaskStart", this.connectStart);
+          t.bind("connectTaskFinish", this.connectFinish);
+          t.bind("deleteTaskRelStart", this.delTaskRelStart);
+          t.bind("deleteTask", this.deleteTask);
           t.conn.drag(t.connMove, t.connDragger, t.connUp, this);
           this.taskList.push(t);
           this.setpp.push(t.sp);
@@ -25689,7 +25689,13 @@ Released under the MIT License
           data: "",
           url: "/schedules/" + this.item.Id + "/jobs/" + r.tail.task.JobId + "/" + param,
           parallel: {}
-        });
+        }).fail((function(_this) {
+          return function(xhr, st, error) {
+            var stxt;
+            stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+            return Spine.trigger("msg", st.status, stxt);
+          };
+        })(this));
         r.head.removeNext(r);
       }
       this.delTaskRelEnd();
@@ -25794,7 +25800,8 @@ Released under the MIT License
       so2 = ["stroke-opacity", 0.2];
       cnt = [c, ts.sp, ts.sp.attr("fill"), "" + (ts.sp.attr('fill')) + "|4"];
       c.rel = (_ref = ts.paper).connection.apply(_ref, cnt);
-      [(_ref1 = c.rel.bg).attr.apply(_ref1, so2), (_ref2 = c.rel.line).attr.apply(_ref2, so2)];
+      (_ref1 = c.rel.bg).attr.apply(_ref1, so2);
+      (_ref2 = c.rel.line).attr.apply(_ref2, so2);
       c.toFront();
       _ref3 = this.taskList;
       for (i = _i = 0, _len = _ref3.length; _i < _len; i = ++_i) {
@@ -25841,7 +25848,7 @@ Released under the MIT License
     };
 
     Shape.prototype.connectFinish = function(ts, e) {
-      var ajax, cr, i, j, param, r, rts, s1, so, t, tmp, tpre, txt, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref10, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9, _results;
+      var ajax, i, j, param, r, rts, s1, so, t, tmp, tpre, txt, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref10, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9, _results;
       s1 = Raphael.animation({
         "fill-opacity": .2,
         "stroke-width": 1
@@ -25850,10 +25857,9 @@ Released under the MIT License
         "fill-opacity": 1,
         "stroke-width": 1
       }, 300);
-      cr = ts.conn.rel;
-      cr.line.remove();
-      cr.bg.remove();
-      cr = null;
+      ts.conn.rel.line.remove();
+      ts.conn.rel.bg.remove();
+      ts.conn.rel = null;
       if (this.relTask) {
         ajax = new Ajax();
         param = "tasks/" + ts.task.Id + "/reltask/" + this.relTask.task.Id;
@@ -25863,7 +25869,13 @@ Released under the MIT License
           data: "",
           url: "/schedules/" + this.item.Id + "/jobs/" + ts.task.JobId + "/" + param,
           parallel: {}
-        });
+        }).fail((function(_this) {
+          return function(xhr, st, error) {
+            var stxt;
+            stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
+            return Spine.trigger("msg", st.status, stxt);
+          };
+        })(this));
         this.relTask.addNext(ts);
       }
       so = ["stroke-opacity", 1];
@@ -25955,7 +25967,11 @@ Released under the MIT License
 
   })(Spine.Controller);
 
-  TaskShape = (function() {
+  TaskShape = (function(_super) {
+    __extends(TaskShape, _super);
+
+    TaskShape.include(Spine.Events);
+
     function TaskShape(paper, cx, cy, task, color, r) {
       var k, v;
       this.paper = paper;
@@ -26001,13 +26017,13 @@ Released under the MIT License
       }, this);
       this.deleteRel = this.paper.circle(this.cx, this.cy, 14);
       this.deleteRel.click(mm = function(e) {
-        return Spine.trigger("deleteTaskRelStart", this, e || window.event);
+        return this.trigger("deleteTaskRelStart", this, e || window.event);
       }, this);
       this["delete"] = this.paper.circle(this.cx, this.cy, 14);
       this["delete"].click(mm = function(e) {
         e = e || window.event;
         this.task.opt = "delete";
-        return Spine.trigger("deleteTask", this, e || window.event);
+        return this.trigger("deleteTask", this, e || window.event);
       }, this);
       this.conn = this.paper.circle(this.cx, this.cy, 14);
       this.conn.refresh = (function(_this) {
@@ -26018,10 +26034,10 @@ Released under the MIT License
         };
       })(this);
       this.conn.mousedown(mm = function(e) {
-        return Spine.trigger("connectTaskStart", this, e || window.event);
+        return this.trigger("connectTaskStart", this, e || window.event);
       }, this);
       this.conn.mouseup(mm = function(e) {
-        return Spine.trigger("connectTaskFinish", this, e || window.event);
+        return this.trigger("connectTaskFinish", this, e || window.event);
       }, this);
       this.toolset.push(this.editImg, this.deleteRelImg, this.deleteImg, this.connImg, this.edit, this.deleteRel, this["delete"], this.conn);
       this.toolset.attr({
@@ -26532,7 +26548,7 @@ Released under the MIT License
 
     return TaskShape;
 
-  })();
+  })(Spine.Module);
 
   TaskManager = {};
 

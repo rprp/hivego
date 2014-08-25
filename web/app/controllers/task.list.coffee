@@ -176,11 +176,7 @@ class Shape extends Spine.Controller
 
   constructor: (@paper, @color, @item, @w, @h) -># {{{
     super
-    Spine.bind("connectTaskStart", @connectStart)
-    Spine.bind("connectTaskFinish", @connectFinish)
-    Spine.bind("deleteTaskRelStart", @delTaskRelStart)
     Spine.bind("deleteTaskRel", @addRemoveTaskRel)
-    Spine.bind("deleteTask", @deleteTask)
     @setpp = @paper.set()
     @delTaskRels = []
     @jobList = []
@@ -216,6 +212,10 @@ class Shape extends Spine.Controller
           tk[key] = value
         tk.JobNo = i
         t= new TaskShape(@paper,left,top,tk,@color[i],25)
+        t.bind("connectTaskStart", @connectStart)
+        t.bind("connectTaskFinish", @connectFinish)
+        t.bind("deleteTaskRelStart", @delTaskRelStart)
+        t.bind("deleteTask", @deleteTask)
         t.conn.drag(t.connMove, t.connDragger, t.connUp,@)
         @taskList.push(t)
         
@@ -354,6 +354,9 @@ class Shape extends Spine.Controller
         url: "/schedules/#{@item.Id}/jobs/#{r.tail.task.JobId}/#{param}"
         parallel:{}
         }
+      ).fail( (xhr, st, error) =>
+            stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+            Spine.trigger("msg",st.status,stxt)
       )
       r.head.removeNext(r)
 
@@ -417,6 +420,7 @@ class Shape extends Spine.Controller
       @delTaskRelEnd()
 # }}}
 
+#隐藏Bug，从列表界面进入调度信息界面后，点击连接图标会调用该函数两次。应为一次调用才对。
   connectStart: (ts, e) =># {{{
     s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 200)
 
@@ -428,7 +432,8 @@ class Shape extends Spine.Controller
     cnt = [c,ts.sp,ts.sp.attr("fill"),"#{ts.sp.attr('fill')}|4"]
 
     c.rel = ts.paper.connection(cnt...)
-    [c.rel.bg.attr(so2...), c.rel.line.attr(so2...)]
+    c.rel.bg.attr(so2...)
+    c.rel.line.attr(so2...)
     c.toFront()
 
     for t,i in @taskList
@@ -455,10 +460,9 @@ class Shape extends Spine.Controller
     s1 = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 300)
     txt = Raphael.animation({"fill-opacity": 1, "stroke-width": 1}, 300)
     
-    cr = ts.conn.rel
-    cr.line.remove()
-    cr.bg.remove()
-    cr = null
+    ts.conn.rel.line.remove()
+    ts.conn.rel.bg.remove()
+    ts.conn.rel = null
     if @relTask
       ajax = new Ajax()
       param = "tasks/#{ts.task.Id}/reltask/#{@relTask.task.Id}"
@@ -470,6 +474,9 @@ class Shape extends Spine.Controller
         url: "/schedules/#{@item.Id}/jobs/#{ts.task.JobId}/#{param}"
         parallel:{}
         }
+      ).fail( (xhr, st, error) =>
+            stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+            Spine.trigger("msg",st.status,stxt)
       )
       @relTask.addNext(ts)
 
@@ -511,9 +518,10 @@ class Shape extends Spine.Controller
         Spine.trigger("msg",st.status,stxt)
 # }}}
 
-class TaskShape
+class TaskShape extends Spine.Module
+  @include Spine.Events
+
   constructor: (@paper, @cx, @cy, @task, @color="#FF8C00", @r=20) -># {{{
-    
     @RelTaskId = (v.Id for k,v of @task.RelTasks)
     @pre=[]
     @preRel=[]
@@ -543,14 +551,14 @@ class TaskShape
 
     @deleteRel=@paper.circle(@cx, @cy, 14)
     @deleteRel.click(mm = (e) ->
-        Spine.trigger("deleteTaskRelStart", @, e||window.event)
+        @trigger("deleteTaskRelStart", @, e||window.event)
       ,@)
 
     @delete=@paper.circle(@cx, @cy, 14)
     @delete.click(mm = (e) ->
         e = e||window.event
         @.task.opt = "delete"
-        Spine.trigger("deleteTask", @, e||window.event)
+        @trigger("deleteTask", @, e||window.event)
       ,@)
 
     @conn=@paper.circle(@cx, @cy, 14)
@@ -559,11 +567,11 @@ class TaskShape
         @paper.connection(@conn.rel)
 
     @conn.mousedown(mm = (e) ->
-        Spine.trigger("connectTaskStart", @, e||window.event)
+        @trigger("connectTaskStart", @, e||window.event)
       ,@)
 
     @conn.mouseup(mm = (e) ->
-        Spine.trigger("connectTaskFinish", @, e||window.event)
+        @trigger("connectTaskFinish", @, e||window.event)
       ,@)
 
     @toolset.push(@editImg,@deleteRelImg,@deleteImg,@connImg,@edit,@deleteRel,@delete,@conn)
