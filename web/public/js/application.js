@@ -25516,6 +25516,10 @@ Released under the MIT License
         }
         tk.JobNo = ci;
         t = new TaskShape(this.paper, 150, 0, tk, Style.getRgbColor()[ci], 25);
+        t.bind("connectTaskStart", this.connectStart);
+        t.bind("connectTaskFinish", this.connectFinish);
+        t.bind("deleteTaskRelStart", this.delTaskRelStart);
+        t.bind("deleteTask", this.deleteTask);
         t.conn.drag(t.connMove, t.connDragger, t.connUp, this);
         t.sp.animate({
           "cx": 150,

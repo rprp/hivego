@@ -260,6 +260,10 @@ class Shape extends Spine.Controller
 
       tk.JobNo = ci
       t= new TaskShape(@paper,150,0,tk,Style.getRgbColor()[ci],25)
+      t.bind("connectTaskStart", @connectStart)
+      t.bind("connectTaskFinish", @connectFinish)
+      t.bind("deleteTaskRelStart", @delTaskRelStart)
+      t.bind("deleteTask", @deleteTask)
       t.conn.drag(t.connMove, t.connDragger, t.connUp,@)
       t.sp.animate({"cx": 150, "cy": ci*100+80}, 2000, "elastic")
       t.text.animate({"x": 150, "y": ci*100+80}, 2000, "elastic")
