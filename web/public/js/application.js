@@ -25097,7 +25097,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/task.list": function(exports, require, module) {(function() {
-  var $, Ajax, Eve, Form, Job, Raphael, Shape, Spine, Style, Task, TaskManager, TaskShape,
+  var $, Ajax, Eve, Form, Job, Raphael, Schedule, Shape, Spine, Style, Task, TaskManager, TaskShape,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -25111,6 +25111,8 @@ Released under the MIT License
   Raphael = require('raphaelify');
 
   Eve = require('eve');
+
+  Schedule = require('models/schedule');
 
   Style = require('controllers/style');
 
@@ -25470,6 +25472,7 @@ Released under the MIT License
         "stroke-width": 1
       }, 300);
       if (xhr === "success") {
+        this.refreshItem();
         _ref = this.taskList;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           t = _ref[_i];
@@ -25698,6 +25701,14 @@ Released under the MIT License
         })(this));
         r.head.removeNext(r);
       }
+      Schedule.fetch({
+        Id: this.item.Id
+      });
+      Schedule.bind("refresh", (function(_this) {
+        return function() {
+          return _this.item = Schedule.find(_this.item.Id);
+        };
+      })(this));
       this.delTaskRelEnd();
       this.delTaskRelFlg = false;
       return this.confirmdeltaskrel.css("display", "none");
@@ -25878,6 +25889,14 @@ Released under the MIT License
         })(this));
         this.relTask.addNext(ts);
       }
+      Schedule.fetch({
+        Id: this.item.Id
+      });
+      Schedule.bind("refresh", (function(_this) {
+        return function() {
+          return _this.item = Schedule.find(_this.item.Id);
+        };
+      })(this));
       so = ["stroke-opacity", 1];
       _ref = this.taskList;
       for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
@@ -26627,9 +26646,14 @@ Released under the MIT License
       this.nv.bind('addtask', this.main.mainInfo.addTaskRender);
       this.nv.bind('refreshAllTask', (function(_this) {
         return function() {
-          _this.main.mainInfo.draw();
-          _this.main.mainInfo.taskShape.refreshTaskList();
-          return _this.main;
+          Schedule.fetch({
+            Id: _this.main.mainInfo.item.Id
+          });
+          return Schedule.bind("refresh", function() {
+            _this.main.mainInfo.draw();
+            _this.main.mainInfo.taskShape.refreshTaskList();
+            return _this.main;
+          });
         };
       })(this));
       this.routes({

@@ -2,6 +2,7 @@ Spine = require('spineify')
 Ajax  = Spine.Ajax.Base
 Raphael = require('raphaelify')
 Eve = require('eve')
+Schedule = require('models/schedule')
 Style = require('controllers/style')
 Task = require('models/task')
 Job = require('models/job')
@@ -235,6 +236,7 @@ class Shape extends Spine.Controller
     s = Raphael.animation({"fill-opacity": 1, "stroke-width": 6}, 1200, -> @.animate(e))
     e = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 300)
     if xhr is "success"
+      @refreshItem()
       tp = t for t in @taskList when t.task.Id is parseInt(task.Id)
       tp.task = task
       tp.text.remove()
@@ -360,6 +362,11 @@ class Shape extends Spine.Controller
       )
       r.head.removeNext(r)
 
+    Schedule.fetch({Id: @item.Id})
+    Schedule.bind("refresh", =>
+            @item = Schedule.find(@item.Id)
+        )
+
     @delTaskRelEnd()
     @delTaskRelFlg = false
     @confirmdeltaskrel.css("display","none")
@@ -478,6 +485,12 @@ class Shape extends Spine.Controller
             Spine.trigger("msg",st.status,stxt)
       )
       @relTask.addNext(ts)
+
+    Schedule.fetch({Id: @item.Id})
+    Schedule.bind("refresh", =>
+            @item = Schedule.find(@item.Id)
+        )
+
 
     so = ["stroke-opacity",1]
     for t,i in @taskList

@@ -323,7 +323,7 @@ func (s *Schedule) DeleteTask(id int64) error { // {{{
 
 	j, er := s.GetJobById(t.JobId)
 	if er != nil {
-		e := fmt.Sprintf("\n[s.DeleteTask] not found job by id %d", id)
+		e := fmt.Sprintf("\n[s.DeleteTask] get job [%d] error %s", id, er.Error())
 		return errors.New(e)
 	}
 
@@ -332,7 +332,6 @@ func (s *Schedule) DeleteTask(id int64) error { // {{{
 		e := fmt.Sprintf("\n[s.DeleteTask] DeleteTask error %s", err.Error())
 		return errors.New(e)
 	}
-	j.TaskCnt--
 
 	err = t.Delete()
 	if err != nil {

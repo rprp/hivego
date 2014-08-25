@@ -40,9 +40,12 @@ class App extends Spine.Controller
     
     @nv.bind('addtask', @main.mainInfo.addTaskRender)
     @nv.bind('refreshAllTask', =>
-        @main.mainInfo.draw()
-        @main.mainInfo.taskShape.refreshTaskList()
-        @main
+        Schedule.fetch({Id: @main.mainInfo.item.Id})
+        Schedule.bind("refresh", =>
+                @main.mainInfo.draw()
+                @main.mainInfo.taskShape.refreshTaskList()
+                @main
+          )
       )
 
     @routes
