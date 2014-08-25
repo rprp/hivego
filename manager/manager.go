@@ -103,6 +103,7 @@ func GetScheduleById(params martini.Params, r render.Render, Ss *schedule.Schedu
 func AddSchedule(params martini.Params, r render.Render, Ss *schedule.ScheduleManager, scd schedule.Schedule) { // {{{
 	if scd.Name == "" {
 		e := fmt.Sprintf("[AddSchedule] Schedule name is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -125,6 +126,7 @@ func AddSchedule(params martini.Params, r render.Render, Ss *schedule.ScheduleMa
 func UpdateSchedule(params martini.Params, r render.Render, Ss *schedule.ScheduleManager, scd schedule.Schedule) { // {{{
 	if scd.Name == "" {
 		e := fmt.Sprintf("[UpdateSchedule] Schedule name is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -185,6 +187,7 @@ func DeleteJob(params martini.Params, r render.Render, Ss *schedule.ScheduleMana
 func AddJob(r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) { // {{{
 	if job.Name == "" {
 		e := fmt.Sprintf("[AddJob] Job name is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -216,6 +219,7 @@ func AddJob(r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) { /
 func UpdateJob(r render.Render, Ss *schedule.ScheduleManager, job schedule.Job) { // {{{
 	if job.Name == "" {
 		e := fmt.Sprintf("[UpdateJob] Job name is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -247,6 +251,7 @@ func AddTask(params martini.Params, r render.Render, Ss *schedule.ScheduleManage
 
 	if !sidok || task.Name == "" || task.JobId == 0 {
 		e := fmt.Sprintf("[AddTask] sid or Job name is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -278,6 +283,7 @@ func DeleteTask(params martini.Params, r render.Render, Ss *schedule.ScheduleMan
 
 	if sid == 0 || jid == 0 || id == 0 {
 		e := fmt.Sprintf("[Delete Task] sid jid id is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -305,6 +311,7 @@ func UpdateTask(params martini.Params, r render.Render, Ss *schedule.ScheduleMan
 
 	if !sidok || task.Name == "" || task.JobId == 0 {
 		e := fmt.Sprintf("[UpdateTask] task name is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -337,6 +344,7 @@ func GetJobsForSchedule(params martini.Params, r render.Render, res http.Respons
 	sid, sidok := params["sid"]
 	if !sidok {
 		e := fmt.Sprintf("[GetJobsForSchedule] sid is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -358,6 +366,7 @@ func DeleteSchedule(params martini.Params, ctx *web.Context, r render.Render, Ss
 
 	if id == 0 {
 		e := fmt.Sprintf("[DeleteSchedule] id is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -381,6 +390,7 @@ func AddRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sc
 
 	if sid == 0 || jid == 0 || id == 0 || relid == 0 {
 		e := fmt.Sprintf("[AddRelTask] [sid jid id relid] is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -391,6 +401,7 @@ func AddRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sc
 
 		if t == nil || rt == nil {
 			e := fmt.Sprintf("[AddRelTask] task or reltask is required")
+			g.L.Warningln(e)
 			r.JSON(500, e)
 			return
 		}
@@ -398,6 +409,7 @@ func AddRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss *sc
 		err := t.AddRelTask(rt)
 		if err != nil {
 			e := fmt.Sprintf("[AddRelTask] add task is error %s.", err.Error())
+			g.L.Warningln(e)
 			r.JSON(500, e)
 			return
 		}
@@ -414,6 +426,7 @@ func DeleteRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss 
 
 	if sid == 0 || jid == 0 || id == 0 || relid == 0 {
 		e := fmt.Sprintf("[DeleteRelTask] [sid jid id relid] is required")
+		g.L.Warningln(e)
 		r.JSON(500, e)
 		return
 	}
@@ -423,6 +436,7 @@ func DeleteRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss 
 
 		if t == nil {
 			e := fmt.Sprintf("[DeleteRelTask] task is required")
+			g.L.Warningln(e)
 			r.JSON(500, e)
 			return
 		}
@@ -430,6 +444,7 @@ func DeleteRelTask(params martini.Params, ctx *web.Context, r render.Render, Ss 
 		err := t.DeleteRelTask(int64(relid))
 		if err != nil {
 			e := fmt.Sprintf("[DeleteRelTask] delete task is error %s.", err.Error())
+			g.L.Warningln(e)
 			r.JSON(500, e)
 			return
 		}

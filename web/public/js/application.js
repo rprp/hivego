@@ -25097,7 +25097,7 @@ Released under the MIT License
 
 }).call(this);
 }, "controllers/task.list": function(exports, require, module) {(function() {
-  var $, Ajax, Eve, Form, Job, Raphael, Shape, Spine, Style, Task, TaskManager, TaskShape,
+  var $, Ajax, Eve, Form, Job, Raphael, Schedule, Shape, Spine, Style, Task, TaskManager, TaskShape,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -25111,6 +25111,8 @@ Released under the MIT License
   Raphael = require('raphaelify');
 
   Eve = require('eve');
+
+  Schedule = require('models/schedule');
 
   Style = require('controllers/style');
 
@@ -25695,7 +25697,7 @@ Released under the MIT License
           url: "/schedules/" + this.item.Id + "/jobs/" + r.tail.task.JobId + "/" + param,
           parallel: {}
         }).fail((function(_this) {
-          return function(xhr, st, error) {
+          return function(st, error, xhr) {
             var stxt;
             stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
             return Spine.trigger("msg", st.status, stxt);
@@ -25875,7 +25877,7 @@ Released under the MIT License
           url: "/schedules/" + this.item.Id + "/jobs/" + ts.task.JobId + "/" + param,
           parallel: {}
         }).fail((function(_this) {
-          return function(xhr, st, error) {
+          return function(st, error, xhr) {
             var stxt;
             stxt = "" + st.status + " " + st.statusText + " " + st.responseText;
             return Spine.trigger("msg", st.status, stxt);

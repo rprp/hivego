@@ -2,6 +2,7 @@ Spine = require('spineify')
 Ajax  = Spine.Ajax.Base
 Raphael = require('raphaelify')
 Eve = require('eve')
+Schedule = require('models/schedule')
 Style = require('controllers/style')
 Task = require('models/task')
 Job = require('models/job')
@@ -359,7 +360,7 @@ class Shape extends Spine.Controller
         url: "/schedules/#{@item.Id}/jobs/#{r.tail.task.JobId}/#{param}"
         parallel:{}
         }
-      ).fail( (xhr, st, error) =>
+      ).fail((st, error, xhr) =>
             stxt = "#{st.status} #{st.statusText} #{st.responseText}"
             Spine.trigger("msg",st.status,stxt)
       )
@@ -478,9 +479,9 @@ class Shape extends Spine.Controller
         url: "/schedules/#{@item.Id}/jobs/#{ts.task.JobId}/#{param}"
         parallel:{}
         }
-      ).fail( (xhr, st, error) =>
-            stxt = "#{st.status} #{st.statusText} #{st.responseText}"
-            Spine.trigger("msg",st.status,stxt)
+      ).fail((st, error, xhr) =>
+                stxt = "#{st.status} #{st.statusText} #{st.responseText}"
+                Spine.trigger("msg",st.status,stxt)
       )
       @relTask.addNext(ts)
 
