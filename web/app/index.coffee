@@ -28,10 +28,6 @@ class App extends Spine.Controller
     Schedule.bind "ajaxError", (xhr, st, error) ->
         stxt = "#{st.status} #{st.statusText} #{st.responseText}"
         Spine.trigger("msg",st.status,stxt)
-        console.log("ajaxError statusText=#{stxt} error=#{error}")
-    Schedule.bind "ajaxSuccess", (data,status,xhr) ->
-        #Spine.trigger("msg",status,"success")
-        console.log("ajaxSuccess #{xhr} #{status}")
 
     @nv = new Navbar
     @msg = new Msg
@@ -41,11 +37,12 @@ class App extends Spine.Controller
     @nv.bind('addtask', @main.mainInfo.addTaskRender)
     @nv.bind('refreshAllTask', =>
         Schedule.fetch({Id: @main.mainInfo.item.Id})
-        Schedule.bind("refresh", =>
-                @main.mainInfo.draw()
+        Schedule.bind("findRecord", (rs) =>
+                @main.mainInfo.paper
+                @main.mainInfo.draw(rs)
                 @main.mainInfo.taskShape.refreshTaskList()
-                @main
           )
+        @main
       )
 
     @routes

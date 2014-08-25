@@ -2,7 +2,6 @@ Spine = require('spineify')
 Ajax  = Spine.Ajax.Base
 Raphael = require('raphaelify')
 Eve = require('eve')
-Schedule = require('models/schedule')
 Style = require('controllers/style')
 Task = require('models/task')
 Job = require('models/job')
@@ -366,11 +365,6 @@ class Shape extends Spine.Controller
       )
       r.head.removeNext(r)
 
-    Schedule.fetch({Id: @item.Id})
-    Schedule.bind("refresh", =>
-            @item = Schedule.find(@item.Id)
-        )
-
     @delTaskRelEnd()
     @delTaskRelFlg = false
     @confirmdeltaskrel.css("display","none")
@@ -490,12 +484,6 @@ class Shape extends Spine.Controller
       )
       @relTask.addNext(ts)
 
-    Schedule.fetch({Id: @item.Id})
-    Schedule.bind("refresh", =>
-            @item = Schedule.find(@item.Id)
-        )
-
-
     so = ["stroke-opacity",1]
     for t,i in @taskList
       t.sp.hover(t.hoveron,t.hoverout)
@@ -514,6 +502,11 @@ class Shape extends Spine.Controller
           for r,j in rts.pre
             tmp.push(r)
       tpre = tmp
+
+    Schedule.fetch({Id: @item.Id})
+    Schedule.bind("findRecord", (rs) =>
+            @item = Schedule.find(@item.Id)
+      )
 # }}}
 
   deleteTask: (ts,e) =># {{{
