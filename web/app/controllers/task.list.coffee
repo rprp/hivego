@@ -42,6 +42,7 @@ class Form extends Spine.Controller
             $('#jobid').val(@$(e.target).attr("data"))
             $('.jobbtn').html("&nbsp;" + @$(e.target).text() + "&nbsp;&nbsp;<span class='caret'></span>")
             $('.jobbtn').css("background-color",@$(e.target).css("background-color"))
+            @JobId = @$(e.target).attr("data")
     # }}}
 
     "keypress .addTask":  @addTaskKeyPress = (e) -># {{{
@@ -95,7 +96,7 @@ class Form extends Spine.Controller
           stxt = "#{st.status} #{st.statusText} #{st.responseText}"
           Spine.trigger("msg",st.status,stxt)
       tk.Name = @taskName.val()
-      tk.JobId = parseInt(@JobId.val())
+      tk.JobId = parseInt(@JobId)
       tk.Address = @taskAddr.val()
       tk.Cmd = @taskCmd.val()
       tk.Desc = @taskDesc.val()
@@ -120,7 +121,7 @@ class Form extends Spine.Controller
       tk.Cmd = @taskCmd.val()
       tk.Desc = @taskDesc.val()
       tk.Id = -1
-      tk.JobId = parseInt(@JobId.val())
+      tk.JobId = parseInt(@JobId)
 
       tk.Param = []
       for li,i in @taskParamList.children("li")
@@ -236,7 +237,6 @@ class Shape extends Spine.Controller
     s = Raphael.animation({"fill-opacity": 1, "stroke-width": 6}, 1200, -> @.animate(e))
     e = Raphael.animation({"fill-opacity": .2, "stroke-width": 1}, 300)
     if xhr is "success"
-      @refreshItem()
       tp = t for t in @taskList when t.task.Id is parseInt(task.Id)
       tp.task = task
       tp.text.remove()
@@ -504,10 +504,10 @@ class Shape extends Spine.Controller
             tmp.push(r)
       tpre = tmp
 
-    Schedule.fetch({Id: @item.Id})
-    Schedule.bind("findRecord", (rs) =>
-            @item = Schedule.find(@item.Id)
-      )
+    #Schedule.fetch({Id: @item.Id})
+    #Schedule.bind("findRecord", (rs) =>
+            #@item = Schedule.find(@item.Id)
+      #)
 # }}}
 
   deleteTask: (ts,e) =># {{{

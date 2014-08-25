@@ -25164,7 +25164,8 @@ Released under the MIT License
       "click .jobli": Form.setJob = function(e) {
         $('#jobid').val(this.$(e.target).attr("data"));
         $('.jobbtn').html("&nbsp;" + this.$(e.target).text() + "&nbsp;&nbsp;<span class='caret'></span>");
-        return $('.jobbtn').css("background-color", this.$(e.target).css("background-color"));
+        $('.jobbtn').css("background-color", this.$(e.target).css("background-color"));
+        return this.JobId = this.$(e.target).attr("data");
       },
       "keypress .addTask": Form.addTaskKeyPress = function(e) {
         var _ref;
@@ -25233,7 +25234,7 @@ Released under the MIT License
           return Spine.trigger("msg", st.status, stxt);
         });
         tk.Name = this.taskName.val();
-        tk.JobId = parseInt(this.JobId.val());
+        tk.JobId = parseInt(this.JobId);
         tk.Address = this.taskAddr.val();
         tk.Cmd = this.taskCmd.val();
         tk.Desc = this.taskDesc.val();
@@ -25268,7 +25269,7 @@ Released under the MIT License
         tk.Cmd = this.taskCmd.val();
         tk.Desc = this.taskDesc.val();
         tk.Id = -1;
-        tk.JobId = parseInt(this.JobId.val());
+        tk.JobId = parseInt(this.JobId);
         tk.Param = [];
         _ref1 = this.taskParamList.children("li");
         for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
@@ -25472,7 +25473,6 @@ Released under the MIT License
         "stroke-width": 1
       }, 300);
       if (xhr === "success") {
-        this.refreshItem();
         _ref = this.taskList;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           t = _ref[_i];
@@ -25855,7 +25855,7 @@ Released under the MIT License
     };
 
     Shape.prototype.connectFinish = function(ts, e) {
-      var ajax, i, j, param, r, rts, s1, so, t, tmp, tpre, txt, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref10, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
+      var ajax, i, j, param, r, rts, s1, so, t, tmp, tpre, txt, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref10, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9, _results;
       s1 = Raphael.animation({
         "fill-opacity": .2,
         "stroke-width": 1
@@ -25905,6 +25905,7 @@ Released under the MIT License
         }
       }
       tpre = ts.pre;
+      _results = [];
       while (tpre.length > 0) {
         tmp = [];
         for (i = _l = 0, _len3 = tpre.length; _l < _len3; i = ++_l) {
@@ -25923,16 +25924,9 @@ Released under the MIT License
             }
           }
         }
-        tpre = tmp;
+        _results.push(tpre = tmp);
       }
-      Schedule.fetch({
-        Id: this.item.Id
-      });
-      return Schedule.bind("findRecord", (function(_this) {
-        return function(rs) {
-          return _this.item = Schedule.find(_this.item.Id);
-        };
-      })(this));
+      return _results;
     };
 
     Shape.prototype.deleteTask = function(ts, e) {
