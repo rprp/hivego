@@ -420,7 +420,6 @@ class Shape extends Spine.Controller
       @delTaskRelEnd()
 # }}}
 
-#隐藏Bug，从列表界面进入调度信息界面后，点击连接图标会调用该函数两次。应为一次调用才对。
   connectStart: (ts, e) =># {{{
     s1 = Raphael.animation({"fill-opacity": .05, "stroke-width": 0}, 200)
 
