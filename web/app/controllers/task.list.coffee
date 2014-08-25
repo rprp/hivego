@@ -658,19 +658,19 @@ class TaskShape extends Spine.Module
     ms = Math.sin(45*Math.PI/180)
     mc1 = Math.cos(90*Math.PI/180)
     ms1 = Math.sin(90*Math.PI/180)
+    [x,y] = [@sp.attr("cx"), @sp.attr("cy")]
     if @sp.isShowTool
-      [x,y] = [@sp.attr("cx"), @sp.attr("cy")]
       s.toolset.animate({"x": x, "y": y, "cx": x, "cy": y}, 80, "backin",-> @.hide())
       @sp.isShowTool = false
     else
-      s.editImg.animate({"x": s.editImg.ox + 50, "y": s.editImg.oy - 7.5}, 600, "elastic")
-      s.deleteImg.animate({"x": s.deleteImg.ox + 50 * mc, "y": s.deleteImg.oy + 50 * ms - 7.5}, 600, "elastic")
-      s.connImg.animate({"x": s.connImg.ox + 50 * mc, "y": s.connImg.oy - 50 * ms - 7.5}, 600, "elastic")
-      s.deleteRelImg.animate({"x": s.deleteRelImg.ox + 50 * mc1, "y": s.deleteRelImg.oy - 50 * ms1 - 7.5}, 600, "elastic")
-      s.edit.animate({"cx": s.edit.ox + 57, "cy": @sp.ts.edit.oy}, 600, "elastic")
-      s.delete.animate({"cx": s.delete.ox + 60 * mc, "cy": s.delete.oy + 50 * ms}, 600, "elastic")
-      s.deleteRel.animate({"cx": s.deleteRel.ox + 60 * mc1 + 7, "cy": s.deleteRel.oy - 50 * ms1}, 600, "elastic")
-      s.conn.animate({"cx": s.conn.ox + 60 * mc, "cy": s.conn.oy - 50 * ms}, 600, "elastic")
+      s.editImg.animate({"x": x + 50, "y": y - 7.5}, 600, "elastic")
+      s.deleteImg.animate({"x": x + 50 * mc, "y": y + 50 * ms - 7.5}, 600, "elastic")
+      s.connImg.animate({"x": x + 50 * mc, "y": y - 50 * ms - 7.5}, 600, "elastic")
+      s.deleteRelImg.animate({"x": x + 50 * mc1, "y": y - 50 * ms1 - 7.5}, 600, "elastic")
+      s.edit.animate({"cx": x + 57, "cy": y}, 600, "elastic")
+      s.delete.animate({"cx": x + 60 * mc, "cy": y + 50 * ms}, 600, "elastic")
+      s.deleteRel.animate({"cx": x + 60 * mc1 + 7, "cy": y - 50 * ms1}, 600, "elastic")
+      s.conn.animate({"cx": x + 60 * mc, "cy": y - 50 * ms}, 600, "elastic")
       s.toolset.show()
       @sp.isShowTool = true
   # }}}
