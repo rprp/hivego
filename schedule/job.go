@@ -28,7 +28,7 @@ type Job struct { // {{{
 //根据Job.Id初始化Job结构，从元数据库获取Job的基本信息初始化后
 //继续初始化Job所属的Task列表，同时递归调用自身，初始化下级Job结构
 //失败返回error信息。
-func (j *Job) InitJob() error { // {{{
+func (j *Job) InitJob(s *Schedule) error { // {{{
 	err := j.getJob()
 	if err != nil {
 		e := fmt.Sprintf("\n[j.InitJob] init job [%d] error %s.", j.Id, err.Error())
@@ -44,7 +44,7 @@ func (j *Job) InitJob() error { // {{{
 		}
 	}
 
-	err = j.InitTasksForJob()
+	err = j.InitTasksForJob(s)
 	if err != nil {
 		e := fmt.Sprintf("\n[j.InitJob] init task for job [%d] error %s.", j.Id, err.Error())
 		return errors.New(e)
@@ -63,7 +63,7 @@ func (j *Job) InitJob() error { // {{{
 	}
 
 	nj.ScheduleId, nj.ScheduleCyc = j.ScheduleId, j.ScheduleCyc
-	if err := nj.InitJob(); err != nil {
+	if err := nj.InitJob(s); err != nil {
 		e := fmt.Sprintf("\n[j.InitJob] init job [%d] error %s.", nj.Id, err.Error())
 		return errors.New(e)
 	}
@@ -75,7 +75,7 @@ func (j *Job) InitJob() error { // {{{
 //初始化Job下的Tasks信息，从元数据库取到Job下所有的TaskId后
 //调用方法初始化Task并加至Job的Tasks成员中，同时也添加到全局Tasks列表
 //出错返回错误信息
-func (j *Job) InitTasksForJob() error { // {{{
+func (j *Job) InitTasksForJob(s *Schedule) error { // {{{
 	j.Tasks = make(map[string]*Task)
 
 	tasksId, err := j.getTasksId()
@@ -86,13 +86,12 @@ func (j *Job) InitTasksForJob() error { // {{{
 
 	for _, taskid := range tasksId {
 		task := &Task{Id: taskid}
-		err := task.InitTask()
+		err := task.InitTask(s)
 		if err != nil {
 			e := fmt.Sprintf("\n[t.InitTaskForJob] %s.", err.Error())
 			return errors.New(e)
 		}
 		j.Tasks[string(taskid)] = task
-		g.Tasks[string(taskid)] = task
 
 		task.ScheduleCyc = j.ScheduleCyc
 		j.TaskCnt++

@@ -8,7 +8,7 @@ Navbar = require('controllers/navbar')
 Msg = require('controllers/msg')
 
 class Main extends Spine.Stack
-  className: 'smain container'
+  className: 'smain'
 
   controllers:
     mainList: MainList

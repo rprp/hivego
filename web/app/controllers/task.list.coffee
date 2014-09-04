@@ -39,10 +39,9 @@ class Form extends Spine.Controller
     "click .delParam": (e) -> $(e.target).parent("li").remove()# }}}
   
     "click .jobli": @setJob = (e) -># {{{
-            $('#jobid').val(@$(e.target).attr("data"))
             $('.jobbtn').html("&nbsp;" + @$(e.target).text() + "&nbsp;&nbsp;<span class='caret'></span>")
             $('.jobbtn').css("background-color",@$(e.target).css("background-color"))
-            @JobId = @$(e.target).attr("data")
+            @JobId.val(@$(e.target).attr("data"))
     # }}}
 
     "keypress .addTask":  @addTaskKeyPress = (e) -># {{{
@@ -96,7 +95,7 @@ class Form extends Spine.Controller
           stxt = "#{st.status} #{st.statusText} #{st.responseText}"
           Spine.trigger("msg",st.status,stxt)
       tk.Name = @taskName.val()
-      tk.JobId = parseInt(@JobId)
+      tk.JobId = parseInt(@JobId.val())
       tk.Address = @taskAddr.val()
       tk.Cmd = @taskCmd.val()
       tk.Desc = @taskDesc.val()
@@ -121,7 +120,7 @@ class Form extends Spine.Controller
       tk.Cmd = @taskCmd.val()
       tk.Desc = @taskDesc.val()
       tk.Id = -1
-      tk.JobId = parseInt(@JobId)
+      tk.JobId = parseInt(@JobId.val())
 
       tk.Param = []
       for li,i in @taskParamList.children("li")
@@ -544,14 +543,14 @@ class TaskShape extends Spine.Module
   draw: -># {{{
     @toolset = @paper.set()
 
-    imgStyle = [@cx, @cy, 15, 15]
+    imgStyle = [@cx, @cy, 10, 10]
     @editImg=@paper.image("img/edit.png", imgStyle...)
     @deleteRelImg=@paper.image("img/delrel.png", imgStyle...)
     @deleteImg=@paper.image("img/delete.png", imgStyle...)
     @connImg=@paper.image("img/conn.png", imgStyle...)
     @connImg.toBack()
 
-    @edit=@paper.circle(@cx, @cy , 14)
+    @edit=@paper.circle(@cx, @cy , 10)
     @edit.click(mm = (e) ->
         @sp.flg = true
         @showTool()
@@ -559,19 +558,19 @@ class TaskShape extends Spine.Module
         Spine.trigger("addTaskRender", @.task)
       ,@)
 
-    @deleteRel=@paper.circle(@cx, @cy, 14)
+    @deleteRel=@paper.circle(@cx, @cy, 10)
     @deleteRel.click(mm = (e) ->
         @trigger("deleteTaskRelStart", @, e||window.event)
       ,@)
 
-    @delete=@paper.circle(@cx, @cy, 14)
+    @delete=@paper.circle(@cx, @cy, 10)
     @delete.click(mm = (e) ->
         e = e||window.event
         @.task.opt = "delete"
         @trigger("deleteTask", @, e||window.event)
       ,@)
 
-    @conn=@paper.circle(@cx, @cy, 14)
+    @conn=@paper.circle(@cx, @cy, 10)
     @conn.refresh = =>
       if @conn.rel
         @paper.connection(@conn.rel)
@@ -674,14 +673,14 @@ class TaskShape extends Spine.Module
       s.toolset.animate({"x": x, "y": y, "cx": x, "cy": y}, 80, "backin",-> @.hide())
       @sp.isShowTool = false
     else
-      s.editImg.animate({"x": x + 50, "y": y - 7.5}, 600, "elastic")
-      s.deleteImg.animate({"x": x + 50 * mc, "y": y + 50 * ms - 7.5}, 600, "elastic")
-      s.connImg.animate({"x": x + 50 * mc, "y": y - 50 * ms - 7.5}, 600, "elastic")
-      s.deleteRelImg.animate({"x": x + 50 * mc1, "y": y - 50 * ms1 - 7.5}, 600, "elastic")
-      s.edit.animate({"cx": x + 57, "cy": y}, 600, "elastic")
-      s.delete.animate({"cx": x + 60 * mc, "cy": y + 50 * ms}, 600, "elastic")
-      s.deleteRel.animate({"cx": x + 60 * mc1 + 7, "cy": y - 50 * ms1}, 600, "elastic")
-      s.conn.animate({"cx": x + 60 * mc, "cy": y - 50 * ms}, 600, "elastic")
+      s.editImg.animate({"x": x + 50, "y": y - 5}, 600, "elastic")
+      s.deleteImg.animate({"x": x + 50 * mc, "y": y + 50 * ms - 5}, 600, "elastic")
+      s.connImg.animate({"x": x + 50 * mc, "y": y - 50 * ms - 5}, 600, "elastic")
+      s.deleteRelImg.animate({"x": x + 50 * mc1, "y": y - 50 * ms1 - 5}, 600, "elastic")
+      s.edit.animate({"cx": x + 55, "cy": y}, 600, "elastic")
+      s.delete.animate({"cx": x + 57 * mc, "cy": y + 50 * ms}, 600, "elastic")
+      s.deleteRel.animate({"cx": x + 57 * mc1 + 5, "cy": y - 50 * ms1}, 600, "elastic")
+      s.conn.animate({"cx": x + 57 * mc, "cy": y - 50 * ms}, 600, "elastic")
       s.toolset.show()
       @sp.isShowTool = true
   # }}}

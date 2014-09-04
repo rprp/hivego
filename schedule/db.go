@@ -30,7 +30,10 @@ func (sl *ScheduleManager) getAllSchedules() error { // {{{
 	g.L.Debugln("[getAllSchedule] ", "\nsql=", sql)
 
 	for rows.Next() {
-		scd := &Schedule{}
+		scd := &Schedule{
+			Jobs:  make([]*Job, 0),
+			Tasks: make([]*Task, 0),
+		}
 		scd.StartSecond = make([]time.Duration, 0)
 		err = rows.Scan(&scd.Id, &scd.Name, &scd.Count, &scd.Cyc, &scd.TimeOut,
 			&scd.JobId, &scd.Desc, &scd.CreateUserId, &scd.CreateTime, &scd.ModifyUserId,
@@ -235,6 +238,9 @@ func (s *Schedule) getSchedule() error { // {{{
 		err = errors.New(e)
 	}
 
+	s.Jobs = make([]*Job, 0)
+	s.Tasks = make([]*Task, 0)
+	s.JobCnt, s.TaskCnt = 0, 0
 	return err
 } // }}}
 
@@ -749,3 +755,121 @@ func (t *Task) deleteTask() error { // {{{
 
 	return err
 } // }}}
+
+//保存执行日志
+func (s *ExecSchedule) Log() (err error) { // {{{
+
+	if s.state == 0 {
+		sql := `INSERT INTO scd_schedule_log
+						(batch_id,
+						 scd_id,
+						 start_time,
+						 end_time,
+						 state,
+						 result,
+						 batch_type)
+			VALUES      (?,
+						 ?,
+						 ?,
+						 ?,
+						 ?,
+						 ?,
+						 ?)`
+		_, err = g.LogConn.Exec(sql, &s.batchId, &s.schedule.Id, &s.startTime, &s.endTime, &s.state, &s.result, &s.execType)
+	} else {
+		sql := `UPDATE scd_schedule_log
+						 set start_time=?,
+						 end_time=?,
+						 state=?,
+						 result=?
+				WHERE batch_id=?`
+		_, err = g.LogConn.Exec(sql, &s.startTime, &s.endTime, &s.state, &s.result, &s.batchId)
+	}
+
+	return err
+} // }}}
+
+//保存执行日志
+func (j *ExecJob) Log() (err error) { // {{{
+	if j.state == 0 {
+		sql := `INSERT INTO scd_job_log
+						(batch_job_id,batch_id,
+						 job_id,
+						 start_time,
+						 end_time,
+						 state,
+						 result,
+						 batch_type)
+			VALUES      (?,
+						 ?,
+						 ?,
+						 ?,
+						 ?,
+						 ?,
+						 ?,
+						 ?)`
+		_, err = g.LogConn.Exec(sql, &j.batchJobId, &j.batchId, &j.job.Id, &j.startTime, &j.endTime, &j.state, &j.result, &j.execType)
+	} else {
+		sql := `UPDATE scd_job_log
+						 set start_time=?,
+						 end_time=?,
+						 state=?,
+						 result=?
+				WHERE batch_job_id=?`
+		_, err = g.LogConn.Exec(sql, &j.startTime, &j.endTime, &j.state, &j.result, &j.batchJobId)
+	}
+
+	return err
+} // }}}
+
+//保存执行日志
+func (t *ExecTask) Log() (err error) { // {{{
+	if t.state == 0 {
+		sql := `INSERT INTO scd_task_log
+						(batch_task_id,batch_job_id,batch_id,
+						 task_id,
+						 start_time,
+						 end_time,
+						 state,
+						 batch_type)
+			VALUES      (?,
+						 ?,
+						 ?,
+						 ?,
+						 ?,
+						 ?,
+						 ?,
+						 ?)`
+		_, err = g.LogConn.Exec(sql, &t.batchTaskId, &t.batchJobId, &t.batchId, &t.task.Id, &t.startTime, &t.endTime, &t.state, &t.execType)
+	} else {
+		sql := `UPDATE scd_task_log
+						 set start_time=?,
+						 end_time=?,
+						 state=?
+				WHERE batch_task_id=?`
+		_, err = g.LogConn.Exec(sql, &t.startTime, &t.endTime, &t.state, &t.batchTaskId)
+	}
+
+	return err
+} // }}}
+
+//getSuccessTaskId会根据传入的batchId从元数据库查找出执行成功的task
+func getSuccessTaskId(batchId string) []int64 { // {{{
+
+	sql := `SELECT task_id
+			FROM   scd_task_log
+			WHERE  state = 3
+			   AND batch_id =?`
+	rows, err := g.HiveConn.Query(sql, batchId)
+	CheckErr("getSuccessTaskId run Sql "+sql, err)
+
+	taskIds := make([]int64, 0)
+	//循环读取记录，格式化后存入变量ｂ
+	for rows.Next() {
+		var id int64
+		rows.Scan(&id)
+		taskIds = append(taskIds, id)
+	}
+
+	return taskIds
+} // }}}// }}}

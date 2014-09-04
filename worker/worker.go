@@ -40,10 +40,10 @@ type Task struct {
 	StartSecond int64             //周期内启动时间
 	Cmd         string            // 任务执行的命令或脚本、函数名等。
 	TimeOut     int64             // 设定超时时间，0表示不做超时限制。单位秒
-	Param       map[string]string // 任务的参数信息
+	Param       []string          // 任务的参数信息
 	Attr        map[string]string // 任务的属性信息
 	JobId       int64             //所属作业ID
-	RelTasks    map[int64]*Task   //依赖的任务
+	RelTasks    map[string]*Task  //依赖的任务
 	RelTaskCnt  int64             //依赖的任务数量
 }
 
@@ -62,15 +62,6 @@ type CmdExecuter struct {
 //参数task，需要执行的任务信息。
 //参数reply，任务执行输出的信息。
 func (this *CmdExecuter) Run(task *Task, reply *Reply) error { // {{{
-	defer func() {
-		if err := recover(); err != nil {
-			var buf bytes.Buffer
-			buf.Write(debug.Stack())
-			l.Warnln("panic=", buf.String())
-			reply.Err = errors.New("panic")
-			return
-		}
-	}()
 
 	//执行task任务
 	err := runCmd(task, reply)
@@ -80,6 +71,15 @@ func (this *CmdExecuter) Run(task *Task, reply *Reply) error { // {{{
 
 //runCmd用来执行参数cmd中指定的命令，并返回执行时间和错误信息。
 func runCmd(task *Task, reply *Reply) error { // {{{
+	defer func() {
+		if err := recover(); err != nil {
+			var buf bytes.Buffer
+			buf.Write(debug.Stack())
+			l.Warnln("panic=", buf.String())
+			reply.Err = errors.New("panic")
+			return
+		}
+	}()
 	var c *exec.Cmd
 	var cmdArgs []string //执行的命令行参数
 
@@ -141,24 +141,41 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 	}()
 
 	//监听通道，超时则kill掉进程
-	select {
-	case <-time.After(time.Duration(task.TimeOut) * 1000 * time.Millisecond):
-		c.Process.Kill()
-		l.Warnln("runCmd is time out TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
-			cmdArgs, "Error=", "time out")
-		reply.Err = errors.New("time out")
-		return errors.New("time out")
-	case e := <-chErr:
-		//异常退出
-		l.Warnln("runCmd is err TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
-			cmdArgs, "Error=", e.Error())
-		reply.Err = e
-		return e
-	case <-ok:
-		//正常退出
-		l.Infoln("runCmd is ok TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
-			cmdArgs)
-		return nil
+	if task.TimeOut > 0 {
+		select {
+		case <-time.After(time.Duration(task.TimeOut) * 1000 * time.Millisecond):
+			c.Process.Kill()
+			l.Warnln("runCmd is time out TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
+				cmdArgs, "Error=", "time out")
+			reply.Err = errors.New("time out")
+			return errors.New("time out")
+		case e := <-chErr:
+			//异常退出
+			l.Warnln("runCmd is err TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
+				cmdArgs, "Error=", e.Error())
+			reply.Err = e
+			return e
+		case <-ok:
+			//正常退出
+			l.Infoln("runCmd is ok TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
+				cmdArgs)
+			return nil
+		}
+	} else {
+
+		select {
+		case e := <-chErr:
+			//异常退出
+			l.Warnln("runCmd is err TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
+				cmdArgs, "Error=", e.Error())
+			reply.Err = e
+			return e
+		case <-ok:
+			//正常退出
+			l.Infoln("runCmd is ok TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
+				cmdArgs)
+			return nil
+		}
 	}
 
 	return nil

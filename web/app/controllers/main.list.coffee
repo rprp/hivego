@@ -88,7 +88,10 @@ class ScheduleItem extends Spine.Controller
     s.destroy()
 
 class MainList extends Spine.Controller
-  className: 'mainlist row'
+  className: 'mainlist container'
+
+  elements:
+    "#row": "row"
 
   constructor: ->
     super
@@ -100,7 +103,7 @@ class MainList extends Spine.Controller
 
   addOne: (it) =>
     view = new ScheduleItem(item: it)
-    @append(view.render().el)
+    @row.append(view.render().el)
 
   addAll: =>
     $('.scheduleitem').remove()

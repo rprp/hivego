@@ -36,7 +36,7 @@ type Task struct { // {{{
 //      Task的参数信息
 //      依赖的Task列表
 //失败返回错误信息。
-func (t *Task) InitTask() error { // {{{
+func (t *Task) InitTask(s *Schedule) error { // {{{
 	err := t.getTask()
 	if err != nil {
 		e := fmt.Sprintf("\n[t.InitTask] %s.", err.Error())
@@ -61,9 +61,9 @@ func (t *Task) InitTask() error { // {{{
 
 	err = t.getRelTaskId()
 	for _, rtid := range t.RelTasksId {
-		ok := false
-		t.RelTasks[string(rtid)], ok = g.Tasks[string(rtid)]
-		if !ok {
+		rt := s.GetTaskById(rtid)
+		t.RelTasks[string(rtid)] = rt
+		if rt == nil {
 			e := fmt.Sprintf("[t.InitTask] Task [%d] not found RelTask [%d] .\n", t.Id, rtid)
 			g.L.Warningln(e)
 			continue
@@ -72,6 +72,7 @@ func (t *Task) InitTask() error { // {{{
 
 	}
 
+	s.addTaskList(t)
 	return nil
 } // }}}
 

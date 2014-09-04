@@ -24479,7 +24479,11 @@ Released under the MIT License
   MainList = (function(_super) {
     __extends(MainList, _super);
 
-    MainList.prototype.className = 'mainlist row';
+    MainList.prototype.className = 'mainlist container';
+
+    MainList.prototype.elements = {
+      "#row": "row"
+    };
 
     function MainList() {
       this.addAll = __bind(this.addAll, this);
@@ -24500,7 +24504,7 @@ Released under the MIT License
       view = new ScheduleItem({
         item: it
       });
-      return this.append(view.render().el);
+      return this.row.append(view.render().el);
     };
 
     MainList.prototype.addAll = function() {
@@ -25162,10 +25166,9 @@ Released under the MIT License
         return $(e.target).parent("li").remove();
       },
       "click .jobli": Form.setJob = function(e) {
-        $('#jobid').val(this.$(e.target).attr("data"));
         $('.jobbtn').html("&nbsp;" + this.$(e.target).text() + "&nbsp;&nbsp;<span class='caret'></span>");
         $('.jobbtn').css("background-color", this.$(e.target).css("background-color"));
-        return this.JobId = this.$(e.target).attr("data");
+        return this.JobId.val(this.$(e.target).attr("data"));
       },
       "keypress .addTask": Form.addTaskKeyPress = function(e) {
         var _ref;
@@ -25234,7 +25237,7 @@ Released under the MIT License
           return Spine.trigger("msg", st.status, stxt);
         });
         tk.Name = this.taskName.val();
-        tk.JobId = parseInt(this.JobId);
+        tk.JobId = parseInt(this.JobId.val());
         tk.Address = this.taskAddr.val();
         tk.Cmd = this.taskCmd.val();
         tk.Desc = this.taskDesc.val();
@@ -25269,7 +25272,7 @@ Released under the MIT License
         tk.Cmd = this.taskCmd.val();
         tk.Desc = this.taskDesc.val();
         tk.Id = -1;
-        tk.JobId = parseInt(this.JobId);
+        tk.JobId = parseInt(this.JobId.val());
         tk.Param = [];
         _ref1 = this.taskParamList.children("li");
         for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
@@ -26009,30 +26012,30 @@ Released under the MIT License
     TaskShape.prototype.draw = function() {
       var hh, imgStyle, mm, nn, _ref, _ref1, _ref2, _ref3;
       this.toolset = this.paper.set();
-      imgStyle = [this.cx, this.cy, 15, 15];
+      imgStyle = [this.cx, this.cy, 10, 10];
       this.editImg = (_ref = this.paper).image.apply(_ref, ["img/edit.png"].concat(__slice.call(imgStyle)));
       this.deleteRelImg = (_ref1 = this.paper).image.apply(_ref1, ["img/delrel.png"].concat(__slice.call(imgStyle)));
       this.deleteImg = (_ref2 = this.paper).image.apply(_ref2, ["img/delete.png"].concat(__slice.call(imgStyle)));
       this.connImg = (_ref3 = this.paper).image.apply(_ref3, ["img/conn.png"].concat(__slice.call(imgStyle)));
       this.connImg.toBack();
-      this.edit = this.paper.circle(this.cx, this.cy, 14);
+      this.edit = this.paper.circle(this.cx, this.cy, 10);
       this.edit.click(mm = function(e) {
         this.sp.flg = true;
         this.showTool();
         this.task.opt = "edit";
         return Spine.trigger("addTaskRender", this.task);
       }, this);
-      this.deleteRel = this.paper.circle(this.cx, this.cy, 14);
+      this.deleteRel = this.paper.circle(this.cx, this.cy, 10);
       this.deleteRel.click(mm = function(e) {
         return this.trigger("deleteTaskRelStart", this, e || window.event);
       }, this);
-      this["delete"] = this.paper.circle(this.cx, this.cy, 14);
+      this["delete"] = this.paper.circle(this.cx, this.cy, 10);
       this["delete"].click(mm = function(e) {
         e = e || window.event;
         this.task.opt = "delete";
         return this.trigger("deleteTask", this, e || window.event);
       }, this);
-      this.conn = this.paper.circle(this.cx, this.cy, 14);
+      this.conn = this.paper.circle(this.cx, this.cy, 10);
       this.conn.refresh = (function(_this) {
         return function() {
           if (_this.conn.rel) {
@@ -26281,34 +26284,34 @@ Released under the MIT License
       } else {
         s.editImg.animate({
           "x": x + 50,
-          "y": y - 7.5
+          "y": y - 5
         }, 600, "elastic");
         s.deleteImg.animate({
           "x": x + 50 * mc,
-          "y": y + 50 * ms - 7.5
+          "y": y + 50 * ms - 5
         }, 600, "elastic");
         s.connImg.animate({
           "x": x + 50 * mc,
-          "y": y - 50 * ms - 7.5
+          "y": y - 50 * ms - 5
         }, 600, "elastic");
         s.deleteRelImg.animate({
           "x": x + 50 * mc1,
-          "y": y - 50 * ms1 - 7.5
+          "y": y - 50 * ms1 - 5
         }, 600, "elastic");
         s.edit.animate({
-          "cx": x + 57,
+          "cx": x + 55,
           "cy": y
         }, 600, "elastic");
         s["delete"].animate({
-          "cx": x + 60 * mc,
+          "cx": x + 57 * mc,
           "cy": y + 50 * ms
         }, 600, "elastic");
         s.deleteRel.animate({
-          "cx": x + 60 * mc1 + 7,
+          "cx": x + 57 * mc1 + 5,
           "cy": y - 50 * ms1
         }, 600, "elastic");
         s.conn.animate({
-          "cx": x + 60 * mc,
+          "cx": x + 57 * mc,
           "cy": y - 50 * ms
         }, 600, "elastic");
         s.toolset.show();
@@ -26592,7 +26595,7 @@ Released under the MIT License
       return Main.__super__.constructor.apply(this, arguments);
     }
 
-    Main.prototype.className = 'smain container';
+    Main.prototype.className = 'smain';
 
     Main.prototype.controllers = {
       mainList: MainList,
@@ -27240,7 +27243,7 @@ module.exports = content;}, "views/main-info": function(exports, require, module
   }
   (function() {
     (function() {
-      __out.push('<div class="panel panel-default fdin" style="background:transparent; border: 0;">\n    <div class="pant">\n    </div>\n</div>\n');
+      __out.push('    <div class="pant">\n    </div>\n');
     
     }).call(this);
     
@@ -27407,7 +27410,7 @@ module.exports = content;}, "views/main": function(exports, require, module) {va
   }
   (function() {
     (function() {
-      __out.push('<br>\n');
+      __out.push('<br>\n<div id=row class=row>\n</div>\n');
     
     }).call(this);
     

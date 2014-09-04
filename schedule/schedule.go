@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"sync"
 	"time"
 )
 
@@ -16,15 +17,12 @@ var (
 
 //GlobalConfigStruct结构中定义了程序中的一些配置信息
 type GlobalConfigStruct struct { // {{{
-	L           *logrus.Logger      //log对象
-	HiveConn    *sql.DB             //元数据库链接
-	LogConn     *sql.DB             //日志数据库链接
-	ManagerPort string              //管理模块的web服务端口
-	Port        string              //Schedule与Worker模块通信端口
-	ExecScdChan chan *ExecSchedule  //执行链信息
-	Tasks       map[string]*Task    //全局Task列表
-	ExecTasks   map[int64]*ExecTask //全局ExecTask列表
-	Schedules   *ScheduleManager    //包含全部Schedule列表的结构
+	L           *logrus.Logger   //log对象
+	HiveConn    *sql.DB          //元数据库链接
+	LogConn     *sql.DB          //日志数据库链接
+	ManagerPort string           //管理模块的web服务端口
+	Port        string           //Schedule与Worker模块通信端口
+	Schedules   *ScheduleManager //包含全部Schedule列表的结构
 } // }}}
 
 //返回GlobalConfigStruct的默认值。
@@ -35,18 +33,16 @@ func DefaultGlobal() *GlobalConfigStruct { // {{{
 	sc.L.Level = logrus.Info
 	sc.Port = ":3128"
 	sc.ManagerPort = ":3000"
-	sc.ExecScdChan = make(chan *ExecSchedule)
-	sc.ExecTasks = make(map[int64]*ExecTask)
-	sc.Tasks = make(map[string]*Task)
-	sc.Schedules = &ScheduleManager{Global: sc}
+	sc.Schedules = &ScheduleManager{Global: sc, ExecScheduleList: make(map[string]*ExecSchedule)}
 	return sc
 } // }}}
 
 //ScheduleManager通过成员ScheduleList持有全部的Schedule。
 //并提供获取、增加、删除以及启动、停止Schedule的功能。
 type ScheduleManager struct { // {{{
-	ScheduleList []*Schedule         //全部的调度列表
-	Global       *GlobalConfigStruct //配置信息
+	ScheduleList     []*Schedule              //全部的调度列表
+	ExecScheduleList map[string]*ExecSchedule //当前执行的调度列表
+	Global           *GlobalConfigStruct      //配置信息
 } // }}}
 
 //初始化ScheduleList，设置全局变量g
@@ -58,6 +54,20 @@ func (sl *ScheduleManager) InitScheduleList() { // {{{
 		e := fmt.Sprintf("[sl.InitScheduleList] init scheduleList error %s.\n", err.Error())
 		g.L.Fatalln(e)
 	}
+} // }}}
+
+//增加一个调度执行结构
+func (sl *ScheduleManager) AddExecSchedule(es *ExecSchedule) { // {{{
+	sl.ExecScheduleList[es.batchId] = es
+	return
+} // }}}
+
+//移除一个调度执行结构
+func (sl *ScheduleManager) RemoveExecSchedule(batchId string) { // {{{
+	var lock sync.Mutex
+	lock.Lock()
+	defer lock.Unlock()
+	delete(sl.ExecScheduleList, batchId)
 } // }}}
 
 //开始监听Schedule，遍历列表中的Schedule并启动它的Timer方法。
@@ -207,9 +217,12 @@ func (s *Schedule) Timer() { // {{{
 		g.L.Print(l)
 
 		//构建执行结构链
-		es, err := NewExecSchedule(s)
+		es := ExecScheduleWarper(s)
+		g.Schedules.AddExecSchedule(es)
+		err = es.InitExecSchedule()
+
 		if err != nil {
-			e := fmt.Sprintf("[s.Timer] create Exec schedule [%d %s] error %s.\n", s.Id, s.Name, err.Error())
+			e := fmt.Sprintf("[s.Timer] Init Execschedule [%d %s] error %s.\n", s.Id, s.Name, err.Error())
 			g.L.Warningln(e)
 			return
 		}
@@ -242,28 +255,24 @@ func (s *Schedule) InitSchedule() error { // {{{
 	}
 
 	tj.ScheduleId, tj.ScheduleCyc = s.Id, s.Cyc
-	if err = tj.InitJob(); err != nil {
+	if err = tj.InitJob(s); err != nil {
 		e := fmt.Sprintf("\n[s.InitSchedule] init job [%d] error %s.", s.JobId, err.Error())
 		return errors.New(e)
 	}
 	s.Job = tj
-	s.Jobs, s.Tasks = make([]*Job, 0), make([]*Task, 0)
-	s.JobCnt, s.TaskCnt = 0, 0
 	for j := s.Job; j != nil; {
 		s.Jobs = append(s.Jobs, j)
 		s.JobCnt++
-		s.TaskCnt += j.TaskCnt
-		for _, t := range j.Tasks {
-			s.addTaskList(t)
-		}
 		j = j.NextJob
 	}
+
 	return nil
 } // }}}
 
 //addTaskList将传入的*Task添加到*Schedule.Tasks中
 func (s *Schedule) addTaskList(t *Task) { // {{{
 	s.Tasks = append(s.Tasks, t)
+	s.TaskCnt++
 } // }}}
 
 //GetTaskById根据传入的id查找Tasks中对应的Task，没有则返回nil。
@@ -286,7 +295,6 @@ func (s *Schedule) AddTask(task *Task) error { // {{{
 
 	s.Tasks = append(s.Tasks, task)
 	s.TaskCnt = len(s.Tasks)
-	g.Tasks[string(task.Id)] = task
 
 	j, err := s.GetJobById(task.JobId)
 	if err != nil {
@@ -318,8 +326,6 @@ func (s *Schedule) DeleteTask(id int64) error { // {{{
 	t := s.Tasks[i]
 	s.Tasks = append(s.Tasks[0:i], s.Tasks[i+1:]...)
 	s.TaskCnt = len(s.Tasks)
-
-	delete(g.Tasks, string(id))
 
 	j, er := s.GetJobById(t.JobId)
 	if er != nil {
