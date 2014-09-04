@@ -8,7 +8,8 @@ hivego
 如下图所示：
 ![image](doc/images/schedule.jpg)
 
-###使用 `go get github.com/rprp/hivego`
+###使用 
+>go get github.com/rprp/hivego
 >./hive -s
 
 ## 架构模型
