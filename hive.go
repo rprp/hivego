@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	_ "github.com/go-sql-driver/mysql"
-	//_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/rprp/hivego/manager"
 	"github.com/rprp/hivego/schedule"
 	"github.com/rprp/hivego/worker"

@@ -113,7 +113,7 @@ func (s *Schedule) setNewId() error { // {{{
 	var id int64
 
 	//查询全部schedule列表
-	sql := `SELECT max(scd.scd_id) as scd_id
+	sql := `SELECT ifnull(max(scd.scd_id),0) as scd_id
 			FROM scd_schedule scd`
 	rows, err := g.HiveConn.Query(sql)
 	if err != nil {
@@ -334,7 +334,7 @@ func (j *Job) setNewId() (err error) { // {{{
 	var id int64
 
 	//查询全部schedule列表
-	sql := `SELECT max(job.job_id) as job_id
+	sql := `SELECT ifnull(max(job.job_id),0) as job_id
 			FROM scd_job job`
 	rows, err := g.HiveConn.Query(sql)
 	if err != nil {
@@ -564,7 +564,7 @@ func (t *Task) addParam(pvalue string) error { // {{{
 func (t *Task) getNewParamTaskId() (int64, error) { // {{{
 
 	//查询全部schedule列表
-	sql := `SELECT max(p.scd_param_id) as scd_param_id
+	sql := `SELECT ifnull(max(p.scd_param_id),0) as scd_param_id
 			FROM scd_task_param p`
 
 	rows, err := g.HiveConn.Query(sql)
@@ -591,7 +591,7 @@ func (t *Task) getNewParamTaskId() (int64, error) { // {{{
 func (t *Task) getNewRelTaskId() (int64, error) { // {{{
 
 	//查询全部schedule列表
-	sql := `SELECT max(rt.task_rel_id) as task_rel_id
+	sql := `SELECT ifnull(max(rt.task_rel_id),0) as task_rel_id
 			FROM scd_task_rel rt`
 
 	rows, err := g.HiveConn.Query(sql)
@@ -618,7 +618,7 @@ func (t *Task) setNewId() (err error) { // {{{
 	var id int64
 
 	//查询全部schedule列表
-	sql := `SELECT max(t.task_id) as task_id
+	sql := `SELECT ifnull(max(t.task_id),0) as task_id
 			FROM scd_task t`
 	rows, err := g.HiveConn.Query(sql)
 	if err != nil {
@@ -687,7 +687,7 @@ func (t *Task) addRelTask(id int64) error { // {{{
 func (t *Task) getRelJobId() (int64, error) { // {{{
 
 	//查询全部schedule列表
-	sql := `SELECT max(t.job_task_id) as job_task_id
+	sql := `SELECT ifnull(max(t.job_task_id),0) as job_task_id
 			FROM scd_job_task t`
 	rows, err := g.HiveConn.Query(sql)
 	if err != nil {

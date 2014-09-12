@@ -1,5 +1,5 @@
 .DS_Store
-hive
+hivego
 *.log
 tags
 cpuprofile
