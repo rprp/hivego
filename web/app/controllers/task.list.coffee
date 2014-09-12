@@ -543,14 +543,14 @@ class TaskShape extends Spine.Module
   draw: -># {{{
     @toolset = @paper.set()
 
-    imgStyle = [@cx, @cy, 10, 10]
+    imgStyle = [@cx, @cy, 15, 15]
     @editImg=@paper.image("img/edit.png", imgStyle...)
     @deleteRelImg=@paper.image("img/delrel.png", imgStyle...)
     @deleteImg=@paper.image("img/delete.png", imgStyle...)
     @connImg=@paper.image("img/conn.png", imgStyle...)
     @connImg.toBack()
 
-    @edit=@paper.circle(@cx, @cy , 10)
+    @edit=@paper.circle(@cx, @cy , 14)
     @edit.click(mm = (e) ->
         @sp.flg = true
         @showTool()
@@ -558,19 +558,19 @@ class TaskShape extends Spine.Module
         Spine.trigger("addTaskRender", @.task)
       ,@)
 
-    @deleteRel=@paper.circle(@cx, @cy, 10)
+    @deleteRel=@paper.circle(@cx, @cy, 14)
     @deleteRel.click(mm = (e) ->
         @trigger("deleteTaskRelStart", @, e||window.event)
       ,@)
 
-    @delete=@paper.circle(@cx, @cy, 10)
+    @delete=@paper.circle(@cx, @cy, 14)
     @delete.click(mm = (e) ->
         e = e||window.event
         @.task.opt = "delete"
         @trigger("deleteTask", @, e||window.event)
       ,@)
 
-    @conn=@paper.circle(@cx, @cy, 10)
+    @conn=@paper.circle(@cx, @cy, 14)
     @conn.refresh = =>
       if @conn.rel
         @paper.connection(@conn.rel)
@@ -673,14 +673,14 @@ class TaskShape extends Spine.Module
       s.toolset.animate({"x": x, "y": y, "cx": x, "cy": y}, 80, "backin",-> @.hide())
       @sp.isShowTool = false
     else
-      s.editImg.animate({"x": x + 50, "y": y - 5}, 600, "elastic")
-      s.deleteImg.animate({"x": x + 50 * mc, "y": y + 50 * ms - 5}, 600, "elastic")
-      s.connImg.animate({"x": x + 50 * mc, "y": y - 50 * ms - 5}, 600, "elastic")
-      s.deleteRelImg.animate({"x": x + 50 * mc1, "y": y - 50 * ms1 - 5}, 600, "elastic")
-      s.edit.animate({"cx": x + 55, "cy": y}, 600, "elastic")
-      s.delete.animate({"cx": x + 57 * mc, "cy": y + 50 * ms}, 600, "elastic")
-      s.deleteRel.animate({"cx": x + 57 * mc1 + 5, "cy": y - 50 * ms1}, 600, "elastic")
-      s.conn.animate({"cx": x + 57 * mc, "cy": y - 50 * ms}, 600, "elastic")
+      s.editImg.animate({"x": x + 50, "y": y - 7.5}, 600, "elastic")
+      s.deleteImg.animate({"x": x + 50 * mc, "y": y + 50 * ms - 7.5}, 600, "elastic")
+      s.connImg.animate({"x": x + 50 * mc, "y": y - 50 * ms - 7.5}, 600, "elastic")
+      s.deleteRelImg.animate({"x": x + 50 * mc1, "y": y - 50 * ms1 - 7.5}, 600, "elastic")
+      s.edit.animate({"cx": x + 57, "cy": y}, 600, "elastic")
+      s.delete.animate({"cx": x + 60 * mc, "cy": y + 50 * ms}, 600, "elastic")
+      s.deleteRel.animate({"cx": x + 60 * mc1 + 7, "cy": y - 50 * ms1}, 600, "elastic")
+      s.conn.animate({"cx": x + 60 * mc, "cy": y - 50 * ms}, 600, "elastic")
       s.toolset.show()
       @sp.isShowTool = true
   # }}}

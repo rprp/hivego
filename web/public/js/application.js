@@ -26012,30 +26012,30 @@ Released under the MIT License
     TaskShape.prototype.draw = function() {
       var hh, imgStyle, mm, nn, _ref, _ref1, _ref2, _ref3;
       this.toolset = this.paper.set();
-      imgStyle = [this.cx, this.cy, 10, 10];
+      imgStyle = [this.cx, this.cy, 15, 15];
       this.editImg = (_ref = this.paper).image.apply(_ref, ["img/edit.png"].concat(__slice.call(imgStyle)));
       this.deleteRelImg = (_ref1 = this.paper).image.apply(_ref1, ["img/delrel.png"].concat(__slice.call(imgStyle)));
       this.deleteImg = (_ref2 = this.paper).image.apply(_ref2, ["img/delete.png"].concat(__slice.call(imgStyle)));
       this.connImg = (_ref3 = this.paper).image.apply(_ref3, ["img/conn.png"].concat(__slice.call(imgStyle)));
       this.connImg.toBack();
-      this.edit = this.paper.circle(this.cx, this.cy, 10);
+      this.edit = this.paper.circle(this.cx, this.cy, 14);
       this.edit.click(mm = function(e) {
         this.sp.flg = true;
         this.showTool();
         this.task.opt = "edit";
         return Spine.trigger("addTaskRender", this.task);
       }, this);
-      this.deleteRel = this.paper.circle(this.cx, this.cy, 10);
+      this.deleteRel = this.paper.circle(this.cx, this.cy, 14);
       this.deleteRel.click(mm = function(e) {
         return this.trigger("deleteTaskRelStart", this, e || window.event);
       }, this);
-      this["delete"] = this.paper.circle(this.cx, this.cy, 10);
+      this["delete"] = this.paper.circle(this.cx, this.cy, 14);
       this["delete"].click(mm = function(e) {
         e = e || window.event;
         this.task.opt = "delete";
         return this.trigger("deleteTask", this, e || window.event);
       }, this);
-      this.conn = this.paper.circle(this.cx, this.cy, 10);
+      this.conn = this.paper.circle(this.cx, this.cy, 14);
       this.conn.refresh = (function(_this) {
         return function() {
           if (_this.conn.rel) {
@@ -26284,34 +26284,34 @@ Released under the MIT License
       } else {
         s.editImg.animate({
           "x": x + 50,
-          "y": y - 5
+          "y": y - 7.5
         }, 600, "elastic");
         s.deleteImg.animate({
           "x": x + 50 * mc,
-          "y": y + 50 * ms - 5
+          "y": y + 50 * ms - 7.5
         }, 600, "elastic");
         s.connImg.animate({
           "x": x + 50 * mc,
-          "y": y - 50 * ms - 5
+          "y": y - 50 * ms - 7.5
         }, 600, "elastic");
         s.deleteRelImg.animate({
           "x": x + 50 * mc1,
-          "y": y - 50 * ms1 - 5
+          "y": y - 50 * ms1 - 7.5
         }, 600, "elastic");
         s.edit.animate({
-          "cx": x + 55,
+          "cx": x + 57,
           "cy": y
         }, 600, "elastic");
         s["delete"].animate({
-          "cx": x + 57 * mc,
+          "cx": x + 60 * mc,
           "cy": y + 50 * ms
         }, 600, "elastic");
         s.deleteRel.animate({
-          "cx": x + 57 * mc1 + 5,
+          "cx": x + 60 * mc1 + 7,
           "cy": y - 50 * ms1
         }, 600, "elastic");
         s.conn.animate({
-          "cx": x + 57 * mc,
+          "cx": x + 60 * mc,
           "cy": y - 50 * ms
         }, 600, "elastic");
         s.toolset.show();

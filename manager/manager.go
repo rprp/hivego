@@ -6,7 +6,7 @@ import (
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/web"
-	"github.com/rprp/hive/schedule"
+	"github.com/rprp/hivego/schedule"
 	"log"
 	"net/http"
 	"strconv"
