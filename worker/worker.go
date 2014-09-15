@@ -91,14 +91,16 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 	//正常结束则设置成功执行标志ok
 	//go func() {
 	out, err := sh.Command(cmd, cmdArgs).SetTimeout(time.Duration(task.TimeOut) * 1000 * time.Millisecond).Output()
+	reply.Stdout = string(out)
+	l.Infoln("StdOut:", string(out))
 	if err != nil {
 		l.Warnln("error", err)
+		l.Warnln("runCmd is error TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
+			cmdArgs)
 		reply.Err = err
 		return err
 	}
 
-	reply.Stdout = string(out)
-	l.Infoln("StdOut:", string(out))
 	l.Infoln("runCmd is ok TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
 		cmdArgs)
 	//}()
