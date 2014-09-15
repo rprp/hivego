@@ -402,7 +402,7 @@ func (et *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	et.state = 3
 
 	if client, err := rpc.Dial("tcp", et.task.Address+g.Port); err == nil {
-		client.Call("CmdExecuter.Run", task, &rl)
+		_ = client.Call("CmdExecuter.Run", task, &rl)
 		if rl.Err != nil {
 			et.output = rl.Err.Error()
 			et.state = 4

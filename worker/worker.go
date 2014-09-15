@@ -59,12 +59,12 @@ type CmdExecuter struct{}
 //Run调用相应的模块，完成对Task的执行
 //参数task，需要执行的任务信息。
 //参数reply，任务执行输出的信息。
-func (this *CmdExecuter) Run(task *Task, reply *Reply) { // {{{
+func (this *CmdExecuter) Run(task *Task, reply *Reply) error { // {{{
 
 	//执行task任务
 	runCmd(task, reply)
 
-	return
+	return nil
 } // }}}
 
 //runCmd用来执行参数cmd中指定的命令，并返回执行时间和错误信息。
