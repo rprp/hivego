@@ -85,7 +85,6 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 		cmdArgs = append(cmdArgs, v)
 	}
 
-	chErr := make(chan error, 1)
 	cmd := strings.TrimSpace(task.Cmd)
 
 	//启动一个goroutine执行任务，超时则直接返回，
@@ -94,7 +93,7 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 		out, err := sh.Command(cmd, cmdArgs).SetTimeout(time.Duration(task.TimeOut) * 1000 * time.Millisecond).Output()
 		if err != nil {
 			l.Warnln("error", err)
-			chErr <- err
+			reply.Err = err
 			return
 		}
 

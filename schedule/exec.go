@@ -182,7 +182,7 @@ func (es *ExecSchedule) RunTasks() (err error) { // {{{
 	for _, et := range es.execTasks {
 
 		//依赖任务列表为空，任务可以执行
-		if len(et.relExecTasks) == 0 {
+		if len(et.relExecTasks) == 0 && et.state == 0 {
 			//任务所属作业开始时间为空，设置作业启动信息
 			if err = et.execJob.Start(); err != nil {
 				es.state = 4
