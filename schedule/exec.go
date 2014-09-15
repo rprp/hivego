@@ -409,6 +409,7 @@ func (et *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 				g.L.Infoln("task", et.task.Name, "is error", et.output)
 			}
 		} else {
+			et.output = rl.Err.Error()
 			e := fmt.Sprintf("Call CmdExecuter.Run error %s", err.Error())
 			panic(e)
 		}
