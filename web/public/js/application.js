@@ -26847,7 +26847,7 @@ Released under the MIT License
           sc = "分";
           break;
         case "h":
-          sc = "点";
+          sc = "小时";
           break;
         case "d":
           sc = "日";
@@ -26864,7 +26864,9 @@ Released under the MIT License
         default:
           "";
       }
-      if (sc === sd[1]) {
+      console.log(sd);
+      console.log(sd.slice(1, 3));
+      if ((sc === sd[1]) || (this.Cyc === "h" && sd.slice(1, 3) === "小时")) {
         tp = "";
         j = [];
         _ref = sd.slice(1);

@@ -6,10 +6,9 @@ import (
 	"bytes"
 	"errors"
 	"github.com/Sirupsen/logrus"
-	"io"
+	sh "github.com/rprp/go-sh"
 	"net"
 	"net/rpc"
-	"os/exec"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -55,8 +54,7 @@ type Reply struct {
 
 //RPC结构
 //服务端处理部分，接受client端发送的指令。
-type CmdExecuter struct {
-}
+type CmdExecuter struct{}
 
 //Run调用相应的模块，完成对Task的执行
 //参数task，需要执行的任务信息。
@@ -80,103 +78,31 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 			return
 		}
 	}()
-	var c *exec.Cmd
-	var cmdArgs []string //执行的命令行参数
 
+	var cmdArgs []string //执行的命令行参数
 	//从task结构中获取并组合命令参数
 	for _, v := range task.Param {
 		cmdArgs = append(cmdArgs, v)
 	}
 
-	//命令成功执行标志
-	ok := make(chan bool, 1)
 	chErr := make(chan error, 1)
-
 	cmd := strings.TrimSpace(task.Cmd)
-	c = exec.Command(cmd, cmdArgs...)
+
 	//启动一个goroutine执行任务，超时则直接返回，
 	//正常结束则设置成功执行标志ok
 	go func() {
-
-		stdout, err := c.StdoutPipe() //挂载标准输出
+		out, err := sh.Command(cmd, cmdArgs).SetTimeout(time.Duration(task.TimeOut) * 1000 * time.Millisecond).Output()
 		if err != nil {
-			l.Warnln("StdoutPipe=", err.Error())
+			l.Warnln("error", err)
 			chErr <- err
 			return
 		}
 
-		stderr, err := c.StderrPipe() //挂着错误输出
-		if err != nil {
-			l.Warnln("StderrPipe=", err.Error())
-			chErr <- err
-			return
-		}
-
-		r := io.MultiReader(stdout, stderr)
-		if err := c.Start(); err != nil {
-			l.Warnln("Start=", err.Error())
-			chErr <- err
-			return
-		}
-
-		//读取输出信息，设置到reply通道中
-		for {
-			bf := make([]byte, 1024)
-			count, err := r.Read(bf)
-			if err != nil || count == 0 {
-				break
-			} else {
-				l.Infoln("cmdStdout=", string(bf))
-				reply.Stdout += string(bf)
-			}
-		}
-
-		if err := c.Wait(); err != nil {
-			l.Warnln("Wait=", err.Error())
-			chErr <- err
-			return
-		}
-
-		ok <- true
+		reply.Stdout = string(out)
+		l.Infoln("StdOut:", string(out))
+		l.Infoln("runCmd is ok TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
+			cmdArgs)
 	}()
-
-	//监听通道，超时则kill掉进程
-	if task.TimeOut > 0 {
-		select {
-		case <-time.After(time.Duration(task.TimeOut) * 1000 * time.Millisecond):
-			c.Process.Kill()
-			l.Warnln("runCmd is time out TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
-				cmdArgs, "Error=", "time out")
-			reply.Err = errors.New("time out")
-			return errors.New("time out")
-		case e := <-chErr:
-			//异常退出
-			l.Warnln("runCmd is err TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
-				cmdArgs, "Error=", e.Error())
-			reply.Err = e
-			return e
-		case <-ok:
-			//正常退出
-			l.Infoln("runCmd is ok TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
-				cmdArgs)
-			return nil
-		}
-	} else {
-
-		select {
-		case e := <-chErr:
-			//异常退出
-			l.Warnln("runCmd is err TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
-				cmdArgs, "Error=", e.Error())
-			reply.Err = e
-			return e
-		case <-ok:
-			//正常退出
-			l.Infoln("runCmd is ok TaskName=", task.Name, "TaskCmd=", task.Cmd, "TaskArg=",
-				cmdArgs)
-			return nil
-		}
-	}
 
 	return nil
 } // }}}
