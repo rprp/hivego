@@ -402,16 +402,11 @@ func (et *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 	et.state = 3
 
 	if client, err := rpc.Dial("tcp", et.task.Address+g.Port); err == nil {
-		if err := client.Call("CmdExecuter.Run", task, &rl); err == nil {
-			if rl.Err != nil {
-				et.output = rl.Err.Error()
-				et.state = 4
-				g.L.Infoln("task", et.task.Name, "is error", et.output)
-			}
-		} else {
-			et.output = et.output + rl.Stdout
-			e := fmt.Sprintf("Call CmdExecuter.Run error %s", err.Error())
-			panic(e)
+		client.Call("CmdExecuter.Run", task, &rl)
+		if rl.Err != nil {
+			et.output = rl.Err.Error()
+			et.state = 4
+			g.L.Infoln("task", et.task.Name, "is error", et.output)
 		}
 	} else {
 		e := fmt.Sprintf("connect task.Address[%s] error %s", et.task.Address+g.Port,

@@ -59,16 +59,16 @@ type CmdExecuter struct{}
 //Run调用相应的模块，完成对Task的执行
 //参数task，需要执行的任务信息。
 //参数reply，任务执行输出的信息。
-func (this *CmdExecuter) Run(task *Task, reply *Reply) error { // {{{
+func (this *CmdExecuter) Run(task *Task, reply *Reply) { // {{{
 
 	//执行task任务
-	err := runCmd(task, reply)
+	runCmd(task, reply)
 
-	return err
+	return
 } // }}}
 
 //runCmd用来执行参数cmd中指定的命令，并返回执行时间和错误信息。
-func runCmd(task *Task, reply *Reply) error { // {{{
+func runCmd(task *Task, reply *Reply) { // {{{
 	defer func() {
 		if err := recover(); err != nil {
 			var buf bytes.Buffer
@@ -92,19 +92,18 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 	//go func() {
 	out, err := sh.Command(cmd, cmdArgs).SetTimeout(time.Duration(task.TimeOut) * 1000 * time.Millisecond).Output()
 	reply.Stdout = string(out)
+	reply.Err = err
 	l.Infoln("StdOut:", string(out))
 	if err != nil {
 		l.Warnln("error", err)
 		l.Warnln(task.Name, "is error TaskCmd=", task.Cmd, "TaskArg=", cmdArgs)
-		reply.Stdout = string(out)
-		reply.Err = err
-		return err
+		return
 	}
 
 	l.Infoln(task.Name, "is ok TaskCmd=", task.Cmd, "TaskArg=", cmdArgs)
 	//}()
 
-	return nil
+	return
 } // }}}
 
 //启动HTTP服务监控指定端口
