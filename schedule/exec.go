@@ -347,7 +347,7 @@ func (et *ExecTask) InitExecTask(es *ExecSchedule) error { // {{{
 } // }}}
 
 type Reply struct { // {{{
-	Err    error  //错误信息
+	Err    string //错误信息
 	Stdout string //标准输出
 } // }}}
 
@@ -403,10 +403,10 @@ func (et *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	if client, err := rpc.Dial("tcp", et.task.Address+g.Port); err == nil {
 		_ = client.Call("CmdExecuter.Run", task, &rl)
-		if rl.Err != nil {
-			et.output = rl.Err.Error()
+		if rl.Err != "" {
+			et.output = rl.Err
 			et.state = 4
-			g.L.Infoln("task", et.task.Name, "is error", et.output)
+			g.L.Infoln("task", et.task.Name, "is error", rl.Stdout)
 		}
 	} else {
 		e := fmt.Sprintf("connect task.Address[%s] error %s", et.task.Address+g.Port,

@@ -47,7 +47,7 @@ type Task struct {
 
 //返回的消息
 type Reply struct {
-	Err    error  //错误信息
+	Err    string //错误信息
 	Stdout string //标准输出
 }
 
@@ -73,6 +73,7 @@ func runCmd(task *Task, reply *Reply) { // {{{
 			var buf bytes.Buffer
 			buf.Write(debug.Stack())
 			l.Warnln("panic=", buf.String())
+			reply.Err = "error"
 			return
 		}
 	}()
@@ -90,12 +91,12 @@ func runCmd(task *Task, reply *Reply) { // {{{
 	//go func() {
 	out, err := sh.Command(cmd, cmdArgs).SetTimeout(time.Duration(task.TimeOut) * 1000 * time.Millisecond).Output()
 	reply.Stdout = string(out)
-	reply.Err = err
 	l.Infoln("StdOut:", string(out))
 	if err != nil {
+		reply.Err = "error"
 		l.Warnln("error", err)
 		l.Warnln(task.Name, "is error TaskCmd=", task.Cmd, "TaskArg=", cmdArgs)
-		panic("error")
+		return
 	}
 
 	l.Infoln(task.Name, "is ok TaskCmd=", task.Cmd, "TaskArg=", cmdArgs)
