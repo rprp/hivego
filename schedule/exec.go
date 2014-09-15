@@ -364,7 +364,7 @@ func (et *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 			et.endTime = time.Now().Local()
 			et.state = 4
 			g.L.Warningln("task run error", "batchTaskId[", et.batchTaskId, "] TaskName=",
-				et.task.Name, "output=", rl.Stdout, "err=", err, " stack=", buf.String())
+				et.task.Name, "output=", et.output, "err=", err, " stack=", buf.String())
 			et.Log()
 
 			taskChan <- et
@@ -409,7 +409,7 @@ func (et *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 				g.L.Infoln("task", et.task.Name, "is error", et.output)
 			}
 		} else {
-			et.output = rl.Err.Error()
+			et.output = et.output + rl.Stdout
 			e := fmt.Sprintf("Call CmdExecuter.Run error %s", err.Error())
 			panic(e)
 		}
