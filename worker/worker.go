@@ -4,7 +4,6 @@ package worker
 
 import (
 	"bytes"
-	"errors"
 	"github.com/Sirupsen/logrus"
 	sh "github.com/rprp/go-sh"
 	"net"
@@ -74,7 +73,6 @@ func runCmd(task *Task, reply *Reply) { // {{{
 			var buf bytes.Buffer
 			buf.Write(debug.Stack())
 			l.Warnln("panic=", buf.String())
-			reply.Err = errors.New("panic")
 			return
 		}
 	}()
@@ -97,7 +95,7 @@ func runCmd(task *Task, reply *Reply) { // {{{
 	if err != nil {
 		l.Warnln("error", err)
 		l.Warnln(task.Name, "is error TaskCmd=", task.Cmd, "TaskArg=", cmdArgs)
-		return
+		panic("error")
 	}
 
 	l.Infoln(task.Name, "is ok TaskCmd=", task.Cmd, "TaskArg=", cmdArgs)
