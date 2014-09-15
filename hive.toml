@@ -15,14 +15,14 @@ memprof="memprofile"
 [dbinfo]
 
   [dbinfo.hivedb]
-  Dbtype = "sqlite3"
-  Conn = "hive_tp.db"
-  #Dbtype = "mysql"
-  #Conn = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true&loc=Local"
+  #Dbtype = "sqlite3"
+  #Conn = "hive_tp.db"
+  Dbtype = "mysql"
+  Conn = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true&loc=Local"
 
   [dbinfo.logdb]
-  Dbtype = "sqlite3"
-  Conn = "log_tp.db"
-  #Dbtype = "mysql"
-  #Conn = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true&loc=Local"
+  #Dbtype = "sqlite3"
+  #Conn = "log_tp.db"
+  Dbtype = "mysql"
+  Conn = "root:@tcp(127.0.0.1:3306)/hive?charset=utf8&parseTime=true&loc=Local"
 

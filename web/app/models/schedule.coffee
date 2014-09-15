@@ -69,14 +69,16 @@ class Schedule extends Spine.Model
     clst = ["年","月","周","日","点","分","秒"]
     switch @Cyc
       when "mi" then sc="分"
-      when "h" then sc="点"
+      when "h" then sc="小时"
       when "d" then sc="日"
       when "w" then sc="周"
       when "m" then sc="月"
       when "y" then sc="年"
       else ""
 
-    if sc is sd[1]
+    console.log(sd)
+    console.log(sd[1..2])
+    if ((sc is sd[1]) or (@Cyc is "h" and sd[1..2] is "小时"))
       tp = ""
       j = []
       for v,i in sd[1..]
