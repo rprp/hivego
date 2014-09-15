@@ -96,6 +96,7 @@ func runCmd(task *Task, reply *Reply) error { // {{{
 	if err != nil {
 		l.Warnln("error", err)
 		l.Warnln(task.Name, "is error TaskCmd=", task.Cmd, "TaskArg=", cmdArgs)
+		reply.Stdout = string(out)
 		reply.Err = err
 		return err
 	}
