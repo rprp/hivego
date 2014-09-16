@@ -4,17 +4,54 @@ hivego
 HiveGo是一个分布式的任务调度平台。可以实现管理多个具有依赖关系的任务，并按规则运行它们。提供友好的Web界面来进行任务的管理。
 
 
-## 安装
+## 编译安装
+
+从源码编译的话需要GoLang的编译环境和git，GoLang安装具体可参考[这里](http://golang.org/doc/install)，执行下面命令：
 
 	go get github.com/rprp/hivego
+    cd hivego
+    go build
+
+完成后会生成执行文件hivego，项目中包含的前端代码在web目录下，这部分用CoffeeScript写成。编译的话需要安装node.js环境：
+
+    cd web
+    npm install . 
+    hem build 
+
+完成后会生成前端代码至web/public目录下。
+运行时可将执行文件与web资源转移出来，形成下面的结构。
+
+    .
+    ├── hive.toml
+    ├── hive_tp.db
+    ├── hivego
+    ├── log_tp.db
+    └── web
+        └── public
+
+其中hive.toml是调度系统的配置文件，用来配置资源库信息，web服务端口号等。若使用Sqlite来做资源库，hive_tp.db可以作为初始的模板。
+web目录下包含了必要的前端资源。
+
+## 部署运行
+
+hivego运行时分为Server端和Client端。Server端负责任务的管理分发，Client端接受服务端发送来的任务，执行并返回是否成功。
+hivego程序同时包含了Server端和Client端，启动时通过参数即可区分。
 
 运行服务端（调度模块）
 
-    ./hive -s
+    ./hivego -s
 
-运行客户端（执行模块）
+运行客户端（执行模块），可部署在多机。
 
-    ./hive
+    ./hivego
+
+## 配置管理
+
+hivego提供了一个简易的web页面来进行任务的配置管理。服务端启动后访问
+
+    http://host:prot
+
+host为Server端机器地址，prot为hive.toml中配置的web服务端口。
 
 ## 架构
 
