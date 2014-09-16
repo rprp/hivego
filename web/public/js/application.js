@@ -24372,7 +24372,7 @@ Released under the MIT License
               opacity: 1
             }, 800);
             _this.header.stop().animate({
-              backgroundColor: "#E0E0E0",
+              backgroundColor: "rgba(196, 187, 142, 1)",
               opactiy: 1
             }, "fast");
             _this.srun.stop().animate({
@@ -24422,7 +24422,7 @@ Released under the MIT License
         }, "fast");
       },
       "mouseenter .sstart": function(e) {
-        this.sstart.css("background-color", "#E0E0E0");
+        this.sstart.css("background-color", "rgba(196, 187, 142, 1)");
         return this.addstart.stop().animate({
           backgroundColor: "#999"
         }, 1);
@@ -24434,13 +24434,13 @@ Released under the MIT License
         }, 10);
       },
       "mouseenter .jobcnt": function(e) {
-        return this.jobcnt.css("background-color", "#E0E0E0");
+        return this.jobcnt.css("background-color", "rgba(196, 187, 142, 1)");
       },
       "mouseleave .jobcnt": function(e) {
         return this.jobcnt.css("background-color", "transparent");
       },
       "mouseenter .nextstart": function(e) {
-        return this.nextstart.css("background-color", "#E0E0E0");
+        return this.nextstart.css("background-color", "rgba(196, 187, 142, 1)");
       },
       "mouseleave .nextstart": function(e) {
         return this.nextstart.css("background-color", "transparent");
@@ -27140,12 +27140,12 @@ Released under the MIT License
       __out.push('<div class="popover left fdin" style="display: block; width: 300px;">\n      <div class="arrow"></div>\n        ');
     
       if (this.opt === "add") {
-        __out.push('\n          <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">添加一个作业\n        ');
+        __out.push('\n          <h3 class="popover-title" style="cursor: pointer; background-color: rgba(196, 187, 142, 1);">添加一个作业\n        ');
       } else {
-        __out.push('\n          <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">修改一个作业\n        ');
+        __out.push('\n          <h3 class="popover-title" style="cursor: pointer; background-color: rgba(196, 187, 142, 1);">修改一个作业\n        ');
       }
     
-      __out.push('\n          <button type="button" class="close pull-right">\n              <span aria-hidden="true">&times;</span>\n              <span class="sr-only">Close</span>\n          </button></h3>\n          <div class="popover-content" style="background-color: #f5f5f5;" >\n        ');
+      __out.push('\n          <button type="button" class="close pull-right">\n              <span aria-hidden="true">&times;</span>\n              <span class="sr-only">Close</span>\n          </button></h3>\n          <div class="popover-content" style="background-color: rgba(241, 241, 225, 1);" >\n        ');
     
       if (this.opt === "add") {
         __out.push('\n              <input id="jobname" type="text" class="form-control" placeholder="作业名称" />\n            <br>\n            作业描述：\n            <textarea id="jobdesc" class="form-control" rows="4"></textarea>\n\n            <input id="prejobid" type="hidden" value="');
@@ -27632,7 +27632,7 @@ module.exports = content;}, "views/schedule": function(exports, require, module)
     
       gnext = this.GetNextStart();
     
-      __out.push('\n<div class="addSchedule row panel panel-default fdin" style="width: 450px; ">\n    <div class="addScheduleHead panel-heading" style="cursor: move; background-color: #E0E0E0;">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">修改调度信息</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="scheduleName" type="text" class="form-control" placeholder="调度名称" value="');
+      __out.push('\n<div class="addSchedule row panel panel-default fdin" style="width: 450px; ">\n    <div class="addScheduleHead panel-heading" style="cursor: move; background-color: rgba(196, 187, 142, 1);">\n        <button type="button" class="close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">修改调度信息</h3>\n    </div>\n    <div class="panel-body" style="background-color: rgba(241, 241, 225, 1);" >\n        <input id="scheduleName" type="text" class="form-control" placeholder="调度名称" value="');
     
       __out.push(__sanitize(this.Name));
     
@@ -27709,7 +27709,7 @@ module.exports = content;}, "views/task": function(exports, require, module) {va
     (function() {
       var i, p, _i, _len, _ref;
     
-      __out.push('<div class="addTask row panel panel-default fdin" style="width: 450px;">\n    <div class="addTaskHead panel-heading" style="cursor: move; background-color: #E0E0E0;">\n        <button type="button" class="tclose close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">新增任务</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="taskName" type="text" class="form-control" placeholder="任务名称" value="');
+      __out.push('<div class="addTask row panel panel-default fdin" style="width: 450px;">\n    <div class="addTaskHead panel-heading" style="cursor: move; background-color: rgba(196, 187, 142, 1);">\n        <button type="button" class="tclose close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">新增任务</h3>\n    </div>\n    <div class="panel-body" style="background-color: rgba(241, 241, 225, 1);" >\n        <input id="taskName" type="text" class="form-control" placeholder="任务名称" value="');
     
       __out.push(__sanitize(this.Name));
     
@@ -27802,7 +27802,7 @@ module.exports = content;}, "views/taskrel": function(exports, require, module) 
   }
   (function() {
     (function() {
-      __out.push('<div id="confirmdeltaskrel" class="popover bottom fdin" style="display: block; width: 250px;">\n      <div class="arrow"></div>\n      <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">删除任务依赖\n          <button id="delrelclose" type="button" class="close pull-right">\n              <span aria-hidden="true">&times;</span>\n              <span class="sr-only">Close</span>\n          </button>\n      </h3>\n      <div class="popover-content" style="background-color: #f5f5f5;" >\n          删除\n            <span id="delcnt" class="label label-warning">1</span>\n          个依赖&nbsp;&nbsp;\n          <button id="deltaskrel" type="button" class="btn btn-success " >&nbsp;确认&nbsp;</button>\n          <br>\n      </div>\n</div>\n');
+      __out.push('<div id="confirmdeltaskrel" class="popover bottom fdin" style="display: block; width: 250px;">\n      <div class="arrow"></div>\n      <h3 class="popover-title" style="cursor: pointer; background-color: rgba(196, 187, 142, 1);">删除任务依赖\n          <button id="delrelclose" type="button" class="close pull-right">\n              <span aria-hidden="true">&times;</span>\n              <span class="sr-only">Close</span>\n          </button>\n      </h3>\n      <div class="popover-content" style="background-color: rgba(241, 241, 225, 1);" >\n          删除\n            <span id="delcnt" class="label label-warning">1</span>\n          个依赖&nbsp;&nbsp;\n          <button id="deltaskrel" type="button" class="btn btn-success " >&nbsp;确认&nbsp;</button>\n          <br>\n      </div>\n</div>\n');
     
     }).call(this);
     

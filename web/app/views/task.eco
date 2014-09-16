@@ -1,12 +1,12 @@
 <div class="addTask row panel panel-default fdin" style="width: 450px;">
-    <div class="addTaskHead panel-heading" style="cursor: move; background-color: #E0E0E0;">
+    <div class="addTaskHead panel-heading" style="cursor: move; background-color: rgba(196, 187, 142, 1);">
         <button type="button" class="tclose close pull-right">
             <span aria-hidden="true">&times;</span>
             <span class="sr-only">Close</span>
         </button>
         <h3 class="panel-title">新增任务</h3>
     </div>
-    <div class="panel-body" style="background-color: #f5f5f5;" >
+    <div class="panel-body" style="background-color: rgba(241, 241, 225, 1);" >
         <input id="taskName" type="text" class="form-control" placeholder="任务名称" value="<%= @Name %>"/>
         <br>
         <input id="taskAddr" type="text" class="form-control" placeholder="任务执行地址。如：192.168.0.5" value="<%= @Address %>"/>

@@ -1,15 +1,15 @@
 <div class="popover left fdin" style="display: block; width: 300px;">
       <div class="arrow"></div>
         <% if @opt is "add": %>
-          <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">添加一个作业
+          <h3 class="popover-title" style="cursor: pointer; background-color: rgba(196, 187, 142, 1);">添加一个作业
         <% else: %>
-          <h3 class="popover-title" style="cursor: pointer; background-color: #E0E0E0;">修改一个作业
+          <h3 class="popover-title" style="cursor: pointer; background-color: rgba(196, 187, 142, 1);">修改一个作业
         <% end %>
           <button type="button" class="close pull-right">
               <span aria-hidden="true">&times;</span>
               <span class="sr-only">Close</span>
           </button></h3>
-          <div class="popover-content" style="background-color: #f5f5f5;" >
+          <div class="popover-content" style="background-color: rgba(241, 241, 225, 1);" >
         <% if @opt is "add": %>
               <input id="jobname" type="text" class="form-control" placeholder="作业名称" />
             <br>
