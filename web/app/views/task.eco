@@ -28,26 +28,7 @@
         <br>
         <br>
         任务命令行：
-        <textarea id="taskCmd" class="form-control" rows="2" ><%= @Cmd %></textarea>
-        <br>
-        任务参数：
-        <br>
-        <ul class="taskParamList list-group">
-            <% for p,i in @Param : %>
-            <li class="list-group-item" >
-                <span class="tparam glyphicon glyphicon-th-list"  style="cursor: pointer;"><%= p %>&nbsp;&nbsp; &nbsp;  &nbsp; </span>
-                    <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>
-                <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"
-                style="display:none;" value="<%= p %>"/>
-            </li>
-            <% end %>
-        </ul> 
-        <div>
-            <span class="pull-right" style="cursor: pointer;">
-                 <span class="addParam glyphicon glyphicon-plus" ></span>
-             </span> 
-         </div> 
-
+        <textarea id="taskCmd" class="form-control" rows="5" ><%= "#{@Cmd} #{@Param.join(' ')}" %></textarea>
         <br>
         <br>
         <div class="panel-group" id="accordion">
