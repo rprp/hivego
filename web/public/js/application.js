@@ -25147,24 +25147,6 @@ Released under the MIT License
       "click .tclose": function() {
         return this.el.css("display", "none");
       },
-      "mouseenter .list-group-item": function(e) {
-        return $(e.target).children(".delParam").css("display", "");
-      },
-      "mouseleave .list-group-item": function(e) {
-        return $(e.target).children(".delParam").css("display", "none");
-      },
-      "click .tparam": Form.editParam = function(e) {
-        $(e.target).siblings().not(".delParam").css("display", "");
-        $(e.target).siblings().focus();
-        return $(e.target).css("display", "none");
-      },
-      "click .addParam": Form.appendParam = function() {
-        this.taskParamList.append(require('views/task-param')());
-        return $(".taskParam").focus();
-      },
-      "click .delParam": function(e) {
-        return $(e.target).parent("li").remove();
-      },
       "click .jobli": Form.setJob = function(e) {
         $('.jobbtn').html("&nbsp;" + this.$(e.target).text() + "&nbsp;&nbsp;<span class='caret'></span>");
         $('.jobbtn').css("background-color", this.$(e.target).css("background-color"));
@@ -25176,19 +25158,6 @@ Released under the MIT License
         if (e.ctrlKey && ((_ref = e.keyCode) === 13 || _ref === 10)) {
           return this.postTask(e);
         }
-      },
-      "keypress .taskParam": Form.paramKeyPress = function(e) {
-        var _ref;
-        e = e || window.event;
-        if ((_ref = e.keyCode) === 13 || _ref === 10) {
-          return this.setTaskParamVal(e);
-        }
-      },
-      "blur .taskParam": Form.setTaskParamVal = function(e) {
-        e = e || window.event;
-        $(e.target).css("display", "none");
-        $(e.target).siblings().not(".delParam").css("display", "");
-        return $(e.target).siblings().not(".delParam").text(" " + ($(e.target).val()) + "           ");
       },
       "mousedown .addTaskHead": function(e) {
         var _ref;
@@ -25222,7 +25191,7 @@ Released under the MIT License
     }
 
     Form.prototype.postTask = function(e) {
-      var i, li, tk, tp, _i, _j, _len, _len1, _ref, _ref1;
+      var cval, i, tk, v, _i, _j, _len, _len1, _ref, _ref1;
       this.el.css("display", "none");
       if (this.taskId.val()) {
         tk = this.task;
@@ -25239,16 +25208,14 @@ Released under the MIT License
         tk.Name = this.taskName.val();
         tk.JobId = parseInt(this.JobId.val());
         tk.Address = this.taskAddr.val();
-        tk.Cmd = this.taskCmd.val();
+        cval = this.taskCmd.val().split(" ");
+        tk.Cmd = cval[0];
         tk.Desc = this.taskDesc.val();
         tk.Param = [];
-        _ref = this.taskParamList.children("li");
+        _ref = cval.slice(1);
         for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-          li = _ref[i];
-          tp = $(li).children(".taskParam").val();
-          if (tp !== "") {
-            tk.Param.push(tp);
-          }
+          v = _ref[i];
+          tk.Param.push(v);
         }
         return tk.save({
           method: "PUT",
@@ -25269,19 +25236,17 @@ Released under the MIT License
         });
         tk.Name = this.taskName.val();
         tk.Address = this.taskAddr.val();
-        tk.Cmd = this.taskCmd.val();
+        cval = this.taskCmd.val().split(" ");
+        tk.Cmd = cval[0];
+        tk.Param = [];
+        _ref1 = cval.slice(1);
+        for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
+          v = _ref1[i];
+          tk.Param.push(v);
+        }
         tk.Desc = this.taskDesc.val();
         tk.Id = -1;
         tk.JobId = parseInt(this.JobId.val());
-        tk.Param = [];
-        _ref1 = this.taskParamList.children("li");
-        for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
-          li = _ref1[i];
-          tp = $(li).children(".taskParam").val();
-          if (tp !== "") {
-            tk.Param.push(tp);
-          }
-        }
         if (tk.Name) {
           return tk.create({
             url: "/schedules/" + this.item.Id + "/jobs/0/tasks"
@@ -27703,53 +27668,6 @@ module.exports = content;}, "views/schedule": function(exports, require, module)
   __obj.safe = __objSafe, __obj.escape = __escape;
   return __out.join('');
 };
-module.exports = content;}, "views/task-param": function(exports, require, module) {var content = function(__obj) {
-  if (!__obj) __obj = {};
-  var __out = [], __capture = function(callback) {
-    var out = __out, result;
-    __out = [];
-    callback.call(this);
-    result = __out.join('');
-    __out = out;
-    return __safe(result);
-  }, __sanitize = function(value) {
-    if (value && value.ecoSafe) {
-      return value;
-    } else if (typeof value !== 'undefined' && value != null) {
-      return __escape(value);
-    } else {
-      return '';
-    }
-  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
-  __safe = __obj.safe = function(value) {
-    if (value && value.ecoSafe) {
-      return value;
-    } else {
-      if (!(typeof value !== 'undefined' && value != null)) value = '';
-      var result = new String(value);
-      result.ecoSafe = true;
-      return result;
-    }
-  };
-  if (!__escape) {
-    __escape = __obj.escape = function(value) {
-      return ('' + value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    };
-  }
-  (function() {
-    (function() {
-      __out.push('<li class="list-group-item" >\n    <span class="tparam glyphicon glyphicon-th-list" style="display:none; cursor: pointer;">&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;  &nbsp; </span>\n        <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n    <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"\n    value=""/>\n</li>\n');
-    
-    }).call(this);
-    
-  }).call(__obj);
-  __obj.safe = __objSafe, __obj.escape = __escape;
-  return __out.join('');
-};
 module.exports = content;}, "views/task": function(exports, require, module) {var content = function(__obj) {
   if (!__obj) __obj = {};
   var __out = [], __capture = function(callback) {
@@ -27789,7 +27707,7 @@ module.exports = content;}, "views/task": function(exports, require, module) {va
   }
   (function() {
     (function() {
-      var i, p, _i, _j, _len, _len1, _ref, _ref1;
+      var i, p, _i, _len, _ref;
     
       __out.push('<div class="addTask row panel panel-default fdin" style="width: 450px;">\n    <div class="addTaskHead panel-heading" style="cursor: move; background-color: #E0E0E0;">\n        <button type="button" class="tclose close pull-right">\n            <span aria-hidden="true">&times;</span>\n            <span class="sr-only">Close</span>\n        </button>\n        <h3 class="panel-title">新增任务</h3>\n    </div>\n    <div class="panel-body" style="background-color: #f5f5f5;" >\n        <input id="taskName" type="text" class="form-control" placeholder="任务名称" value="');
     
@@ -27825,23 +27743,11 @@ module.exports = content;}, "views/task": function(exports, require, module) {va
         __out.push('</li>\n            ');
       }
     
-      __out.push('\n          </ul>\n        </div>\n\n        <br>\n        <br>\n        任务命令行：\n        <textarea id="taskCmd" class="form-control" rows="2" >');
+      __out.push('\n          </ul>\n        </div>\n\n        <br>\n        <br>\n        任务命令行：\n        <textarea id="taskCmd" class="form-control" rows="5" >');
     
-      __out.push(__sanitize(this.Cmd));
+      __out.push(__sanitize("" + this.Cmd + " " + (this.Param.join(' '))));
     
-      __out.push('</textarea>\n        <br>\n        任务参数：\n        <br>\n        <ul class="taskParamList list-group">\n            ');
-    
-      _ref1 = this.Param;
-      for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
-        p = _ref1[i];
-        __out.push('\n            <li class="list-group-item" >\n                <span class="tparam glyphicon glyphicon-th-list"  style="cursor: pointer;">');
-        __out.push(__sanitize(p));
-        __out.push('&nbsp;&nbsp; &nbsp;  &nbsp; </span>\n                    <span class="delParam pull-right glyphicon glyphicon-minus" style="cursor: pointer; display:none;"></span>\n                <input type="text" class="taskParam form-control" placeholder="设置任务的参数。如：-a l -s h"\n                style="display:none;" value="');
-        __out.push(__sanitize(p));
-        __out.push('"/>\n            </li>\n            ');
-      }
-    
-      __out.push('\n        </ul> \n        <div>\n            <span class="pull-right" style="cursor: pointer;">\n                 <span class="addParam glyphicon glyphicon-plus" ></span>\n             </span> \n         </div> \n\n        <br>\n        <br>\n        <div class="panel-group" id="accordion">\n          <div class="panel panel-default">\n            <div class="panel-heading">\n              <h4 class="panel-title">\n                <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree">\n                  设置另外的调度周期与启动时间\n                </a>\n              </h4>\n            </div>\n            <div id="collapseThree" class="panel-collapse collapse">\n              <div class="panel-body">\n                 <div>\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Second</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Minute</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Hour</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Day</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Month</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Year</span>\n                 </div>\n                 <br>\n                 启动时间：\n                 <br>\n                 <ul class="startList list-group">\n                         <li class="list-group-item" >\n                             <span class="start glyphicon glyphicon-time"  style="cursor: pointer;">&nbsp;&nbsp; </span>\n                             <input type="text" class="tstartInput form-control" style="display:none;" value=""/>\n                             <input class="startSecond " type="hidden" value="" />\n                             <input class="startMonth" type="hidden" value="" />\n                         </li>\n                 </ul> \n              </div>\n            </div>\n          </div>\n        </div>\n       \n        <br>\n        任务描述：\n        <textarea id="taskDesc" class="form-control" rows="4" >');
+      __out.push('</textarea>\n        <br>\n        <br>\n        <div class="panel-group" id="accordion">\n          <div class="panel panel-default">\n            <div class="panel-heading">\n              <h4 class="panel-title">\n                <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree">\n                  设置另外的调度周期与启动时间\n                </a>\n              </h4>\n            </div>\n            <div id="collapseThree" class="panel-collapse collapse">\n              <div class="panel-body">\n                 <div>\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Second</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Minute</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Hour</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Day</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Month</span>&nbsp;\n                     <span class="tcyclbl label label-default" style="cursor: pointer;" >Year</span>\n                 </div>\n                 <br>\n                 启动时间：\n                 <br>\n                 <ul class="startList list-group">\n                         <li class="list-group-item" >\n                             <span class="start glyphicon glyphicon-time"  style="cursor: pointer;">&nbsp;&nbsp; </span>\n                             <input type="text" class="tstartInput form-control" style="display:none;" value=""/>\n                             <input class="startSecond " type="hidden" value="" />\n                             <input class="startMonth" type="hidden" value="" />\n                         </li>\n                 </ul> \n              </div>\n            </div>\n          </div>\n        </div>\n       \n        <br>\n        任务描述：\n        <textarea id="taskDesc" class="form-control" rows="4" >');
     
       __out.push(__sanitize(this.Desc));
     

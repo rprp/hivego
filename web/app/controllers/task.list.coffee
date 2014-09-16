@@ -25,19 +25,8 @@ class Form extends Spine.Controller
   events:# {{{
     "click #submitTask": "postTask"# {{{
     "click .tclose": -> @el.css("display","none")
-    "mouseenter .list-group-item": (e) -> $(e.target).children(".delParam").css("display","")
-    "mouseleave .list-group-item": (e) -> $(e.target).children(".delParam").css("display","none")# }}}
+    # }}}
 
-    "click .tparam": @editParam = (e) -># {{{
-            $(e.target).siblings().not(".delParam").css("display","")
-            $(e.target).siblings().focus()
-            $(e.target).css("display","none")# }}}
-  
-    "click .addParam": @appendParam = -># {{{
-            @taskParamList.append(require('views/task-param')())
-            $(".taskParam").focus()
-    "click .delParam": (e) -> $(e.target).parent("li").remove()# }}}
-  
     "click .jobli": @setJob = (e) -># {{{
             $('.jobbtn').html("&nbsp;" + @$(e.target).text() + "&nbsp;&nbsp;<span class='caret'></span>")
             $('.jobbtn').css("background-color",@$(e.target).css("background-color"))
@@ -49,19 +38,6 @@ class Form extends Spine.Controller
             if e.ctrlKey and e.keyCode in [13,10]
               @postTask(e)# }}}
   
-    "keypress .taskParam": @paramKeyPress = (e) -># {{{
-            e = e||window.event
-            if e.keyCode in [13,10]
-              @setTaskParamVal(e)
-    # }}}
-
-    "blur .taskParam":  @setTaskParamVal = (e) -># {{{
-            e = e||window.event
-            $(e.target).css("display","none")
-            $(e.target).siblings().not(".delParam").css("display","")
-            $(e.target).siblings().not(".delParam").text(" #{$(e.target).val()}           ")
-    # }}}
-
     "mousedown .addTaskHead": (e) -> [@isMove,@preLeft,@preTop] = [true, e.clientX, e.clientY]# {{{
     "mouseup .addTaskHead": (e) -> [@isMove = false, @el.css("opacity", 1)]
     "mousemove .addTaskHead": (e) ->
@@ -97,14 +73,13 @@ class Form extends Spine.Controller
       tk.Name = @taskName.val()
       tk.JobId = parseInt(@JobId.val())
       tk.Address = @taskAddr.val()
-      tk.Cmd = @taskCmd.val()
+      cval = @taskCmd.val().split(" ")
+      tk.Cmd = cval[0]
       tk.Desc = @taskDesc.val()
 
       tk.Param = []
-      for li,i in @taskParamList.children("li")
-        tp = $(li).children(".taskParam").val()
-        if tp isnt ""
-          tk.Param.push(tp)
+      for v,i in cval[1..]
+        tk.Param.push(v)
       tk.save({method: "PUT", url:"/schedules/#{@item.Id}/jobs/#{tk.JobId}/tasks/#{tk.Id}"})
     else
       tk = new Task()
@@ -117,16 +92,17 @@ class Form extends Spine.Controller
           Spine.trigger("msg",st.status,stxt)
       tk.Name = @taskName.val()
       tk.Address = @taskAddr.val()
-      tk.Cmd = @taskCmd.val()
+
+      cval = @taskCmd.val().split(" ")
+      tk.Cmd = cval[0]
+
+      tk.Param = []
+      for v,i in cval[1..]
+        tk.Param.push(v)
+
       tk.Desc = @taskDesc.val()
       tk.Id = -1
       tk.JobId = parseInt(@JobId.val())
-
-      tk.Param = []
-      for li,i in @taskParamList.children("li")
-        tp = $(li).children(".taskParam").val()
-        if tp isnt ""
-          tk.Param.push(tp)
 
       tk.create({url:"/schedules/#{@item.Id}/jobs/0/tasks"}) if tk.Name
   # }}}
