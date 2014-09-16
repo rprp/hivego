@@ -6,19 +6,20 @@ HiveGo是一个分布式的任务调度平台。可以实现管理多个具有�
 
 ## 编译安装
 
-从源码编译的话需要GoLang的编译环境和git，GoLang安装具体可参考[这里](http://golang.org/doc/install)，执行下面命令：
+从源码编译的话需要golang的编译环境和git，golang安装具体可参考[这里](http://golang.org/doc/install)，环境搭建好后，执行下面命令编译：
 
 	go get github.com/rprp/hivego
     cd hivego
     go build
 
-完成后会生成执行文件hivego，项目中包含的前端代码在web目录下，这部分用CoffeeScript写成。编译的话需要安装node.js环境：
+项目中包含的前端代码在web目录下，这部分用CoffeeScript写成。编译的话需要安装node.js环境后执行：
 
     cd web
     npm install . 
     hem build 
 
-完成后会生成前端代码至web/public目录下。
+会生成前端代码至web/public目录下。
+
 运行时可将执行文件与web资源转移出来，形成下面的结构。
 
     .
@@ -53,10 +54,15 @@ hivego提供了一个简易的web页面来进行任务的配置管理。服务�
 
 host为Server端机器地址，prot为hive.toml中配置的web服务端口。
 
+调度列表界面：
+![image](doc/images/list.jpg)
+
+任务管理界面：
+![image](doc/images/maininfo.jpg)
+
 ## 架构
 
 调度平台被设计为三部分，分别由任务执行模块、调度模块、配置管理模块组成。
-如下图所示：
 
 ![image](doc/images/scd_arch1.jpg)
 
