@@ -3,14 +3,14 @@
 <% gcyc=@GetCyc()        %>
 <% gnext=@GetNextStart() %>
 <div class="addSchedule row panel panel-default fdin" style="width: 450px; ">
-    <div class="addScheduleHead panel-heading" style="cursor: move; background-color: #E0E0E0;">
+    <div class="addScheduleHead panel-heading" style="cursor: move; background-color: rgba(196, 187, 142, 1);">
         <button type="button" class="close pull-right">
             <span aria-hidden="true">&times;</span>
             <span class="sr-only">Close</span>
         </button>
         <h3 class="panel-title">修改调度信息</h3>
     </div>
-    <div class="panel-body" style="background-color: #f5f5f5;" >
+    <div class="panel-body" style="background-color: rgba(241, 241, 225, 1);" >
         <input id="scheduleName" type="text" class="form-control" placeholder="调度名称" value="<%= @Name %>"/>
         <br>
             <span class="cyclbl label label-default" style="cursor: pointer;" >Second</span>&nbsp;

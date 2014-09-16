@@ -37,7 +37,7 @@ class ScheduleItem extends Spine.Controller
             @body.stop().animate({opacity: 1},800)
             @footer.stop().animate({opacity: 1},800)
             @sname.stop().animate({color:"#333", opacity: 1},800)
-            @header.stop().animate({backgroundColor:"#E0E0E0", opactiy: 1},"fast")
+            @header.stop().animate({backgroundColor:"rgba(196, 187, 142, 1)", opactiy: 1},"fast")
 
             @srun.stop().animate({backgroundColor:"#999", opactiy: 1},800)
             @sdelete.stop().animate({backgroundColor:"#999", opactiy: 1},800)
@@ -59,16 +59,16 @@ class ScheduleItem extends Spine.Controller
         @sdelete.stop().animate({backgroundColor:"transparent"},"fast")
 
    "mouseenter .sstart": (e)->
-          @sstart.css("background-color","#E0E0E0")
+          @sstart.css("background-color","rgba(196, 187, 142, 1)")
           @addstart.stop().animate({backgroundColor:"#999"},1)
    "mouseleave .sstart": (e)->
           @sstart.css("background-color","transparent")
           @addstart.stop().animate({backgroundColor:"transparent"},10)
 
-   "mouseenter .jobcnt": (e)-> @jobcnt.css("background-color","#E0E0E0")
+   "mouseenter .jobcnt": (e)-> @jobcnt.css("background-color","rgba(196, 187, 142, 1)")
    "mouseleave .jobcnt": (e)-> @jobcnt.css("background-color","transparent")
 
-   "mouseenter .nextstart": (e)-> @nextstart.css("background-color","#E0E0E0")
+   "mouseenter .nextstart": (e)-> @nextstart.css("background-color","rgba(196, 187, 142, 1)")
    "mouseleave .nextstart": (e)-> @nextstart.css("background-color","transparent")
 
   constructor: ->
