@@ -175,6 +175,7 @@ type Schedule struct { // {{{
 	Job          *Job            //作业
 	Jobs         []*Job          //作业列表
 	Tasks        []*Task         `json:"-"` //任务列表
+	isRefresh    chan bool       `json:"-"` //是否刷新标志
 	Desc         string          //调度说明
 	JobCnt       int             //调度中作业数量
 	TaskCnt      int             //调度中任务数量
@@ -229,6 +230,10 @@ func (s *Schedule) Timer() { // {{{
 
 		//启动线程执行调度任务
 		go es.Run()
+	case <-s.isRefresh:
+		l := fmt.Sprintf("[s.Timer] schedule [%d %s] is refresh.\n", s.Id, s.Name)
+		g.L.Println(l)
+		return
 	}
 	return
 } // }}}
@@ -267,6 +272,18 @@ func (s *Schedule) InitSchedule() error { // {{{
 	}
 
 	return nil
+} // }}}
+
+//刷新Schedule
+func (s *Schedule) refresh() { // {{{
+
+	//发送消息停止监听
+	s.isRefresh <- true
+
+	//启动监听，按时启动Schedule
+	go s.Timer()
+
+	return
 } // }}}
 
 //addTaskList将传入的*Task添加到*Schedule.Tasks中
@@ -480,6 +497,7 @@ func (s *Schedule) UpdateSchedule() error { // {{{
 		return errors.New(e)
 	}
 
+	s.refresh()
 	return err
 } // }}}
 
