@@ -240,6 +240,7 @@ func (s *Schedule) getSchedule() error { // {{{
 
 	s.Jobs = make([]*Job, 0)
 	s.Tasks = make([]*Task, 0)
+	s.isRefresh = make(chan bool)
 	s.JobCnt, s.TaskCnt = 0, 0
 	return err
 } // }}}

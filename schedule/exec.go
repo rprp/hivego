@@ -74,7 +74,7 @@ func (es *ExecSchedule) Start() (err error) { // {{{
 
 //调度中的一个任务完成，更新状态。
 //当调度中全部任务完成后，将调度执行体从全局列表中移除，并设置下次启动时间。
-func (es *ExecSchedule) TaskDone(et *ExecTask) (err error) { // {{{
+func (es *ExecSchedule) TaskDone(et *ExecTask) (finish bool, err error) { // {{{
 
 	//计算任务完成百分比
 	s := es.schedule
@@ -88,7 +88,7 @@ func (es *ExecSchedule) TaskDone(et *ExecTask) (err error) { // {{{
 		es.state = 3
 		if err = es.Log(); err != nil {
 			es.state = 4
-			return errors.New(fmt.Sprintf("\n[es.TaskDone] %s", err.Error()))
+			return true, errors.New(fmt.Sprintf("\n[es.TaskDone] %s", err.Error()))
 		}
 
 		g.L.Infoln("schedule ", s.Name, " is end ", " batchId=", es.batchId,
@@ -99,9 +99,10 @@ func (es *ExecSchedule) TaskDone(et *ExecTask) (err error) { // {{{
 			//设置下次执行时间
 			go s.Timer()
 		}
+		return true, nil
 	}
 
-	return err
+	return false, err
 } // }}}
 
 //ExecSchedule.Run()方法执行调度任务。
@@ -130,20 +131,14 @@ func (es *ExecSchedule) Run() { // {{{
 		select {
 		case et := <-es.execTaskChan:
 			es.taskCnt--
-			//将该任务从任务列表中删除。
-			delete(es.execTasks, et.task.Id)
 
 			//将该任务从其它任务的依赖列表中删除。
 			for _, et1 := range es.execTasks {
 
 				//任务执行失败，将依赖的下级任务状态设置为2（暂停）
 				if et.state != 3 && et.state != 5 {
-					g.L.Infoln("task", et.task.Name, "is fail batchTaskId[", et.batchTaskId, "] state=", et.state)
-					if _, ok := et1.relExecTasks[et.task.Id]; ok {
+					if _, ok := et1.relExecTasks[et.task.Id]; ok && et1.state != 2 {
 						et1.state = 2
-						es.failTaskCnt++ //暂停的也计入失败数量
-						g.L.Infoln("task", et1.task.Name, "is pause batchTaskId[", et1.batchTaskId, "] state=",
-							et1.state)
 					}
 				}
 
@@ -153,12 +148,12 @@ func (es *ExecSchedule) Run() { // {{{
 
 			if et.state == 3 || et.state == 5 { //任务执行成功或可以忽略
 				es.successTaskCnt++
-				if err = es.RunTasks(); err != nil {
-					g.L.Warningln(fmt.Sprintf("\n[es.Run] %s", err.Error()))
-					return
-				}
+			} else if et.state == 2 {
+				es.failTaskCnt++ //暂停的也计入失败数量
+				g.L.Infoln("task", et.task.Name, "is pause batchTaskId[", et.batchTaskId, "] state=", et.state)
 			} else {
 				es.failTaskCnt++
+				g.L.Infoln("task", et.task.Name, "is fail batchTaskId[", et.batchTaskId, "] state=", et.state)
 			}
 
 			if err = et.execJob.TaskDone(et); err != nil {
@@ -166,7 +161,15 @@ func (es *ExecSchedule) Run() { // {{{
 				return
 			}
 
-			if err = es.TaskDone(et); err != nil {
+			finish := false
+			if finish, err = es.TaskDone(et); finish && err == nil {
+				return
+			} else if err != nil {
+				g.L.Warningln(fmt.Sprintf("\n[es.Run] %s", err.Error()))
+				return
+			}
+
+			if err = es.RunTasks(); err != nil {
 				g.L.Warningln(fmt.Sprintf("\n[es.Run] %s", err.Error()))
 				return
 			}
@@ -182,12 +185,16 @@ func (es *ExecSchedule) RunTasks() (err error) { // {{{
 	for _, et := range es.execTasks {
 
 		//依赖任务列表为空，任务可以执行
-		if len(et.relExecTasks) == 0 && et.state == 0 {
+		if len(et.relExecTasks) == 0 && (et.state == 0 || et.state == 2) {
+
 			//任务所属作业开始时间为空，设置作业启动信息
 			if err = et.execJob.Start(); err != nil {
 				es.state = 4
 				return errors.New(fmt.Sprintf("\n[es.RunTasks] %s", err.Error()))
 			}
+
+			//将该任务从任务列表中删除。
+			delete(es.execTasks, et.task.Id)
 
 			//执行任务，完成后任务会放入taskChan中
 			go et.Run(es.execTaskChan)
@@ -374,7 +381,6 @@ func (et *ExecTask) Run(taskChan chan *ExecTask) { // {{{
 
 	//暂停状态的处理
 	if et.state == 2 {
-		g.L.Infoln("task", et.task.Name, "is pause batchTaskId[", et.batchTaskId, "]")
 		et.Log()
 		taskChan <- et
 		return
